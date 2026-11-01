@@ -81,11 +81,16 @@ def rel(path, root, cwd=None):
     p = Path(os.path.expanduser(str(path)))
     if not p.is_absolute():
         p = Path(cwd or root) / p
+    p = Path(os.path.normpath(str(p)))
     try:
-        p = Path(os.path.normpath(str(p)))
         r = p.relative_to(Path(root))
     except ValueError:
-        return None
+        # The same folder can have two names (macOS /var -> /private/var, a symlinked
+        # checkout). Compare the real locations before deciding the path is outside the repo.
+        try:
+            r = Path(os.path.realpath(str(p))).relative_to(Path(os.path.realpath(str(root))))
+        except ValueError:
+            return None
     s = r.as_posix()
     return "" if s == "." else s
 
@@ -231,6 +236,15 @@ def is_test(path, cfg):
 
 def is_infra(path):
     return matches(path, INFRA_GLOBS)
+
+
+def no_tests_ran(comp, code, text):
+    """True only when the runner really ran no test at all. A runner that prints one empty
+    section per crate, package or module (cargo, go, Maven, dotnet) next to sections that did
+    run tests is not 'no tests': tests_ran_patterns win over no_tests_patterns."""
+    if first_match(comp.get("tests_ran_patterns", []), text):
+        return False
+    return code in comp.get("no_tests_exit_codes", []) or bool(first_match(comp.get("no_tests_patterns", []), text))
 
 
 def is_change_doc(path):

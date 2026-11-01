@@ -49,6 +49,9 @@
         "running 0 tests"
       ],
       "no_tests_exit_codes": [],
+      "tests_ran_patterns": [
+        "running [1-9]\\d* tests?"
+      ],
       "test_command": "cargo test --quiet",
       "lint_command": "cargo clippy --quiet -- -D warnings",
       "typecheck_command": "",
@@ -131,6 +134,10 @@
         "0 passing"
       ],
       "no_tests_exit_codes": [],
+      "tests_ran_patterns": [
+        "Tests?\\s+[1-9]\\d* (passed|failed)",
+        "\\b[1-9]\\d* passing"
+      ],
       "test_command": "npx vitest run --exclude 'tests/holdout/**'",
       "lint_command": "",
       "typecheck_command": "npx tsc --noEmit",

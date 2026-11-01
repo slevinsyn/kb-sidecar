@@ -1,0 +1,82 @@
+== core-rust (run 1): cargo test --quiet -> exit 101
+
+warning: function `test_AC_01_09_kb_error_from_io_error_and_display` should have a snake case name
+    --> tests/phase01_claude_code.rs:1217:4
+     |
+1217 | fn test_AC_01_09_kb_error_from_io_error_and_display() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_09_kb_error_from_io_error_and_display`
+
+warning: function `test_AC_01_10_parse_transcript_uses_file_stem_when_no_session_id` should have a snake case name
+    --> tests/phase01_claude_code.rs:1239:4
+     |
+1239 | fn test_AC_01_10_parse_transcript_uses_file_stem_when_no_session_id() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_10_parse_transcript_uses_file_stem_when_no_session_id`
+
+warning: function `test_AC_01_10_session_id_in_records_beats_file_stem` should have a snake case name
+    --> tests/phase01_claude_code.rs:1256:4
+     |
+1256 | fn test_AC_01_10_session_id_in_records_beats_file_stem() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_10_session_id_in_records_beats_file_stem`
+
+warning: function `test_AC_01_10_parse_transcript_str_uses_fallback_id_when_no_session_id` should have a snake case name
+    --> tests/phase01_claude_code.rs:1267:4
+     |
+1267 | fn test_AC_01_10_parse_transcript_str_uses_fallback_id_when_no_session_id() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_10_parse_transcript_str_uses_fallback_id_when_no_session_id`
+
+warning: function `test_AC_01_10_first_record_with_session_id_wins` should have a snake case name
+    --> tests/phase01_claude_code.rs:1277:4
+     |
+1277 | fn test_AC_01_10_first_record_with_session_id_wins() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_10_first_record_with_session_id_wins`
+
+warning: function `test_AC_01_11_discover_returns_project_level_jsonl_sorted` should have a snake case name
+    --> tests/phase01_claude_code.rs:1296:4
+     |
+1296 | fn test_AC_01_11_discover_returns_project_level_jsonl_sorted() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_11_discover_returns_project_level_jsonl_sorted`
+
+warning: function `test_AC_01_11_discover_ignores_subagents_deeper_files_other_extensions_and_top_level` should have a snake case name
+    --> tests/phase01_claude_code.rs:1319:4
+     |
+1319 | fn test_AC_01_11_discover_ignores_subagents_deeper_files_other_extensions_and_top_level() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_11_discover_ignores_subagents_deeper_files_other_extensions_and_top_level`
+
+warning: function `test_AC_01_11_discover_missing_dir_is_empty` should have a snake case name
+    --> tests/phase01_claude_code.rs:1337:4
+     |
+1337 | fn test_AC_01_11_discover_missing_dir_is_empty() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_11_discover_missing_dir_is_empty`
+
+warning: function `test_AC_01_11_discover_empty_dir_is_empty` should have a snake case name
+    --> tests/phase01_claude_code.rs:1344:4
+     |
+1344 | fn test_AC_01_11_discover_empty_dir_is_empty() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_11_discover_empty_dir_is_empty`
+
+warning: function `test_AC_01_11_discovered_files_can_be_parsed` should have a snake case name
+    --> tests/phase01_claude_code.rs:1350:4
+     |
+1350 | fn test_AC_01_11_discovered_files_can_be_parsed() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_11_discovered_files_can_be_parsed`
+
+warning: function `test_AC_01_12_parsed_session_round_trips_through_serde_json` should have a snake case name
+    --> tests/phase01_claude_code.rs:1368:4
+     |
+1368 | fn test_AC_01_12_parsed_session_round_trips_through_serde_json() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_12_parsed_session_round_trips_through_serde_json`
+
+warning: function `test_AC_01_12_hand_built_session_with_every_block_variant_round_trips` should have a snake case name
+    --> tests/phase01_claude_code.rs:1376:4
+     |
+1376 | fn test_AC_01_12_hand_built_session_with_every_block_variant_round_trips() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_12_hand_built_session_with_every_block_variant_round_trips`
+
+warning: function `test_AC_01_12_none_fields_and_enums_round_trip` should have a snake case name
+    --> tests/phase01_claude_code.rs:1429:4
+     |
+1429 | fn test_AC_01_12_none_fields_and_enums_round_trip() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_12_none_fields_and_enums_round_trip`
+
+error: test failed, to rerun pass `--test phase01_claude_code`
+== explorer-javascript: no test files yet - skipped until its first test exists

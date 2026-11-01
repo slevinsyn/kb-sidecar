@@ -91,7 +91,6 @@
       "Write",
       "MultiEdit",
       "NotebookEdit",
-      "Bash(python3 .phased/bin/*)",
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(git status*)",
@@ -121,7 +120,8 @@
       "Bash(npx vitest run)",
       "Bash(npx vitest run *)",
       "Bash(npx tsc)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(python3 .phased/bin/*)"
     ],
     "deny": [
       "Bash(git push)",

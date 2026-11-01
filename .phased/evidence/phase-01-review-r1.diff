@@ -1,0 +1,2996 @@
+diff --git a/.claude/settings.json b/.claude/settings.json
+index 9bb25a8..a348c71 100644
+--- a/.claude/settings.json
++++ b/.claude/settings.json
+@@ -91,7 +91,6 @@
+       "Write",
+       "MultiEdit",
+       "NotebookEdit",
+-      "Bash(python3 .phased/bin/*)",
+       "Bash(git add *)",
+       "Bash(git commit *)",
+       "Bash(git status*)",
+@@ -121,7 +120,8 @@
+       "Bash(npx vitest run)",
+       "Bash(npx vitest run *)",
+       "Bash(npx tsc)",
+-      "Bash(npx tsc *)"
++      "Bash(npx tsc *)",
++      "Bash(python3 .phased/bin/*)"
+     ],
+     "deny": [
+       "Bash(git push)",
+diff --git a/changes/2026-11-01-conversation-kb/change.md b/changes/2026-11-01-conversation-kb/change.md
+new file mode 100644
+index 0000000..3e8ad7a
+--- /dev/null
++++ b/changes/2026-11-01-conversation-kb/change.md
+@@ -0,0 +1,85 @@
++# Change: Conversation knowledge base (session nodes, training dataset, 3D graph)
++
++Date: 2026-11-01 · Requested by: Sarthak Bhatt · Status: draft
++Client: Internal
++Linked: none
++
++## Why
++Conversations with Claude (Claude Code sessions and claude.ai chats) disappear into raw log
++files that nobody can browse, search or reuse. Sarthak wants one knowledge base that, for every
++conversation, (1) creates a readable node for the session, (2) turns it into an LLM-trainable
++dataset record, and (3) adds it to a 3D knowledge graph that can be explored visually.
++
++## Must work
++- A Claude Code transcript (`~/.claude/projects/<proj>/<session>.jsonl`) with 3 user prompts,
++  assistant replies, a `Read` tool call and its result -> one session with title, project
++  (last folder of `cwd`), branch, start/end time, models, 3 turns, tools `[Read]`, the file
++  that was read.
++- Assistant replies split over several jsonl lines with the same message id -> one assistant
++  message.
++- Sidechain lines, `isMeta` lines, `<system-reminder>` text, blank and broken JSON lines ->
++  ignored, no crash.
++- A transcript with no user/assistant lines -> skipped, not an error for the whole run.
++- A claude.ai export as a folder, `conversations.json` or `.zip` -> one session per
++  conversation (empty conversations skipped).
++- Every session -> a Markdown node file with JSON-valued frontmatter (id, title, project,
++  branch, dates, models, turns, tools, files, PRs, topics), `[[project/..]]` and
++  `[[topic/..]]` links, and the full conversation.
++- Every session -> one JSONL line in OpenAI chat format: `user` / `assistant` (with
++  `tool_calls` and `reasoning_content`) / `tool` messages, long tool output truncated, ending
++  on an assistant turn.
++- `alice@example.com`, `sk-ant-…`, `AKIA…`, `ghp_…`, JWTs, `password=…` in any conversation ->
++  `[EMAIL]` / `[SECRET]` in the dataset (redaction on by default, `--no-redact` turns it off).
++- Offline topic keywords (TF-IDF over all sessions): a session that talks mostly about
++  "kubernetes" and "ingress" gets those as topics; stop words never become topics.
++- `graph.json` with nodes `session`, `project`, `topic`, `file`, `tool` and links
++  session->project/topic/file/tool, deterministic order, no dangling links.
++- `kb ingest` run twice with no changes -> second run reports everything unchanged and
++  produces identical output files; a changed transcript is re-parsed; a renamed title leaves
++  no stale node file.
++- `kb hook` given the Claude Code SessionEnd JSON on stdin -> ingests that transcript and
++  updates nodes, dataset and graph; it always exits 0 so it can never break Claude Code.
++- `kb install-hook --settings <file>` -> adds the SessionEnd hook, keeps every other setting,
++  running it twice adds nothing; invalid JSON -> exit 1 and the file is untouched.
++- Explorer (`npm run dev` in `explorer/`) -> 3D force graph of `graph.json`, colour per node
++  type, click a node for details, search box, type filters, neighbours highlighted.
++- Explorer given malformed graph JSON -> clear "Invalid graph" error, not a blank page.
++
++## Steps
++| Phase | What it delivers | Size |
++|---|---|---|
++| 01 | Session model + Claude Code transcript parser | M |
++| 02 | claude.ai export parser (folder / json / zip) | S |
++| 03 | Topic keywords (TF-IDF) + Markdown session nodes | M |
++| 04 | Training dataset records (OpenAI chat JSONL) + secret/email redaction | M |
++| 05 | Knowledge graph builder (`graph.json`) | S |
++| 06 | `kb` command: incremental ingest, SessionEnd hook, hook installer | M |
++| 07 | 3D explorer web app (search, filters, details) | M |
++
++## Risk: High
++It reads and stores private conversations (personal data) and writes a Claude Code settings
++file; everything stays on this computer and nothing is sent anywhere.
++
++## Undo
++Revert the phase commits. Delete the output folder (`~/claude-kb` or `$KB_HOME`). If the hook
++was installed, remove the `kb hook` entry under `hooks.SessionEnd` in the settings file.
++
++## Not in this change
++- Calling any LLM (topics are computed offline).
++- Uploading the dataset anywhere or starting a fine-tune.
++- Installing the hook into the real `~/.claude/settings.json` (the person runs
++  `kb install-hook` themselves when ready).
++- Other chat sources (ChatGPT, Cursor) and subagent transcripts.
++- Python: not needed; Rust core + TypeScript/Node explorer cover everything.
++
++## Assumptions
++- Output goes to `$KB_HOME`, else `~/claude-kb` (outside the repo; `kb-data/` is git-ignored too).
++- Dataset format is OpenAI-style chat `messages` JSONL, with thinking as `reasoning_content`;
++  tool results truncated to 2000 characters by default.
++- Redaction is on by default.
++- Topics: top 8 TF-IDF keywords per session.
++- Images inside conversations are replaced by `[image]`.
++- Subagent transcripts (`…/subagents/`) are skipped; only the main session is a node.
++- Unknown record types in transcripts are ignored, so newer Claude Code versions keep working.
++
++## Still open
+diff --git a/core/Cargo.lock b/core/Cargo.lock
+index e68bbdc..074d314 100644
+--- a/core/Cargo.lock
++++ b/core/Cargo.lock
+@@ -2,6 +2,211 @@
+ # It is not intended for manual editing.
+ version = 4
+ 
++[[package]]
++name = "bitflags"
++version = "2.13.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "3ded4057c258ba199e2d26386d3af3780957ecaee6c4ef4041c6b4b8b97c0b06"
++
++[[package]]
++name = "cfg-if"
++version = "1.0.5"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "4e7648175b45a9a48536d676f68d918270699102aa8dab5496df06904c914600"
++
++[[package]]
++name = "errno"
++version = "0.3.14"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
++dependencies = [
++ "libc",
++ "windows-sys",
++]
++
++[[package]]
++name = "fastrand"
++version = "2.5.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
++
++[[package]]
++name = "getrandom"
++version = "0.4.3"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "300e883d756b2e4ec94e02791f39b04b522276138852cfc41d9fb7e904106099"
++dependencies = [
++ "cfg-if",
++ "libc",
++ "r-efi",
++]
++
++[[package]]
++name = "itoa"
++version = "1.0.18"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
++
+ [[package]]
+ name = "kb-core"
+ version = "0.1.0"
++dependencies = [
++ "serde",
++ "serde_json",
++ "tempfile",
++]
++
++[[package]]
++name = "libc"
++version = "0.2.191"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "65cd87c9a6d60536580b316ad985726104730a5151c99845f2490428ef91240a"
++
++[[package]]
++name = "linux-raw-sys"
++version = "0.12.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53"
++
++[[package]]
++name = "memchr"
++version = "2.8.3"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
++
++[[package]]
++name = "once_cell"
++version = "1.21.4"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
++
++[[package]]
++name = "proc-macro2"
++version = "1.0.107"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "985e7ec9bb745e6ce6535b544d84d6cd6f7ad8bd711c398938ae983b91a766d9"
++dependencies = [
++ "unicode-ident",
++]
++
++[[package]]
++name = "quote"
++version = "1.0.47"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "1fbf4db142a473a8d80c26bbf18454ed458bf8d26c8219c331daecfdbd079001"
++dependencies = [
++ "proc-macro2",
++]
++
++[[package]]
++name = "r-efi"
++version = "6.0.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
++
++[[package]]
++name = "rustix"
++version = "1.1.6"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "e5e76742e5294153d4dde1207dbec5bdd81eef6fabdc0d2118babadabfd858aa"
++dependencies = [
++ "bitflags",
++ "errno",
++ "libc",
++ "linux-raw-sys",
++ "windows-sys",
++]
++
++[[package]]
++name = "serde"
++version = "1.0.229"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "4148590afebada386688f18773da617792bf2ef03ffc1e4cbd2b1d45b023e0ba"
++dependencies = [
++ "serde_core",
++ "serde_derive",
++]
++
++[[package]]
++name = "serde_core"
++version = "1.0.229"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "67dca2c9c51e58a4791a4b1ed58308b39c64224d349a935ab5039aa360942a48"
++dependencies = [
++ "serde_derive",
++]
++
++[[package]]
++name = "serde_derive"
++version = "1.0.229"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "e7a5d71263a5a7d47b41f6b3f06ba276f10cc18b0931f1799f710578e2309348"
++dependencies = [
++ "proc-macro2",
++ "quote",
++ "syn",
++]
++
++[[package]]
++name = "serde_json"
++version = "1.0.154"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "e7e9cc8b1b85264074fbcc02a88680c4096b1e47df8f739dceb03bf482f04bd6"
++dependencies = [
++ "itoa",
++ "memchr",
++ "serde",
++ "serde_core",
++ "zmij",
++]
++
++[[package]]
++name = "syn"
++version = "3.0.9"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "d78c8dee4c7bf0e14673097256fed6142ce9d3b85a408189d07482442145823b"
++dependencies = [
++ "proc-macro2",
++ "quote",
++ "unicode-ident",
++]
++
++[[package]]
++name = "tempfile"
++version = "3.27.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
++dependencies = [
++ "fastrand",
++ "getrandom",
++ "once_cell",
++ "rustix",
++ "windows-sys",
++]
++
++[[package]]
++name = "unicode-ident"
++version = "1.0.27"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "a2c754d6c33795a1c324727428e5a7dedb5b06195f9890bdbcba760d3e246563"
++
++[[package]]
++name = "windows-link"
++version = "0.2.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5"
++
++[[package]]
++name = "windows-sys"
++version = "0.61.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "ae137229bcbd6cdf0f7b80a31df61766145077ddf49416a728b02cb3921ff3fc"
++dependencies = [
++ "windows-link",
++]
++
++[[package]]
++name = "zmij"
++version = "1.0.23"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
+diff --git a/core/Cargo.toml b/core/Cargo.toml
+index b89a3d6..7fecd6b 100644
+--- a/core/Cargo.toml
++++ b/core/Cargo.toml
+@@ -13,3 +13,9 @@ name = "kb"
+ path = "src/main.rs"
+ 
+ [dependencies]
++serde = { version = "1", features = ["derive"] }
++serde_json = "1"
++
++[dev-dependencies]
++tempfile = "3"
++serde_json = "1"
+diff --git a/core/src/claude_code.rs b/core/src/claude_code.rs
+new file mode 100644
+index 0000000..1dbb47b
+--- /dev/null
++++ b/core/src/claude_code.rs
+@@ -0,0 +1,366 @@
++//! Claude Code transcript parser.
++
++use std::collections::HashMap;
++use std::path::{Path, PathBuf};
++
++use serde_json::Value;
++
++use crate::error::KbError;
++use crate::model::{Block, Message, Role, Session, Source};
++
++const OPEN_TAG: &str = "<system-reminder>";
++const CLOSE_TAG: &str = "</system-reminder>";
++const TITLE_MAX_CHARS: usize = 80;
++
++/// Remove every `<system-reminder>...</system-reminder>` span and trim the rest.
++fn strip_system_reminders(text: &str) -> String {
++    let mut out = String::with_capacity(text.len());
++    let mut rest = text;
++    while let Some(start) = rest.find(OPEN_TAG) {
++        let after_open = &rest[start + OPEN_TAG.len()..];
++        match after_open.find(CLOSE_TAG) {
++            Some(end) => {
++                out.push_str(&rest[..start]);
++                rest = &after_open[end + CLOSE_TAG.len()..];
++            }
++            None => break,
++        }
++    }
++    out.push_str(rest);
++    out.trim().to_string()
++}
++
++/// Push a user text block after cleaning it; empty results are dropped.
++fn push_user_text(blocks: &mut Vec<Block>, text: &str) {
++    let cleaned = strip_system_reminders(text);
++    if !cleaned.is_empty() {
++        blocks.push(Block::Text(cleaned));
++    }
++}
++
++/// Flatten the `content` of a tool result into one string.
++fn tool_result_content(content: Option<&Value>) -> String {
++    match content {
++        Some(Value::String(s)) => s.clone(),
++        Some(Value::Array(items)) => items
++            .iter()
++            .filter_map(|item| match item.get("type").and_then(Value::as_str) {
++                Some("text") => item.get("text").and_then(Value::as_str).map(str::to_string),
++                Some("image") => Some("[image]".to_string()),
++                _ => None,
++            })
++            .collect::<Vec<_>>()
++            .join("\n"),
++        _ => String::new(),
++    }
++}
++
++fn user_blocks(content: Option<&Value>) -> Vec<Block> {
++    let mut blocks = Vec::new();
++    match content {
++        Some(Value::String(s)) => push_user_text(&mut blocks, s),
++        Some(Value::Array(items)) => {
++            for item in items {
++                match item.get("type").and_then(Value::as_str) {
++                    Some("text") => {
++                        if let Some(t) = item.get("text").and_then(Value::as_str) {
++                            push_user_text(&mut blocks, t);
++                        }
++                    }
++                    Some("image") => blocks.push(Block::Text("[image]".to_string())),
++                    Some("tool_result") => blocks.push(Block::ToolResult {
++                        tool_use_id: item
++                            .get("tool_use_id")
++                            .and_then(Value::as_str)
++                            .unwrap_or("")
++                            .to_string(),
++                        content: tool_result_content(item.get("content")),
++                        is_error: item
++                            .get("is_error")
++                            .and_then(Value::as_bool)
++                            .unwrap_or(false),
++                    }),
++                    _ => {}
++                }
++            }
++        }
++        _ => {}
++    }
++    blocks
++}
++
++fn assistant_blocks(content: Option<&Value>) -> Vec<Block> {
++    let mut blocks = Vec::new();
++    match content {
++        Some(Value::String(s)) => blocks.push(Block::Text(s.clone())),
++        Some(Value::Array(items)) => {
++            for item in items {
++                match item.get("type").and_then(Value::as_str) {
++                    Some("text") => {
++                        if let Some(t) = item.get("text").and_then(Value::as_str) {
++                            blocks.push(Block::Text(t.to_string()));
++                        }
++                    }
++                    Some("thinking") => {
++                        if let Some(t) = item.get("thinking").and_then(Value::as_str) {
++                            if !t.trim().is_empty() {
++                                blocks.push(Block::Thinking(t.to_string()));
++                            }
++                        }
++                    }
++                    Some("tool_use") => blocks.push(Block::ToolUse {
++                        id: item
++                            .get("id")
++                            .and_then(Value::as_str)
++                            .unwrap_or("")
++                            .to_string(),
++                        name: item
++                            .get("name")
++                            .and_then(Value::as_str)
++                            .unwrap_or("")
++                            .to_string(),
++                        input: item.get("input").cloned().unwrap_or(Value::Null),
++                    }),
++                    _ => {}
++                }
++            }
++        }
++        _ => {}
++    }
++    blocks
++}
++
++fn non_empty_str<'a>(value: &'a Value, key: &str) -> Option<&'a str> {
++    value
++        .get(key)
++        .and_then(Value::as_str)
++        .filter(|s| !s.is_empty())
++}
++
++fn flag_set(value: &Value, key: &str) -> bool {
++    value.get(key).and_then(Value::as_bool).unwrap_or(false)
++}
++
++fn last_path_component(path: &str) -> Option<String> {
++    path.trim_end_matches(['/', '\\'])
++        .rsplit(['/', '\\'])
++        .next()
++        .filter(|s| !s.is_empty())
++        .map(str::to_string)
++}
++
++fn push_distinct(list: &mut Vec<String>, value: &str) {
++    if !list.iter().any(|v| v == value) {
++        list.push(value.to_string());
++    }
++}
++
++fn derive_title(
++    custom_title: Option<String>,
++    summary: Option<String>,
++    messages: &[Message],
++) -> String {
++    if let Some(t) = custom_title {
++        return t;
++    }
++    if let Some(s) = summary {
++        return s;
++    }
++    let first_text = messages
++        .iter()
++        .filter(|m| m.role == Role::User)
++        .flat_map(|m| m.blocks.iter())
++        .find_map(|b| match b {
++            Block::Text(t) => Some(t),
++            _ => None,
++        });
++    if let Some(text) = first_text {
++        let collapsed = text.split_whitespace().collect::<Vec<_>>().join(" ");
++        let cut: String = collapsed.chars().take(TITLE_MAX_CHARS).collect();
++        let cut = cut.trim().to_string();
++        if !cut.is_empty() {
++            return cut;
++        }
++    }
++    "Untitled".to_string()
++}
++
++/// Parse the text of one transcript (JSON lines) into a session.
++pub fn parse_transcript_str(text: &str, fallback_id: &str) -> Result<Session, KbError> {
++    let mut session_id: Option<String> = None;
++    let mut cwd: Option<String> = None;
++    let mut git_branch: Option<String> = None;
++    let mut prs: Vec<String> = Vec::new();
++    let mut custom_title: Option<String> = None;
++    let mut summary: Option<String> = None;
++
++    // Messages in file order, each with the models of the records that built it.
++    let mut entries: Vec<(Message, Vec<String>)> = Vec::new();
++    let mut by_msg_id: HashMap<String, usize> = HashMap::new();
++
++    for line in text.lines() {
++        let line = line.trim();
++        if line.is_empty() {
++            continue;
++        }
++        let Ok(record) = serde_json::from_str::<Value>(line) else {
++            continue;
++        };
++        if !record.is_object() {
++            continue;
++        }
++        let Some(kind) = record.get("type").and_then(Value::as_str) else {
++            continue;
++        };
++
++        match kind {
++            "custom-title" => {
++                if let Some(t) = non_empty_str(&record, "customTitle") {
++                    custom_title = Some(t.to_string());
++                }
++            }
++            "summary" => {
++                if let Some(s) = non_empty_str(&record, "summary") {
++                    summary = Some(s.to_string());
++                }
++            }
++            "pr-link" => {
++                if let Some(url) =
++                    non_empty_str(&record, "prUrl").or_else(|| non_empty_str(&record, "url"))
++                {
++                    push_distinct(&mut prs, url);
++                }
++            }
++            "user" | "assistant" => {
++                if flag_set(&record, "isSidechain") || flag_set(&record, "isMeta") {
++                    continue;
++                }
++                let message = record.get("message");
++                let model = message.and_then(|m| non_empty_str(m, "model"));
++                let is_assistant = kind == "assistant";
++                if is_assistant && model == Some("<synthetic>") {
++                    continue;
++                }
++
++                if session_id.is_none() {
++                    session_id = non_empty_str(&record, "sessionId").map(str::to_string);
++                }
++                if cwd.is_none() {
++                    cwd = non_empty_str(&record, "cwd").map(str::to_string);
++                }
++                if git_branch.is_none() {
++                    git_branch = non_empty_str(&record, "gitBranch").map(str::to_string);
++                }
++
++                let content = message.and_then(|m| m.get("content"));
++                let record_models: Vec<String> = model.map(str::to_string).into_iter().collect();
++                let (role, blocks, msg_id) = if is_assistant {
++                    (
++                        Role::Assistant,
++                        assistant_blocks(content),
++                        message
++                            .and_then(|m| non_empty_str(m, "id"))
++                            .map(str::to_string),
++                    )
++                } else {
++                    (Role::User, user_blocks(content), None)
++                };
++
++                if let Some(id) = &msg_id {
++                    if let Some(&idx) = by_msg_id.get(id) {
++                        entries[idx].0.blocks.extend(blocks);
++                        for m in &record_models {
++                            push_distinct(&mut entries[idx].1, m);
++                        }
++                        continue;
++                    }
++                    by_msg_id.insert(id.clone(), entries.len());
++                }
++
++                let timestamp = non_empty_str(&record, "timestamp").map(str::to_string);
++                entries.push((
++                    Message {
++                        role,
++                        timestamp,
++                        blocks,
++                    },
++                    record_models,
++                ));
++            }
++            _ => {}
++        }
++    }
++
++    // Messages left without blocks are dropped, and so are their models.
++    let mut messages: Vec<Message> = Vec::new();
++    let mut models: Vec<String> = Vec::new();
++    for (message, entry_models) in entries {
++        if message.blocks.is_empty() {
++            continue;
++        }
++        for m in &entry_models {
++            push_distinct(&mut models, m);
++        }
++        messages.push(message);
++    }
++
++    if messages.is_empty() {
++        return Err(KbError::Empty(fallback_id.to_string()));
++    }
++
++    let started_at = messages.iter().filter_map(|m| m.timestamp.clone()).min();
++    let ended_at = messages.iter().filter_map(|m| m.timestamp.clone()).max();
++    let project = cwd.as_deref().and_then(last_path_component);
++    let title = derive_title(custom_title, summary, &messages);
++
++    Ok(Session {
++        id: session_id.unwrap_or_else(|| fallback_id.to_string()),
++        source: Source::ClaudeCode,
++        title,
++        project,
++        cwd,
++        git_branch,
++        started_at,
++        ended_at,
++        models,
++        messages,
++        prs,
++    })
++}
++
++/// Parse one transcript file; the file stem is the fallback id.
++pub fn parse_transcript(path: &Path) -> Result<Session, KbError> {
++    let bytes = std::fs::read(path)?;
++    let text = String::from_utf8_lossy(&bytes);
++    let fallback_id = path
++        .file_stem()
++        .map(|s| s.to_string_lossy().into_owned())
++        .unwrap_or_default();
++    parse_transcript_str(&text, &fallback_id)
++}
++
++/// List `dir/<project>/*.jsonl` files, sorted by path.
++pub fn discover(projects_dir: &Path) -> Vec<PathBuf> {
++    let mut found = Vec::new();
++    let Ok(projects) = std::fs::read_dir(projects_dir) else {
++        return found;
++    };
++    for project in projects.flatten() {
++        let project_path = project.path();
++        if !project_path.is_dir() {
++            continue;
++        }
++        let Ok(files) = std::fs::read_dir(&project_path) else {
++            continue;
++        };
++        for file in files.flatten() {
++            let path = file.path();
++            let is_jsonl = path.extension().is_some_and(|e| e == "jsonl");
++            if is_jsonl && path.is_file() {
++                found.push(path);
++            }
++        }
++    }
++    found.sort();
++    found
++}
+diff --git a/core/src/error.rs b/core/src/error.rs
+new file mode 100644
+index 0000000..5554068
+--- /dev/null
++++ b/core/src/error.rs
+@@ -0,0 +1,42 @@
++//! Error type shared by the whole crate.
++
++use std::fmt;
++
++/// Errors produced by the knowledge base core.
++#[derive(Debug)]
++pub enum KbError {
++    /// A file could not be read or written.
++    Io(std::io::Error),
++    /// The input held no usable messages (carries the session id).
++    Empty(String),
++    /// The input could not be parsed.
++    Parse(String),
++    /// The settings are broken.
++    Settings(String),
++}
++
++impl fmt::Display for KbError {
++    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        match self {
++            KbError::Io(e) => write!(f, "I/O error: {e}"),
++            KbError::Empty(id) => write!(f, "no messages in session {id}"),
++            KbError::Parse(msg) => write!(f, "parse error: {msg}"),
++            KbError::Settings(msg) => write!(f, "settings error: {msg}"),
++        }
++    }
++}
++
++impl std::error::Error for KbError {
++    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
++        match self {
++            KbError::Io(e) => Some(e),
++            _ => None,
++        }
++    }
++}
++
++impl From<std::io::Error> for KbError {
++    fn from(e: std::io::Error) -> Self {
++        KbError::Io(e)
++    }
++}
+diff --git a/core/src/lib.rs b/core/src/lib.rs
+index 4213623..21643f7 100644
+--- a/core/src/lib.rs
++++ b/core/src/lib.rs
+@@ -1 +1,8 @@
+ //! Conversation knowledge base core.
++
++pub mod claude_code;
++pub mod error;
++pub mod model;
++
++pub use error::KbError;
++pub use model::{Block, Message, Role, Session, Source};
+diff --git a/core/src/model.rs b/core/src/model.rs
+new file mode 100644
+index 0000000..07fad89
+--- /dev/null
++++ b/core/src/model.rs
+@@ -0,0 +1,111 @@
++//! Shared data model: sessions, messages and blocks.
++
++use std::collections::BTreeSet;
++
++use serde::{Deserialize, Serialize};
++
++/// Where a session came from.
++#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
++pub enum Source {
++    ClaudeCode,
++    ClaudeAi,
++}
++
++impl Source {
++    /// Stable string form used in output files.
++    pub fn as_str(&self) -> &'static str {
++        match self {
++            Source::ClaudeCode => "claude-code",
++            Source::ClaudeAi => "claude-ai",
++        }
++    }
++}
++
++/// Who wrote a message.
++#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
++pub enum Role {
++    User,
++    Assistant,
++}
++
++/// One content block of a message.
++#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
++pub enum Block {
++    Text(String),
++    Thinking(String),
++    ToolUse {
++        id: String,
++        name: String,
++        input: serde_json::Value,
++    },
++    ToolResult {
++        tool_use_id: String,
++        content: String,
++        is_error: bool,
++    },
++}
++
++/// One message of a session.
++#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
++pub struct Message {
++    pub role: Role,
++    pub timestamp: Option<String>,
++    pub blocks: Vec<Block>,
++}
++
++/// One conversation.
++#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
++pub struct Session {
++    pub id: String,
++    pub source: Source,
++    pub title: String,
++    pub project: Option<String>,
++    pub cwd: Option<String>,
++    pub git_branch: Option<String>,
++    pub started_at: Option<String>,
++    pub ended_at: Option<String>,
++    pub models: Vec<String>,
++    pub messages: Vec<Message>,
++    pub prs: Vec<String>,
++}
++
++impl Session {
++    /// Sorted, de-duplicated names of all tools called in the session.
++    pub fn tools_used(&self) -> Vec<String> {
++        let names: BTreeSet<String> = self
++            .messages
++            .iter()
++            .flat_map(|m| m.blocks.iter())
++            .filter_map(|b| match b {
++                Block::ToolUse { name, .. } => Some(name.clone()),
++                _ => None,
++            })
++            .collect();
++        names.into_iter().collect()
++    }
++
++    /// Sorted, de-duplicated file paths named in tool inputs.
++    pub fn files_touched(&self) -> Vec<String> {
++        let mut files = BTreeSet::new();
++        for block in self.messages.iter().flat_map(|m| m.blocks.iter()) {
++            if let Block::ToolUse { input, .. } = block {
++                for key in ["file_path", "path", "notebook_path"] {
++                    if let Some(path) = input.get(key).and_then(serde_json::Value::as_str) {
++                        files.insert(path.to_string());
++                    }
++                }
++            }
++        }
++        files.into_iter().collect()
++    }
++
++    /// Number of user messages that contain at least one text block.
++    pub fn turn_count(&self) -> usize {
++        self.messages
++            .iter()
++            .filter(|m| {
++                m.role == Role::User && m.blocks.iter().any(|b| matches!(b, Block::Text(_)))
++            })
++            .count()
++    }
++}
+diff --git a/core/tests/phase01_claude_code.rs b/core/tests/phase01_claude_code.rs
+new file mode 100644
+index 0000000..9da630d
+--- /dev/null
++++ b/core/tests/phase01_claude_code.rs
+@@ -0,0 +1,1454 @@
++//! Phase 01 tests: session model + Claude Code transcript parser.
++//!
++//! All fixtures are built in memory or in a `tempfile::TempDir`; the real `~/.claude` is never read.
++
++use std::fs;
++use std::path::Path;
++
++use kb_core::claude_code::{discover, parse_transcript, parse_transcript_str};
++use kb_core::{Block, KbError, Message, Role, Session, Source};
++use serde_json::{json, Value};
++
++// ---------------------------------------------------------------------------------------------
++// Fixture helpers
++// ---------------------------------------------------------------------------------------------
++
++fn join(records: Vec<Value>) -> String {
++    records
++        .iter()
++        .map(|r| r.to_string())
++        .collect::<Vec<_>>()
++        .join("\n")
++}
++
++fn user_rec(text: &str, ts: &str) -> Value {
++    json!({
++        "type": "user",
++        "sessionId": "s1",
++        "cwd": "/home/a/proj",
++        "gitBranch": "main",
++        "timestamp": ts,
++        "isSidechain": false,
++        "message": {"role": "user", "content": text}
++    })
++}
++
++fn user_blocks(content: Value, ts: &str) -> Value {
++    json!({
++        "type": "user",
++        "sessionId": "s1",
++        "timestamp": ts,
++        "message": {"role": "user", "content": content}
++    })
++}
++
++fn asst_rec(id: Option<&str>, model: &str, ts: &str, content: Value) -> Value {
++    let mut message = json!({"role": "assistant", "model": model, "content": content});
++    if let Some(id) = id {
++        message["id"] = json!(id);
++    }
++    json!({
++        "type": "assistant",
++        "sessionId": "s1",
++        "timestamp": ts,
++        "message": message
++    })
++}
++
++fn text(s: &str) -> Block {
++    Block::Text(s.to_string())
++}
++
++fn parse(records: Vec<Value>) -> Session {
++    parse_transcript_str(&join(records), "fallback").expect("transcript should parse")
++}
++
++fn expect_empty(result: Result<Session, KbError>, expected_id: &str) {
++    match result {
++        Err(KbError::Empty(id)) => assert_eq!(id, expected_id),
++        other => panic!("expected Err(KbError::Empty({expected_id:?})), got {other:?}"),
++    }
++}
++
++fn tool_use_msg(name: &str, input: Value) -> Message {
++    Message {
++        role: Role::Assistant,
++        timestamp: None,
++        blocks: vec![Block::ToolUse {
++            id: format!("id_{name}"),
++            name: name.to_string(),
++            input,
++        }],
++    }
++}
++
++fn bare_session(messages: Vec<Message>) -> Session {
++    Session {
++        id: "x".to_string(),
++        source: Source::ClaudeCode,
++        title: "t".to_string(),
++        project: None,
++        cwd: None,
++        git_branch: None,
++        started_at: None,
++        ended_at: None,
++        models: vec![],
++        messages,
++        prs: vec![],
++    }
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-01-01: a typical session
++// ---------------------------------------------------------------------------------------------
++
++fn typical_transcript() -> String {
++    join(vec![
++        user_rec("first prompt", "2026-10-01T10:00:00.000Z"),
++        asst_rec(
++            Some("msg_1"),
++            "claude-opus-5-5",
++            "2026-10-01T10:00:05.000Z",
++            json!([
++                {"type": "text", "text": "Let me look at the file."},
++                {"type": "tool_use", "id": "tu_1", "name": "Read",
++                 "input": {"file_path": "/home/a/proj/src/main.rs"}}
++            ]),
++        ),
++        user_blocks(
++            json!([{"type": "tool_result", "tool_use_id": "tu_1", "content": "fn main(){}", "is_error": false}]),
++            "2026-10-01T10:00:06.000Z",
++        ),
++        asst_rec(
++            Some("msg_2"),
++            "claude-opus-5-5",
++            "2026-10-01T10:00:07.000Z",
++            json!([{"type": "text", "text": "It is an empty main."}]),
++        ),
++        user_rec("second prompt", "2026-10-01T10:01:00.000Z"),
++        asst_rec(
++            Some("msg_3"),
++            "claude-opus-5-5",
++            "2026-10-01T10:01:05.000Z",
++            json!([{"type": "text", "text": "second answer"}]),
++        ),
++        user_rec("third prompt", "2026-10-01T10:02:00.000Z"),
++        asst_rec(
++            Some("msg_4"),
++            "claude-opus-5-5",
++            "2026-10-01T10:02:05.000Z",
++            json!([{"type": "text", "text": "third answer"}]),
++        ),
++    ])
++}
++
++#[test]
++fn test_AC_01_01_typical_session_metadata() {
++    let s = parse_transcript_str(&typical_transcript(), "fallback").unwrap();
++    assert_eq!(s.id, "s1");
++    assert_eq!(s.source, Source::ClaudeCode);
++    assert_eq!(s.cwd.as_deref(), Some("/home/a/proj"));
++    assert_eq!(s.project.as_deref(), Some("proj"));
++    assert_eq!(s.git_branch.as_deref(), Some("main"));
++    assert_eq!(s.title, "first prompt");
++}
++
++#[test]
++fn test_AC_01_01_typical_session_turns_tools_files() {
++    let s = parse_transcript_str(&typical_transcript(), "fallback").unwrap();
++    assert_eq!(s.turn_count(), 3);
++    assert_eq!(s.tools_used(), vec!["Read".to_string()]);
++    assert_eq!(
++        s.files_touched(),
++        vec!["/home/a/proj/src/main.rs".to_string()]
++    );
++}
++
++#[test]
++fn test_AC_01_01_typical_session_message_structure() {
++    let s = parse_transcript_str(&typical_transcript(), "fallback").unwrap();
++    let roles: Vec<Role> = s.messages.iter().map(|m| m.role).collect();
++    assert_eq!(
++        roles,
++        vec![
++            Role::User,
++            Role::Assistant,
++            Role::User,
++            Role::Assistant,
++            Role::User,
++            Role::Assistant,
++            Role::User,
++            Role::Assistant
++        ]
++    );
++    assert_eq!(s.messages[0].blocks, vec![text("first prompt")]);
++    assert_eq!(
++        s.messages[1].blocks,
++        vec![
++            text("Let me look at the file."),
++            Block::ToolUse {
++                id: "tu_1".to_string(),
++                name: "Read".to_string(),
++                input: json!({"file_path": "/home/a/proj/src/main.rs"}),
++            }
++        ]
++    );
++    assert_eq!(
++        s.messages[2].blocks,
++        vec![Block::ToolResult {
++            tool_use_id: "tu_1".to_string(),
++            content: "fn main(){}".to_string(),
++            is_error: false,
++        }]
++    );
++    assert_eq!(
++        s.messages[0].timestamp.as_deref(),
++        Some("2026-10-01T10:00:00.000Z")
++    );
++}
++
++#[test]
++fn test_AC_01_01_project_none_when_no_cwd() {
++    let s = parse(vec![json!({
++        "type": "user",
++        "sessionId": "s1",
++        "message": {"role": "user", "content": "hello"}
++    })]);
++    assert_eq!(s.cwd, None);
++    assert_eq!(s.project, None);
++    assert_eq!(s.git_branch, None);
++}
++
++#[test]
++fn test_AC_01_01_cwd_and_branch_are_first_non_empty() {
++    let s = parse(vec![
++        json!({"type": "user", "sessionId": "s1", "cwd": "", "gitBranch": "",
++               "message": {"role": "user", "content": "one"}}),
++        json!({"type": "assistant", "sessionId": "s1", "cwd": "/work/alpha", "gitBranch": "dev",
++               "message": {"id": "m1", "model": "m", "role": "assistant",
++                           "content": [{"type": "text", "text": "two"}]}}),
++        json!({"type": "user", "sessionId": "s1", "cwd": "/work/beta", "gitBranch": "other",
++               "message": {"role": "user", "content": "three"}}),
++    ]);
++    assert_eq!(s.cwd.as_deref(), Some("/work/alpha"));
++    assert_eq!(s.project.as_deref(), Some("alpha"));
++    assert_eq!(s.git_branch.as_deref(), Some("dev"));
++}
++
++#[test]
++fn test_AC_01_01_source_as_str() {
++    assert_eq!(Source::ClaudeCode.as_str(), "claude-code");
++    assert_eq!(Source::ClaudeAi.as_str(), "claude-ai");
++}
++
++#[test]
++fn test_AC_01_01_tools_used_sorted_and_deduplicated() {
++    let s = bare_session(vec![
++        tool_use_msg("Write", json!({})),
++        tool_use_msg("Bash", json!({})),
++        tool_use_msg("Read", json!({})),
++        tool_use_msg("Bash", json!({})),
++        tool_use_msg("Edit", json!({})),
++    ]);
++    assert_eq!(
++        s.tools_used(),
++        vec![
++            "Bash".to_string(),
++            "Edit".to_string(),
++            "Read".to_string(),
++            "Write".to_string()
++        ]
++    );
++}
++
++#[test]
++fn test_AC_01_01_tools_used_empty_without_tool_calls() {
++    let s = bare_session(vec![Message {
++        role: Role::Assistant,
++        timestamp: None,
++        blocks: vec![text("no tools here")],
++    }]);
++    assert!(s.tools_used().is_empty());
++}
++
++#[test]
++fn test_AC_01_01_files_touched_keys_sorted_dedup_and_non_strings_ignored() {
++    let s = bare_session(vec![
++        tool_use_msg("Read", json!({"file_path": "/z/last.rs"})),
++        tool_use_msg("Grep", json!({"path": "/a/dir"})),
++        tool_use_msg("NotebookEdit", json!({"notebook_path": "/m/nb.ipynb"})),
++        tool_use_msg("Edit", json!({"file_path": "/z/last.rs"})),
++        tool_use_msg("Read", json!({"file_path": 42})),
++        tool_use_msg("Read", json!({"path": null, "file_path": ["/x"]})),
++        tool_use_msg("Bash", json!({"command": "ls /not/a/file"})),
++    ]);
++    assert_eq!(
++        s.files_touched(),
++        vec![
++            "/a/dir".to_string(),
++            "/m/nb.ipynb".to_string(),
++            "/z/last.rs".to_string()
++        ]
++    );
++}
++
++#[test]
++fn test_AC_01_01_files_touched_ignores_tool_results_and_text() {
++    let s = bare_session(vec![
++        Message {
++            role: Role::User,
++            timestamp: None,
++            blocks: vec![
++                text("/home/user/mentioned.rs"),
++                Block::ToolResult {
++                    tool_use_id: "t".to_string(),
++                    content: "/home/user/result.rs".to_string(),
++                    is_error: false,
++                },
++            ],
++        },
++        tool_use_msg("Read", json!({"file_path": "/only/this.rs"})),
++    ]);
++    assert_eq!(s.files_touched(), vec!["/only/this.rs".to_string()]);
++}
++
++#[test]
++fn test_AC_01_01_turn_count_counts_only_user_messages_with_text() {
++    let s = bare_session(vec![
++        // user with text -> counts
++        Message {
++            role: Role::User,
++            timestamp: None,
++            blocks: vec![text("prompt one")],
++        },
++        // assistant text -> does not count
++        Message {
++            role: Role::Assistant,
++            timestamp: None,
++            blocks: vec![text("answer")],
++        },
++        // user with only a tool_result -> does not count
++        Message {
++            role: Role::User,
++            timestamp: None,
++            blocks: vec![Block::ToolResult {
++                tool_use_id: "t".to_string(),
++                content: "out".to_string(),
++                is_error: false,
++            }],
++        },
++        // user with tool_result and text -> counts once
++        Message {
++            role: Role::User,
++            timestamp: None,
++            blocks: vec![
++                Block::ToolResult {
++                    tool_use_id: "t".to_string(),
++                    content: "out".to_string(),
++                    is_error: false,
++                },
++                text("prompt two"),
++                text("more"),
++            ],
++        },
++    ]);
++    assert_eq!(s.turn_count(), 2);
++}
++
++#[test]
++fn test_AC_01_01_turn_count_zero_for_no_messages() {
++    assert_eq!(bare_session(vec![]).turn_count(), 0);
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-01-02: split assistant messages are merged
++// ---------------------------------------------------------------------------------------------
++
++#[test]
++fn test_AC_01_02_same_message_id_records_merge_in_order() {
++    let s = parse(vec![
++        user_rec("do it", "2026-10-01T10:00:00.000Z"),
++        asst_rec(
++            Some("msg_1"),
++            "claude-opus-5-5",
++            "2026-10-01T10:00:01.000Z",
++            json!([{"type": "thinking", "thinking": "plan the work"}]),
++        ),
++        asst_rec(
++            Some("msg_1"),
++            "claude-opus-5-5",
++            "2026-10-01T10:00:02.000Z",
++            json!([{"type": "text", "text": "here is the answer"}]),
++        ),
++        asst_rec(
++            Some("msg_1"),
++            "claude-opus-5-5",
++            "2026-10-01T10:00:03.000Z",
++            json!([{"type": "tool_use", "id": "tu_1", "name": "Read",
++                    "input": {"file_path": "/a/b.rs"}}]),
++        ),
++    ]);
++    assert_eq!(s.messages.len(), 2);
++    let m = &s.messages[1];
++    assert_eq!(m.role, Role::Assistant);
++    assert_eq!(
++        m.blocks,
++        vec![
++            Block::Thinking("plan the work".to_string()),
++            text("here is the answer"),
++            Block::ToolUse {
++                id: "tu_1".to_string(),
++                name: "Read".to_string(),
++                input: json!({"file_path": "/a/b.rs"}),
++            }
++        ]
++    );
++    // The merged message keeps the first record's timestamp.
++    assert_eq!(m.timestamp.as_deref(), Some("2026-10-01T10:00:01.000Z"));
++}
++
++#[test]
++fn test_AC_01_02_merge_into_first_even_with_records_in_between() {
++    let s = parse(vec![
++        asst_rec(
++            Some("msg_a"),
++            "m",
++            "2026-10-01T10:00:01.000Z",
++            json!([{"type": "text", "text": "part 1"}]),
++        ),
++        user_blocks(
++            json!([{"type": "tool_result", "tool_use_id": "tu_9", "content": "res"}]),
++            "2026-10-01T10:00:02.000Z",
++        ),
++        asst_rec(
++            Some("msg_a"),
++            "m",
++            "2026-10-01T10:00:03.000Z",
++            json!([{"type": "text", "text": "part 2"}]),
++        ),
++    ]);
++    assert_eq!(s.messages.len(), 2);
++    assert_eq!(s.messages[0].role, Role::Assistant);
++    assert_eq!(s.messages[0].blocks, vec![text("part 1"), text("part 2")]);
++    assert_eq!(s.messages[1].role, Role::User);
++}
++
++#[test]
++fn test_AC_01_02_different_ids_stay_separate() {
++    let s = parse(vec![
++        asst_rec(
++            Some("msg_a"),
++            "m",
++            "2026-10-01T10:00:01.000Z",
++            json!([{"type": "text", "text": "A"}]),
++        ),
++        asst_rec(
++            Some("msg_b"),
++            "m",
++            "2026-10-01T10:00:02.000Z",
++            json!([{"type": "text", "text": "B"}]),
++        ),
++    ]);
++    assert_eq!(s.messages.len(), 2);
++    assert_eq!(s.messages[0].blocks, vec![text("A")]);
++    assert_eq!(s.messages[1].blocks, vec![text("B")]);
++}
++
++#[test]
++fn test_AC_01_02_records_without_message_id_never_merge() {
++    let s = parse(vec![
++        asst_rec(
++            None,
++            "m",
++            "2026-10-01T10:00:01.000Z",
++            json!([{"type": "text", "text": "one"}]),
++        ),
++        asst_rec(
++            None,
++            "m",
++            "2026-10-01T10:00:02.000Z",
++            json!([{"type": "text", "text": "two"}]),
++        ),
++    ]);
++    assert_eq!(s.messages.len(), 2);
++    assert_eq!(s.messages[0].blocks, vec![text("one")]);
++    assert_eq!(s.messages[1].blocks, vec![text("two")]);
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-01-03: noise is ignored
++// ---------------------------------------------------------------------------------------------
++
++#[test]
++fn test_AC_01_03_noise_lines_are_ignored_without_error() {
++    let mut lines: Vec<String> = Vec::new();
++    lines.push(user_rec("keep this prompt", "2026-10-01T10:00:00.000Z").to_string());
++    lines.push(String::new());
++    lines.push("   ".to_string());
++    lines.push("{this is not json".to_string());
++    lines.push("[1,2,3]".to_string());
++    lines.push("42".to_string());
++    lines.push("\"just a string\"".to_string());
++    lines.push(
++        json!({"type": "user", "sessionId": "s1", "isSidechain": true, "timestamp": "2026-10-01T10:00:01.000Z",
++               "message": {"role": "user", "content": "sidechain prompt"}})
++        .to_string(),
++    );
++    lines.push(
++        json!({"type": "assistant", "sessionId": "s1", "isSidechain": true, "timestamp": "2026-10-01T10:00:02.000Z",
++               "message": {"id": "side", "model": "sidechain-model", "role": "assistant",
++                           "content": [{"type": "text", "text": "sidechain answer"}]}})
++        .to_string(),
++    );
++    lines.push(
++        json!({"type": "user", "sessionId": "s1", "isMeta": true, "timestamp": "2026-10-01T10:00:03.000Z",
++               "message": {"role": "user", "content": "meta caveat"}})
++        .to_string(),
++    );
++    lines.push(
++        json!({"type": "assistant", "sessionId": "s1", "timestamp": "2026-10-01T10:00:04.000Z",
++               "message": {"id": "syn", "model": "<synthetic>", "role": "assistant",
++                           "content": [{"type": "text", "text": "No response requested."}]}})
++        .to_string(),
++    );
++    lines.push(json!({"type": "file-history-snapshot", "snapshot": {}}).to_string());
++    lines.push(json!({"type": "system", "content": "system noise"}).to_string());
++    lines.push(json!({"type": "queue-operation", "operation": "enqueue"}).to_string());
++    lines.push(json!({"no_type_at_all": true}).to_string());
++    lines.push(
++        asst_rec(
++            Some("real"),
++            "claude-opus-5-5",
++            "2026-10-01T10:00:05.000Z",
++            json!([{"type": "text", "text": "real answer"}]),
++        )
++        .to_string(),
++    );
++    lines.push("{\"type\":\"user\",\"message\":{\"role\":\"us".to_string()); // truncated last line
++
++    let s = parse_transcript_str(&lines.join("\n"), "fallback").unwrap();
++    assert_eq!(s.messages.len(), 2);
++    assert_eq!(s.messages[0].blocks, vec![text("keep this prompt")]);
++    assert_eq!(s.messages[1].blocks, vec![text("real answer")]);
++    assert_eq!(s.models, vec!["claude-opus-5-5".to_string()]);
++    assert_eq!(s.turn_count(), 1);
++    assert_eq!(s.ended_at.as_deref(), Some("2026-10-01T10:00:05.000Z"));
++}
++
++#[test]
++fn test_AC_01_03_sidechain_only_transcript_is_empty() {
++    let text_in = join(vec![
++        json!({"type": "user", "sessionId": "s1", "isSidechain": true,
++               "message": {"role": "user", "content": "side"}}),
++        json!({"type": "assistant", "sessionId": "s1", "isSidechain": true,
++               "message": {"id": "a", "model": "m", "role": "assistant",
++                           "content": [{"type": "text", "text": "side"}]}}),
++    ]);
++    expect_empty(parse_transcript_str(&text_in, "fb-side"), "fb-side");
++}
++
++#[test]
++fn test_AC_01_03_meta_only_transcript_is_empty() {
++    let text_in = join(vec![json!({
++        "type": "user", "sessionId": "s1", "isMeta": true,
++        "message": {"role": "user", "content": "Caveat: the messages below were generated by the user"}
++    })]);
++    expect_empty(parse_transcript_str(&text_in, "fb-meta"), "fb-meta");
++}
++
++#[test]
++fn test_AC_01_03_synthetic_assistant_is_ignored_entirely() {
++    let text_in = join(vec![json!({
++        "type": "assistant", "sessionId": "s1", "timestamp": "2026-10-01T10:00:00.000Z",
++        "message": {"id": "x", "model": "<synthetic>", "role": "assistant",
++                    "content": [{"type": "text", "text": "No response requested."}]}
++    })]);
++    expect_empty(parse_transcript_str(&text_in, "fb-syn"), "fb-syn");
++}
++
++#[test]
++fn test_AC_01_03_explicit_false_flags_are_kept() {
++    let s = parse(vec![
++        json!({"type": "user", "sessionId": "s1", "isSidechain": false, "isMeta": false,
++               "message": {"role": "user", "content": "normal prompt"}}),
++    ]);
++    assert_eq!(s.messages.len(), 1);
++    assert_eq!(s.messages[0].blocks, vec![text("normal prompt")]);
++}
++
++#[test]
++fn test_AC_01_03_only_garbage_lines_is_empty_not_a_panic() {
++    let garbage = "\n\n{{{{\nnull\ntrue\n[]\n{\"type\":\"nonsense\"}\n";
++    expect_empty(parse_transcript_str(garbage, "fb-garbage"), "fb-garbage");
++}
++
++#[test]
++fn test_AC_01_03_windows_line_endings_are_tolerated() {
++    let raw = format!(
++        "{}\r\n{}\r\n",
++        user_rec("crlf prompt", "2026-10-01T10:00:00.000Z"),
++        asst_rec(
++            Some("m1"),
++            "m",
++            "2026-10-01T10:00:01.000Z",
++            json!([{"type": "text", "text": "crlf answer"}])
++        )
++    );
++    let s = parse_transcript_str(&raw, "fallback").unwrap();
++    assert_eq!(s.messages.len(), 2);
++    assert_eq!(s.messages[0].blocks, vec![text("crlf prompt")]);
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-01-04: system reminders
++// ---------------------------------------------------------------------------------------------
++
++#[test]
++fn test_AC_01_04_multiline_system_reminder_removed_and_text_trimmed() {
++    let s = parse(vec![user_rec(
++        "Fix the bug.\n<system-reminder>\nline one\nline two\n</system-reminder>\n",
++        "2026-10-01T10:00:00.000Z",
++    )]);
++    assert_eq!(s.messages.len(), 1);
++    assert_eq!(s.messages[0].blocks, vec![text("Fix the bug.")]);
++}
++
++#[test]
++fn test_AC_01_04_multiple_spans_all_removed() {
++    let s = parse(vec![user_rec(
++        "<system-reminder>a</system-reminder>Hello<system-reminder>\nb\n</system-reminder>",
++        "2026-10-01T10:00:00.000Z",
++    )]);
++    assert_eq!(s.messages[0].blocks, vec![text("Hello")]);
++}
++
++#[test]
++fn test_AC_01_04_span_in_the_middle_is_cut_out() {
++    let s = parse(vec![user_rec(
++        "AB<system-reminder>secret instructions</system-reminder>CD",
++        "2026-10-01T10:00:00.000Z",
++    )]);
++    assert_eq!(s.messages[0].blocks, vec![text("ABCD")]);
++}
++
++#[test]
++fn test_AC_01_04_message_with_only_reminder_disappears() {
++    let s = parse(vec![
++        user_rec(
++            "<system-reminder>\nOnly a reminder here.\n</system-reminder>",
++            "2026-10-01T10:00:00.000Z",
++        ),
++        user_rec("real prompt", "2026-10-01T10:00:01.000Z"),
++    ]);
++    assert_eq!(s.messages.len(), 1);
++    assert_eq!(s.messages[0].blocks, vec![text("real prompt")]);
++    assert_eq!(s.turn_count(), 1);
++    // The dropped message must not leak into the timestamp range either.
++    assert_eq!(s.started_at.as_deref(), Some("2026-10-01T10:00:01.000Z"));
++}
++
++#[test]
++fn test_AC_01_04_reminder_only_transcript_is_empty() {
++    let text_in = join(vec![user_rec(
++        "<system-reminder>x</system-reminder>",
++        "2026-10-01T10:00:00.000Z",
++    )]);
++    expect_empty(parse_transcript_str(&text_in, "fb-rem"), "fb-rem");
++}
++
++#[test]
++fn test_AC_01_04_reminder_in_array_text_block_removed_other_blocks_stay() {
++    let s = parse(vec![user_blocks(
++        json!([
++            {"type": "text", "text": "<system-reminder>hidden</system-reminder>"},
++            {"type": "text", "text": "visible <system-reminder>hidden</system-reminder>"},
++            {"type": "tool_result", "tool_use_id": "tu_1", "content": "result body"}
++        ]),
++        "2026-10-01T10:00:00.000Z",
++    )]);
++    assert_eq!(s.messages.len(), 1);
++    assert_eq!(
++        s.messages[0].blocks,
++        vec![
++            text("visible"),
++            Block::ToolResult {
++                tool_use_id: "tu_1".to_string(),
++                content: "result body".to_string(),
++                is_error: false,
++            }
++        ]
++    );
++}
++
++#[test]
++fn test_AC_01_04_reminder_only_text_next_to_tool_result_keeps_tool_result_message() {
++    let s = parse(vec![user_blocks(
++        json!([
++            {"type": "tool_result", "tool_use_id": "tu_1", "content": "ok"},
++            {"type": "text", "text": "<system-reminder>noise</system-reminder>"}
++        ]),
++        "2026-10-01T10:00:00.000Z",
++    )]);
++    assert_eq!(s.messages.len(), 1);
++    assert_eq!(
++        s.messages[0].blocks,
++        vec![Block::ToolResult {
++            tool_use_id: "tu_1".to_string(),
++            content: "ok".to_string(),
++            is_error: false,
++        }]
++    );
++    assert_eq!(s.turn_count(), 0);
++}
++
++#[test]
++fn test_AC_01_04_text_without_reminder_is_only_trimmed() {
++    let s = parse(vec![user_rec(
++        "  keep <b>markup</b> as is \n",
++        "2026-10-01T10:00:00.000Z",
++    )]);
++    assert_eq!(s.messages[0].blocks, vec![text("keep <b>markup</b> as is")]);
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-01-05: thinking blocks
++// ---------------------------------------------------------------------------------------------
++
++#[test]
++fn test_AC_01_05_empty_and_whitespace_thinking_dropped_nonempty_kept() {
++    let s = parse(vec![asst_rec(
++        Some("m1"),
++        "m",
++        "2026-10-01T10:00:00.000Z",
++        json!([
++            {"type": "thinking", "thinking": ""},
++            {"type": "thinking", "thinking": "  \n\t "},
++            {"type": "thinking", "thinking": "real reasoning"},
++            {"type": "text", "text": "answer"}
++        ]),
++    )]);
++    assert_eq!(s.messages.len(), 1);
++    assert_eq!(
++        s.messages[0].blocks,
++        vec![
++            Block::Thinking("real reasoning".to_string()),
++            text("answer")
++        ]
++    );
++}
++
++#[test]
++fn test_AC_01_05_message_with_only_empty_thinking_is_dropped() {
++    let s = parse(vec![
++        user_rec("prompt", "2026-10-01T10:00:00.000Z"),
++        asst_rec(
++            Some("m1"),
++            "ghost-model",
++            "2026-10-01T10:00:01.000Z",
++            json!([{"type": "thinking", "thinking": ""}]),
++        ),
++    ]);
++    assert_eq!(s.messages.len(), 1);
++    assert_eq!(s.messages[0].role, Role::User);
++    // A dropped message contributes neither a timestamp nor a model.
++    assert_eq!(s.ended_at.as_deref(), Some("2026-10-01T10:00:00.000Z"));
++    assert!(s.models.is_empty());
++}
++
++#[test]
++fn test_AC_01_05_redacted_thinking_and_unknown_items_dropped() {
++    let s = parse(vec![asst_rec(
++        Some("m1"),
++        "m",
++        "2026-10-01T10:00:00.000Z",
++        json!([
++            {"type": "redacted_thinking", "data": "abcdef"},
++            {"type": "server_tool_use", "id": "x", "name": "web_search", "input": {}},
++            {"type": "text", "text": "visible answer"}
++        ]),
++    )]);
++    assert_eq!(s.messages[0].blocks, vec![text("visible answer")]);
++}
++
++#[test]
++fn test_AC_01_05_thinking_text_is_preserved_verbatim() {
++    let s = parse(vec![asst_rec(
++        Some("m1"),
++        "m",
++        "2026-10-01T10:00:00.000Z",
++        json!([{"type": "thinking", "thinking": "step 1\nstep 2", "signature": "sig"}]),
++    )]);
++    assert_eq!(
++        s.messages[0].blocks,
++        vec![Block::Thinking("step 1\nstep 2".to_string())]
++    );
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-01-06: tool_result content
++// ---------------------------------------------------------------------------------------------
++
++#[test]
++fn test_AC_01_06_array_content_joined_with_newlines_and_image_placeholder() {
++    let s = parse(vec![user_blocks(
++        json!([{
++            "type": "tool_result",
++            "tool_use_id": "tu_7",
++            "content": [
++                {"type": "text", "text": "line one"},
++                {"type": "image", "source": {"type": "base64", "data": "AAAA"}},
++                {"type": "text", "text": "line two"}
++            ]
++        }]),
++        "2026-10-01T10:00:00.000Z",
++    )]);
++    assert_eq!(
++        s.messages[0].blocks,
++        vec![Block::ToolResult {
++            tool_use_id: "tu_7".to_string(),
++            content: "line one\n[image]\nline two".to_string(),
++            is_error: false,
++        }]
++    );
++}
++
++#[test]
++fn test_AC_01_06_is_error_true_is_preserved() {
++    let s = parse(vec![user_blocks(
++        json!([{
++            "type": "tool_result",
++            "tool_use_id": "tu_8",
++            "content": "command failed: exit 2",
++            "is_error": true
++        }]),
++        "2026-10-01T10:00:00.000Z",
++    )]);
++    assert_eq!(
++        s.messages[0].blocks,
++        vec![Block::ToolResult {
++            tool_use_id: "tu_8".to_string(),
++            content: "command failed: exit 2".to_string(),
++            is_error: true,
++        }]
++    );
++}
++
++#[test]
++fn test_AC_01_06_missing_is_error_and_tool_use_id_use_defaults() {
++    let s = parse(vec![user_blocks(
++        json!([{"type": "tool_result", "content": "bare result"}]),
++        "2026-10-01T10:00:00.000Z",
++    )]);
++    assert_eq!(
++        s.messages[0].blocks,
++        vec![Block::ToolResult {
++            tool_use_id: String::new(),
++            content: "bare result".to_string(),
++            is_error: false,
++        }]
++    );
++}
++
++#[test]
++fn test_AC_01_06_string_content_used_as_is() {
++    let s = parse(vec![user_blocks(
++        json!([{"type": "tool_result", "tool_use_id": "t", "content": "  spaced\nout  \n"}]),
++        "2026-10-01T10:00:00.000Z",
++    )]);
++    assert_eq!(
++        s.messages[0].blocks,
++        vec![Block::ToolResult {
++            tool_use_id: "t".to_string(),
++            content: "  spaced\nout  \n".to_string(),
++            is_error: false,
++        }]
++    );
++}
++
++#[test]
++fn test_AC_01_06_array_with_single_text_item_has_no_separator() {
++    let s = parse(vec![user_blocks(
++        json!([{"type": "tool_result", "tool_use_id": "t",
++                "content": [{"type": "text", "text": "only"}]}]),
++        "2026-10-01T10:00:00.000Z",
++    )]);
++    assert_eq!(
++        s.messages[0].blocks,
++        vec![Block::ToolResult {
++            tool_use_id: "t".to_string(),
++            content: "only".to_string(),
++            is_error: false,
++        }]
++    );
++}
++
++#[test]
++fn test_AC_01_06_two_images_become_two_placeholders() {
++    let s = parse(vec![user_blocks(
++        json!([{"type": "tool_result", "tool_use_id": "t",
++                "content": [{"type": "image", "source": {}}, {"type": "image", "source": {}}]}]),
++        "2026-10-01T10:00:00.000Z",
++    )]);
++    assert_eq!(
++        s.messages[0].blocks,
++        vec![Block::ToolResult {
++            tool_use_id: "t".to_string(),
++            content: "[image]\n[image]".to_string(),
++            is_error: false,
++        }]
++    );
++}
++
++#[test]
++fn test_AC_01_06_user_image_item_becomes_placeholder_text() {
++    let s = parse(vec![user_blocks(
++        json!([{"type": "text", "text": "look at this"}, {"type": "image", "source": {}}]),
++        "2026-10-01T10:00:00.000Z",
++    )]);
++    assert_eq!(
++        s.messages[0].blocks,
++        vec![text("look at this"), text("[image]")]
++    );
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-01-07: title precedence
++// ---------------------------------------------------------------------------------------------
++
++fn title_base() -> Vec<Value> {
++    vec![
++        user_rec("  first   user\n\ttext  ", "2026-10-01T10:00:00.000Z"),
++        asst_rec(
++            Some("m1"),
++            "m",
++            "2026-10-01T10:00:01.000Z",
++            json!([{"type": "text", "text": "assistant words"}]),
++        ),
++    ]
++}
++
++#[test]
++fn test_AC_01_07_custom_title_beats_summary_and_user_text() {
++    let mut recs = title_base();
++    recs.push(json!({"type": "summary", "summary": "Short summary", "leafUuid": "u"}));
++    recs.push(json!({"type": "custom-title", "sessionId": "s1", "customTitle": "My title"}));
++    assert_eq!(parse(recs).title, "My title");
++}
++
++#[test]
++fn test_AC_01_07_custom_title_before_messages_still_wins() {
++    let mut recs = vec![
++        json!({"type": "custom-title", "sessionId": "s1", "customTitle": "Early title"}),
++        json!({"type": "summary", "summary": "Some summary"}),
++    ];
++    recs.extend(title_base());
++    assert_eq!(parse(recs).title, "Early title");
++}
++
++#[test]
++fn test_AC_01_07_last_custom_title_wins() {
++    let mut recs = title_base();
++    recs.push(json!({"type": "custom-title", "customTitle": "Old name"}));
++    recs.push(json!({"type": "custom-title", "customTitle": "Newest name"}));
++    assert_eq!(parse(recs).title, "Newest name");
++}
++
++#[test]
++fn test_AC_01_07_summary_beats_user_text() {
++    let mut recs = title_base();
++    recs.push(json!({"type": "summary", "summary": "Short summary", "leafUuid": "u"}));
++    assert_eq!(parse(recs).title, "Short summary");
++}
++
++#[test]
++fn test_AC_01_07_last_summary_wins() {
++    let mut recs = title_base();
++    recs.push(json!({"type": "summary", "summary": "First summary"}));
++    recs.push(json!({"type": "summary", "summary": "Second summary"}));
++    assert_eq!(parse(recs).title, "Second summary");
++}
++
++#[test]
++fn test_AC_01_07_empty_custom_title_falls_through_to_summary() {
++    let mut recs = title_base();
++    recs.push(json!({"type": "summary", "summary": "Fallback summary"}));
++    recs.push(json!({"type": "custom-title", "customTitle": ""}));
++    assert_eq!(parse(recs).title, "Fallback summary");
++}
++
++#[test]
++fn test_AC_01_07_empty_summary_falls_through_to_user_text() {
++    let mut recs = title_base();
++    recs.push(json!({"type": "summary", "summary": ""}));
++    assert_eq!(parse(recs).title, "first user text");
++}
++
++#[test]
++fn test_AC_01_07_user_text_whitespace_collapsed_and_trimmed() {
++    assert_eq!(parse(title_base()).title, "first user text");
++}
++
++#[test]
++fn test_AC_01_07_title_cut_to_80_chars_not_bytes() {
++    let long = "é".repeat(100);
++    let s = parse(vec![user_rec(&long, "2026-10-01T10:00:00.000Z")]);
++    assert_eq!(s.title.chars().count(), 80);
++    assert_eq!(s.title, "é".repeat(80));
++}
++
++#[test]
++fn test_AC_01_07_title_of_exactly_80_chars_is_kept_and_81_is_cut() {
++    let eighty = "x".repeat(80);
++    let s = parse(vec![user_rec(&eighty, "2026-10-01T10:00:00.000Z")]);
++    assert_eq!(s.title, eighty);
++
++    let s = parse(vec![user_rec(&"x".repeat(81), "2026-10-01T10:00:00.000Z")]);
++    assert_eq!(s.title, eighty);
++}
++
++#[test]
++fn test_AC_01_07_title_skips_dropped_reminder_message_and_uses_next_user_text() {
++    let s = parse(vec![
++        user_rec(
++            "<system-reminder>boot</system-reminder>",
++            "2026-10-01T10:00:00.000Z",
++        ),
++        user_rec("actual question", "2026-10-01T10:00:01.000Z"),
++    ]);
++    assert_eq!(s.title, "actual question");
++}
++
++#[test]
++fn test_AC_01_07_title_untitled_when_no_user_text() {
++    let s = parse(vec![asst_rec(
++        Some("m1"),
++        "m",
++        "2026-10-01T10:00:00.000Z",
++        json!([{"type": "text", "text": "assistant only"}]),
++    )]);
++    assert_eq!(s.title, "Untitled");
++}
++
++#[test]
++fn test_AC_01_07_title_untitled_when_user_only_has_tool_results() {
++    let s = parse(vec![
++        user_blocks(
++            json!([{"type": "tool_result", "tool_use_id": "t", "content": "res"}]),
++            "2026-10-01T10:00:00.000Z",
++        ),
++        asst_rec(
++            Some("m1"),
++            "m",
++            "2026-10-01T10:00:01.000Z",
++            json!([{"type": "text", "text": "hi"}]),
++        ),
++    ]);
++    assert_eq!(s.title, "Untitled");
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-01-08: timestamps, models, prs
++// ---------------------------------------------------------------------------------------------
++
++#[test]
++fn test_AC_01_08_started_and_ended_are_min_and_max_of_kept_timestamps() {
++    let s = parse(vec![
++        user_rec("b", "2026-10-02T09:00:00.000Z"),
++        asst_rec(
++            Some("m1"),
++            "m",
++            "2026-10-01T08:30:00.000Z",
++            json!([{"type": "text", "text": "earliest but listed second"}]),
++        ),
++        user_rec("c", "2026-10-05T23:59:59.000Z"),
++        asst_rec(
++            Some("m2"),
++            "m",
++            "2026-10-03T00:00:00.000Z",
++            json!([{"type": "text", "text": "later in file, not the max"}]),
++        ),
++    ]);
++    assert_eq!(s.started_at.as_deref(), Some("2026-10-01T08:30:00.000Z"));
++    assert_eq!(s.ended_at.as_deref(), Some("2026-10-05T23:59:59.000Z"));
++}
++
++#[test]
++fn test_AC_01_08_timestamps_of_ignored_records_do_not_count() {
++    let s = parse(vec![
++        user_rec("kept", "2026-10-02T10:00:00.000Z"),
++        json!({"type": "user", "sessionId": "s1", "isSidechain": true, "timestamp": "2000-01-01T00:00:00.000Z",
++               "message": {"role": "user", "content": "side"}}),
++        json!({"type": "user", "sessionId": "s1", "isMeta": true, "timestamp": "2099-01-01T00:00:00.000Z",
++               "message": {"role": "user", "content": "meta"}}),
++    ]);
++    assert_eq!(s.started_at.as_deref(), Some("2026-10-02T10:00:00.000Z"));
++    assert_eq!(s.ended_at.as_deref(), Some("2026-10-02T10:00:00.000Z"));
++}
++
++#[test]
++fn test_AC_01_08_timestamps_none_when_no_record_has_one() {
++    let s = parse(vec![json!({
++        "type": "user", "sessionId": "s1",
++        "message": {"role": "user", "content": "no clock"}
++    })]);
++    assert_eq!(s.started_at, None);
++    assert_eq!(s.ended_at, None);
++    assert_eq!(s.messages[0].timestamp, None);
++}
++
++#[test]
++fn test_AC_01_08_messages_without_timestamp_are_skipped_for_range() {
++    let s = parse(vec![
++        json!({"type": "user", "sessionId": "s1", "message": {"role": "user", "content": "no clock"}}),
++        user_rec("clocked", "2026-10-04T10:00:00.000Z"),
++    ]);
++    assert_eq!(s.started_at.as_deref(), Some("2026-10-04T10:00:00.000Z"));
++    assert_eq!(s.ended_at.as_deref(), Some("2026-10-04T10:00:00.000Z"));
++}
++
++#[test]
++fn test_AC_01_08_models_distinct_in_first_seen_order_without_synthetic() {
++    let s = parse(vec![
++        user_rec("q", "2026-10-01T10:00:00.000Z"),
++        asst_rec(
++            Some("m1"),
++            "claude-sonnet-5",
++            "2026-10-01T10:00:01.000Z",
++            json!([{"type": "text", "text": "a"}]),
++        ),
++        asst_rec(
++            Some("m2"),
++            "claude-opus-5-5",
++            "2026-10-01T10:00:02.000Z",
++            json!([{"type": "text", "text": "b"}]),
++        ),
++        asst_rec(
++            Some("m3"),
++            "<synthetic>",
++            "2026-10-01T10:00:03.000Z",
++            json!([{"type": "text", "text": "No response requested."}]),
++        ),
++        asst_rec(
++            Some("m4"),
++            "claude-sonnet-5",
++            "2026-10-01T10:00:04.000Z",
++            json!([{"type": "text", "text": "c"}]),
++        ),
++        asst_rec(
++            Some("m5"),
++            "claude-haiku-5",
++            "2026-10-01T10:00:05.000Z",
++            json!([{"type": "text", "text": "d"}]),
++        ),
++    ]);
++    assert_eq!(
++        s.models,
++        vec![
++            "claude-sonnet-5".to_string(),
++            "claude-opus-5-5".to_string(),
++            "claude-haiku-5".to_string()
++        ]
++    );
++}
++
++#[test]
++fn test_AC_01_08_models_empty_when_no_assistant_message() {
++    let s = parse(vec![user_rec("only me", "2026-10-01T10:00:00.000Z")]);
++    assert!(s.models.is_empty());
++}
++
++#[test]
++fn test_AC_01_08_prs_distinct_in_order_with_prurl_or_url() {
++    let s = parse(vec![
++        user_rec("q", "2026-10-01T10:00:00.000Z"),
++        json!({"type": "pr-link", "sessionId": "s1", "prUrl": "https://github.com/o/r/pull/7"}),
++        json!({"type": "pr-link", "sessionId": "s1", "url": "https://github.com/o/r/pull/3"}),
++        json!({"type": "pr-link", "sessionId": "s1", "prUrl": "https://github.com/o/r/pull/7"}),
++        json!({"type": "pr-link", "sessionId": "s1", "prUrl": "https://github.com/o/r/pull/9"}),
++    ]);
++    assert_eq!(
++        s.prs,
++        vec![
++            "https://github.com/o/r/pull/7".to_string(),
++            "https://github.com/o/r/pull/3".to_string(),
++            "https://github.com/o/r/pull/9".to_string()
++        ]
++    );
++}
++
++#[test]
++fn test_AC_01_08_prs_empty_without_pr_link_records() {
++    let s = parse(vec![user_rec("q", "2026-10-01T10:00:00.000Z")]);
++    assert!(s.prs.is_empty());
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-01-09: empty and unreadable
++// ---------------------------------------------------------------------------------------------
++
++#[test]
++fn test_AC_01_09_no_user_or_assistant_records_is_empty_error_with_fallback_id() {
++    let text_in = join(vec![
++        json!({"type": "custom-title", "sessionId": "s1", "customTitle": "Only a title"}),
++        json!({"type": "summary", "summary": "Only a summary"}),
++        json!({"type": "pr-link", "sessionId": "s1", "prUrl": "https://github.com/o/r/pull/1"}),
++    ]);
++    expect_empty(parse_transcript_str(&text_in, "my-fallback"), "my-fallback");
++}
++
++#[test]
++fn test_AC_01_09_empty_string_is_empty_error() {
++    expect_empty(parse_transcript_str("", "blank"), "blank");
++}
++
++#[test]
++fn test_AC_01_09_empty_file_via_parse_transcript_is_empty_error_with_stem() {
++    let dir = tempfile::tempdir().unwrap();
++    let path = dir.path().join("abc-123.jsonl");
++    fs::write(&path, "").unwrap();
++    expect_empty(parse_transcript(&path), "abc-123");
++}
++
++#[test]
++fn test_AC_01_09_unreadable_path_is_io_error() {
++    let dir = tempfile::tempdir().unwrap();
++    let path = dir.path().join("does-not-exist.jsonl");
++    match parse_transcript(&path) {
++        Err(KbError::Io(_)) => {}
++        other => panic!("expected Err(KbError::Io(_)), got {other:?}"),
++    }
++}
++
++#[test]
++fn test_AC_01_09_kb_error_from_io_error_and_display() {
++    let io = std::io::Error::new(std::io::ErrorKind::NotFound, "gone");
++    let err: KbError = io.into();
++    assert!(matches!(err, KbError::Io(_)));
++    assert!(!err.to_string().is_empty());
++
++    for e in [
++        KbError::Empty("sess".to_string()),
++        KbError::Parse("bad".to_string()),
++        KbError::Settings("broken".to_string()),
++    ] {
++        assert!(!e.to_string().is_empty());
++        let as_dyn: &dyn std::error::Error = &e;
++        assert!(!as_dyn.to_string().is_empty());
++    }
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-01-10: id and fallback
++// ---------------------------------------------------------------------------------------------
++
++#[test]
++fn test_AC_01_10_parse_transcript_uses_file_stem_when_no_session_id() {
++    let dir = tempfile::tempdir().unwrap();
++    let path = dir.path().join("0f3c-stem-id.jsonl");
++    let content = join(vec![
++        json!({"type": "user", "message": {"role": "user", "content": "hello"}}),
++        json!({"type": "assistant",
++               "message": {"id": "m1", "model": "m", "role": "assistant",
++                           "content": [{"type": "text", "text": "hi"}]}}),
++    ]);
++    fs::write(&path, content).unwrap();
++    let s = parse_transcript(&path).unwrap();
++    assert_eq!(s.id, "0f3c-stem-id");
++    assert_eq!(s.messages.len(), 2);
++    assert_eq!(s.source, Source::ClaudeCode);
++}
++
++#[test]
++fn test_AC_01_10_session_id_in_records_beats_file_stem() {
++    let dir = tempfile::tempdir().unwrap();
++    let path = dir.path().join("file-name.jsonl");
++    fs::write(&path, typical_transcript()).unwrap();
++    let s = parse_transcript(&path).unwrap();
++    assert_eq!(s.id, "s1");
++    assert_eq!(s.project.as_deref(), Some("proj"));
++    assert_eq!(s.turn_count(), 3);
++}
++
++#[test]
++fn test_AC_01_10_parse_transcript_str_uses_fallback_id_when_no_session_id() {
++    let s = parse_transcript_str(
++        &json!({"type": "user", "message": {"role": "user", "content": "hi"}}).to_string(),
++        "given-fallback",
++    )
++    .unwrap();
++    assert_eq!(s.id, "given-fallback");
++}
++
++#[test]
++fn test_AC_01_10_first_record_with_session_id_wins() {
++    let s = parse(vec![
++        json!({"type": "user", "message": {"role": "user", "content": "no id on this one"}}),
++        json!({"type": "user", "sessionId": "first-id", "message": {"role": "user", "content": "a"}}),
++        json!({"type": "user", "sessionId": "second-id", "message": {"role": "user", "content": "b"}}),
++    ]);
++    assert_eq!(s.id, "first-id");
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-01-11: discover
++// ---------------------------------------------------------------------------------------------
++
++fn touch(path: &Path) {
++    fs::create_dir_all(path.parent().unwrap()).unwrap();
++    fs::write(path, "{}\n").unwrap();
++}
++
++#[test]
++fn test_AC_01_11_discover_returns_project_level_jsonl_sorted() {
++    let dir = tempfile::tempdir().unwrap();
++    let root = dir.path().to_path_buf();
++
++    // Created deliberately out of order.
++    touch(&root.join("proj-b").join("z.jsonl"));
++    touch(&root.join("proj-a").join("y.jsonl"));
++    touch(&root.join("proj-a").join("x.jsonl"));
++    touch(&root.join("proj-c").join("m.jsonl"));
++
++    let found = discover(&root);
++    assert_eq!(
++        found,
++        vec![
++            root.join("proj-a").join("x.jsonl"),
++            root.join("proj-a").join("y.jsonl"),
++            root.join("proj-b").join("z.jsonl"),
++            root.join("proj-c").join("m.jsonl"),
++        ]
++    );
++}
++
++#[test]
++fn test_AC_01_11_discover_ignores_subagents_deeper_files_other_extensions_and_top_level() {
++    let dir = tempfile::tempdir().unwrap();
++    let root = dir.path().to_path_buf();
++
++    touch(&root.join("proj").join("session1.jsonl"));
++    touch(
++        &root
++            .join("proj")
++            .join("session1")
++            .join("subagents")
++            .join("agent-1.jsonl"),
++    );
++    touch(&root.join("proj").join("session1").join("direct.jsonl"));
++    touch(&root.join("proj").join("notes.txt"));
++    touch(&root.join("proj").join("data.json"));
++    touch(&root.join("proj").join("jsonl")); // no extension
++    touch(&root.join("top-level.jsonl"));
++    fs::create_dir_all(root.join("empty-project")).unwrap();
++
++    let found = discover(&root);
++    assert_eq!(found, vec![root.join("proj").join("session1.jsonl")]);
++}
++
++#[test]
++fn test_AC_01_11_discover_missing_dir_is_empty() {
++    let dir = tempfile::tempdir().unwrap();
++    let missing = dir.path().join("no-such-projects-dir");
++    assert!(discover(&missing).is_empty());
++}
++
++#[test]
++fn test_AC_01_11_discover_empty_dir_is_empty() {
++    let dir = tempfile::tempdir().unwrap();
++    assert!(discover(dir.path()).is_empty());
++}
++
++#[test]
++fn test_AC_01_11_discovered_files_can_be_parsed() {
++    let dir = tempfile::tempdir().unwrap();
++    let root = dir.path().to_path_buf();
++    let file = root.join("-home-a-proj").join("sess-xyz.jsonl");
++    fs::create_dir_all(file.parent().unwrap()).unwrap();
++    fs::write(&file, typical_transcript()).unwrap();
++
++    let found = discover(&root);
++    assert_eq!(found, vec![file.clone()]);
++    let s = parse_transcript(&found[0]).unwrap();
++    assert_eq!(s.id, "s1");
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-01-12: serde round trip
++// ---------------------------------------------------------------------------------------------
++
++#[test]
++fn test_AC_01_12_parsed_session_round_trips_through_serde_json() {
++    let s = parse_transcript_str(&typical_transcript(), "fallback").unwrap();
++    let encoded = serde_json::to_string(&s).unwrap();
++    let decoded: Session = serde_json::from_str(&encoded).unwrap();
++    assert_eq!(decoded, s);
++}
++
++#[test]
++fn test_AC_01_12_hand_built_session_with_every_block_variant_round_trips() {
++    let s = Session {
++        id: "round-trip".to_string(),
++        source: Source::ClaudeAi,
++        title: "Ünïcode ✓ title".to_string(),
++        project: Some("proj".to_string()),
++        cwd: Some("/x/proj".to_string()),
++        git_branch: Some("feat/x".to_string()),
++        started_at: Some("2026-10-01T00:00:00.000Z".to_string()),
++        ended_at: Some("2026-10-02T00:00:00.000Z".to_string()),
++        models: vec!["m1".to_string(), "m2".to_string()],
++        messages: vec![
++            Message {
++                role: Role::User,
++                timestamp: Some("2026-10-01T00:00:00.000Z".to_string()),
++                blocks: vec![text("hello \"quoted\"\nnewline")],
++            },
++            Message {
++                role: Role::Assistant,
++                timestamp: None,
++                blocks: vec![
++                    Block::Thinking("hmm".to_string()),
++                    text("answer"),
++                    Block::ToolUse {
++                        id: "tu".to_string(),
++                        name: "Read".to_string(),
++                        input: json!({"file_path": "/x", "nested": {"a": [1, 2, null]}}),
++                    },
++                ],
++            },
++            Message {
++                role: Role::User,
++                timestamp: None,
++                blocks: vec![Block::ToolResult {
++                    tool_use_id: "tu".to_string(),
++                    content: "boom".to_string(),
++                    is_error: true,
++                }],
++            },
++        ],
++        prs: vec!["https://github.com/o/r/pull/1".to_string()],
++    };
++    let encoded = serde_json::to_string(&s).unwrap();
++    let decoded: Session = serde_json::from_str(&encoded).unwrap();
++    assert_eq!(decoded, s);
++
++    // Pretty form must decode to the same value too.
++    let pretty = serde_json::to_string_pretty(&s).unwrap();
++    let decoded_pretty: Session = serde_json::from_str(&pretty).unwrap();
++    assert_eq!(decoded_pretty, s);
++}
++
++#[test]
++fn test_AC_01_12_none_fields_and_enums_round_trip() {
++    let s = bare_session(vec![]);
++    let decoded: Session = serde_json::from_str(&serde_json::to_string(&s).unwrap()).unwrap();
++    assert_eq!(decoded, s);
++
++    for src in [Source::ClaudeCode, Source::ClaudeAi] {
++        let back: Source = serde_json::from_str(&serde_json::to_string(&src).unwrap()).unwrap();
++        assert_eq!(back, src);
++    }
++    for role in [Role::User, Role::Assistant] {
++        let back: Role = serde_json::from_str(&serde_json::to_string(&role).unwrap()).unwrap();
++        assert_eq!(back, role);
++    }
++}
+diff --git a/specs/phase-01.md b/specs/phase-01.md
+new file mode 100644
+index 0000000..e916e4b
+--- /dev/null
++++ b/specs/phase-01.md
+@@ -0,0 +1,109 @@
++# Phase 01: Session model + Claude Code transcript parser
++
++## Intent
++Turn one Claude Code transcript file (`~/.claude/projects/<project>/<session>.jsonl`) into a
++clean `Session` value that every later phase (nodes, dataset, graph) builds on. The parser must
++survive real-world noise: split assistant messages, sidechains, meta lines, system reminders,
++broken lines and unknown record types.
++
++## Complexity
++M - JSON-lines parsing with merging and many filtering edge cases, but no concurrency or I/O beyond reading one file.
++
++## Scope
++- In scope: the shared data model (`Session`, `Message`, `Block`, `Source`, `Role`, `KbError`),
++  `parse_transcript`, `parse_transcript_str`, `discover`, and the `Session` helper methods.
++- Out of scope: claude.ai export (phase 02), any output files, the CLI.
++
++## Interface contract
++Crate `kb-core` in `core/`, library name `kb_core`. Tests are integration tests in
++`core/tests/*.rs` (e.g. `core/tests/phase01_claude_code.rs`). Dev-dependencies available to
++tests: `tempfile = "3"`, `serde_json = "1"`. All types below are re-exported at the crate root
++(`use kb_core::{Session, Message, Block, Source, Role, KbError};`).
++
++| Item | Location (file / module) | Signature or shape | Errors |
++|---|---|---|---|
++| `Source` | `kb_core::model` | `pub enum Source { ClaudeCode, ClaudeAi }` derives `Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize`; `pub fn as_str(&self) -> &'static str` returns `"claude-code"` / `"claude-ai"` | - |
++| `Role` | `kb_core::model` | `pub enum Role { User, Assistant }` derives `Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize` | - |
++| `Block` | `kb_core::model` | `pub enum Block { Text(String), Thinking(String), ToolUse { id: String, name: String, input: serde_json::Value }, ToolResult { tool_use_id: String, content: String, is_error: bool } }` derives `Debug, Clone, PartialEq, Serialize, Deserialize` | - |
++| `Message` | `kb_core::model` | `pub struct Message { pub role: Role, pub timestamp: Option<String>, pub blocks: Vec<Block> }` derives `Debug, Clone, PartialEq, Serialize, Deserialize` | - |
++| `Session` | `kb_core::model` | `pub struct Session { pub id: String, pub source: Source, pub title: String, pub project: Option<String>, pub cwd: Option<String>, pub git_branch: Option<String>, pub started_at: Option<String>, pub ended_at: Option<String>, pub models: Vec<String>, pub messages: Vec<Message>, pub prs: Vec<String> }` derives `Debug, Clone, PartialEq, Serialize, Deserialize` | - |
++| `Session::tools_used` | `kb_core::model` | `pub fn tools_used(&self) -> Vec<String>` | - |
++| `Session::files_touched` | `kb_core::model` | `pub fn files_touched(&self) -> Vec<String>` | - |
++| `Session::turn_count` | `kb_core::model` | `pub fn turn_count(&self) -> usize` | - |
++| `KbError` | `kb_core::error` | `pub enum KbError { Io(std::io::Error), Empty(String), Parse(String), Settings(String) }`; implements `Display`, `std::error::Error`, `From<std::io::Error>` | - |
++| `parse_transcript_str` | `kb_core::claude_code` | `pub fn parse_transcript_str(text: &str, fallback_id: &str) -> Result<Session, KbError>` | `KbError::Empty(fallback_id)` when no message survives filtering |
++| `parse_transcript` | `kb_core::claude_code` | `pub fn parse_transcript(path: &std::path::Path) -> Result<Session, KbError>`; fallback id = file stem | `KbError::Io` if unreadable; `KbError::Empty` as above |
++| `discover` | `kb_core::claude_code` | `pub fn discover(projects_dir: &std::path::Path) -> Vec<std::path::PathBuf>` | missing dir -> empty vec |
++
++### Input record shapes (one JSON object per line)
++```json
++{"type":"user","sessionId":"s1","cwd":"/home/a/proj","gitBranch":"main","timestamp":"2026-10-01T10:00:00.000Z","isSidechain":false,"message":{"role":"user","content":"hello"}}
++{"type":"user","sessionId":"s1","timestamp":"...","message":{"role":"user","content":[{"type":"text","text":"hi"},{"type":"image","source":{}}]}}
++{"type":"assistant","sessionId":"s1","timestamp":"...","message":{"id":"msg_1","model":"claude-opus-5-5","role":"assistant","content":[{"type":"thinking","thinking":"plan"},{"type":"text","text":"answer"},{"type":"tool_use","id":"tu_1","name":"Read","input":{"file_path":"/home/a/proj/src/main.rs"}}]}}
++{"type":"user","sessionId":"s1","timestamp":"...","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu_1","content":"fn main(){}","is_error":false}]}}
++{"type":"custom-title","sessionId":"s1","customTitle":"My title"}
++{"type":"summary","summary":"Short summary","leafUuid":"..."}
++{"type":"pr-link","sessionId":"s1","prUrl":"https://github.com/o/r/pull/7"}
++```
++`tool_result.content` may be a string or an array of `{"type":"text","text":…}` / `{"type":"image",…}` items.
++
++## Behaviour
++1. Each line is parsed independently. Blank lines and lines that are not valid JSON objects are
++   ignored. Records whose `type` is not one of `user`, `assistant`, `custom-title`, `summary`,
++   `pr-link` are ignored.
++2. `user` / `assistant` records with `"isSidechain": true` or `"isMeta": true` are ignored.
++3. `assistant` records whose `message.model` is `"<synthetic>"` are ignored entirely.
++4. User content: a string becomes one `Text`; array items map `text` -> `Text`,
++   `image` -> `Text("[image]")`, `tool_result` -> `ToolResult`. Assistant content items map
++   `text` -> `Text`, `thinking` -> `Thinking` (dropped when the thinking string is empty or
++   whitespace), `tool_use` -> `ToolUse`; `redacted_thinking` and unknown item types are dropped.
++5. Every `<system-reminder>…</system-reminder>` span (may be multi-line) is removed from Text
++   blocks of user messages; the remaining text is trimmed; a Text block that is then empty is
++   dropped.
++6. `ToolResult.content`: a string is used as is; an array is joined with `"\n"`, where text items
++   contribute their `text` and image items contribute `"[image]"`. `is_error` defaults to false;
++   `tool_use_id` defaults to `""`.
++7. Assistant records sharing the same `message.id` are merged into the first message with that
++   id, blocks appended in file order. Records without `message.id` are never merged.
++8. A message with zero blocks after filtering is dropped. Messages keep file order.
++   `Message.timestamp` is the record's `timestamp` (the first record's for merged messages).
++9. `id` = `sessionId` of the first user/assistant record that has one, else `fallback_id`.
++10. `cwd` / `git_branch` = first non-empty `cwd` / `gitBranch` seen on a user/assistant record.
++    `project` = last path component of `cwd` (`None` when `cwd` is `None`).
++11. `started_at` / `ended_at` = lexicographically smallest / largest `timestamp` among the kept
++    messages (`None` if none has one).
++12. `models` = distinct `message.model` values of kept assistant records, in order of first
++    appearance.
++13. `title`: the last `custom-title` record's `customTitle` (non-empty), else the last `summary`
++    record's `summary` (non-empty), else the first user Text with runs of whitespace collapsed to
++    one space, trimmed and cut to at most 80 characters (chars, not bytes), else `"Untitled"`.
++14. `prs` = distinct `prUrl` (or `url`) values from `pr-link` records, in order of appearance.
++15. No kept message -> `Err(KbError::Empty(fallback_id))`.
++16. `source` = `Source::ClaudeCode`.
++17. `tools_used()` = sorted, de-duplicated names of all `ToolUse` blocks.
++18. `files_touched()` = sorted, de-duplicated string values of the input keys `file_path`,
++    `path` and `notebook_path` of all `ToolUse` blocks (non-string values ignored).
++19. `turn_count()` = number of `User` messages that contain at least one `Text` block.
++20. `discover(dir)` returns every `*.jsonl` file exactly one folder below `dir`
++    (`dir/<project>/<file>.jsonl`), sorted by path; deeper files (for example
++    `dir/<project>/<session>/subagents/x.jsonl`) and files directly in `dir` are not returned.
++
++## Acceptance criteria
++- AC-01-01: A transcript with 3 plain user prompts, assistant replies, one `Read` tool_use and its tool_result parses to a Session with the transcript's `sessionId`, `project` = last folder of `cwd`, `git_branch`, `turn_count() == 3`, `tools_used() == ["Read"]` and `files_touched()` containing the read file path.
++- AC-01-02: Three assistant records with the same `message.id` (thinking, text, tool_use) become one assistant Message with the three blocks in order.
++- AC-01-03: Sidechain records, `isMeta` records, `<synthetic>` assistant records, blank lines, invalid JSON lines and unknown record types are ignored without error.
++- AC-01-04: `<system-reminder>` spans are removed from user text; a user message that only held a system reminder disappears.
++- AC-01-05: Empty thinking blocks are dropped; non-empty thinking is kept as `Block::Thinking`.
++- AC-01-06: `tool_result` content given as an array of text and image items becomes one string joined with newlines, with `[image]` for images; `is_error: true` is preserved.
++- AC-01-07: Title precedence: custom-title beats summary beats first user text (collapsed, max 80 chars) beats `"Untitled"`.
++- AC-01-08: `started_at`/`ended_at` are the min/max kept timestamps; `models` lists distinct models in first-seen order without `<synthetic>`; `prs` lists pr-link URLs.
++- AC-01-09: A file with no user/assistant messages returns `Err(KbError::Empty(_))`; an unreadable path returns `Err(KbError::Io(_))`.
++- AC-01-10: `parse_transcript` uses the file stem as id when no record has a `sessionId`.
++- AC-01-11: `discover` returns only `<dir>/<project>/*.jsonl`, sorted, ignoring subagent folders, other extensions and a missing dir.
++- AC-01-12: `Session` round-trips through `serde_json` unchanged.
++
++## External systems to mock
++- File system: build transcripts as strings or in a `tempfile::TempDir`. Never read the real `~/.claude`.
++
++## Dependencies on earlier phases
++- None
+diff --git a/specs/phase-02.md b/specs/phase-02.md
+new file mode 100644
+index 0000000..fbc9585
+--- /dev/null
++++ b/specs/phase-02.md
+@@ -0,0 +1,63 @@
++# Phase 02: claude.ai export parser
++
++## Intent
++Bring claude.ai chats into the same `Session` model, from the data export the person downloads
++from claude.ai (a `.zip`, the unzipped folder, or `conversations.json` itself).
++
++## Complexity
++S - straightforward JSON mapping plus zip reading.
++
++## Scope
++- In scope: `parse_conversations_json`, `parse_export` (folder / json file / zip).
++- Out of scope: `projects.json`, `users.json`, attachments and files inside the export.
++
++## Interface contract
++Tests in `core/tests/phase02_claude_ai.rs`. Dev-dependencies available: `tempfile = "3"`,
++`serde_json = "1"`, `zip` (same crate the library uses, to build test zips).
++
++| Item | Location (file / module) | Signature or shape | Errors |
++|---|---|---|---|
++| `parse_conversations_json` | `kb_core::claude_ai` | `pub fn parse_conversations_json(text: &str) -> Result<Vec<kb_core::Session>, kb_core::KbError>` | `KbError::Parse` if not JSON or the top level is not an array |
++| `parse_export` | `kb_core::claude_ai` | `pub fn parse_export(path: &std::path::Path) -> Result<Vec<kb_core::Session>, kb_core::KbError>` | `KbError::Io` if missing/unreadable; `KbError::Parse` if a zip or folder has no `conversations.json` or the zip is corrupt |
++
++### Input shape (`conversations.json`)
++```json
++[{"uuid":"c1","name":"Rust lifetimes","created_at":"2026-09-01T08:00:00Z","updated_at":"2026-09-01T09:00:00Z",
++  "chat_messages":[
++    {"uuid":"m1","sender":"human","text":"explain lifetimes","created_at":"2026-09-01T08:00:00Z","content":[{"type":"text","text":"explain lifetimes"}]},
++    {"uuid":"m2","sender":"assistant","text":"...","created_at":"2026-09-01T08:00:05Z","content":[{"type":"thinking","thinking":"..."},{"type":"text","text":"Lifetimes are..."},{"type":"tool_use","id":"t1","name":"web_search","input":{"query":"x"}},{"type":"tool_result","tool_use_id":"t1","name":"web_search","content":[{"type":"text","text":"result"}],"is_error":false}]}]}]
++```
++
++## Behaviour
++1. One `Session` per conversation, in input order, `source = Source::ClaudeAi`, `id = uuid`.
++2. `sender` `"human"` -> `Role::User`, `"assistant"` -> `Role::Assistant`; other senders skipped.
++3. Blocks: when `content` is a non-empty array, map items `text` -> `Text`, `thinking` ->
++   `Thinking` (dropped if empty), `tool_use` -> `ToolUse{id (default ""), name, input (default null)}`,
++   `tool_result` -> `ToolResult{tool_use_id (default ""), content, is_error (default false)}` where
++   content is a string as is or an array whose text items' `text` are joined with `"\n"` (other
++   items ignored); other item types dropped. Otherwise a non-empty `text` field becomes one `Text`.
++   Text blocks that are empty after trimming are dropped; messages with no blocks are dropped.
++4. `Message.timestamp` = message `created_at`.
++5. `title` = `name` if non-empty, else the first user Text (whitespace collapsed, max 80 chars),
++   else `"Untitled"`.
++6. `started_at` = conversation `created_at` (falls back to the first message timestamp);
++   `ended_at` = `updated_at` (falls back to the last message timestamp).
++7. `project`, `cwd`, `git_branch` = `None`; `models`, `prs` = empty.
++8. Conversations with no remaining messages are skipped (not an error).
++9. `parse_export(path)`: a directory -> reads `path/conversations.json`; a file ending in
++   `.zip` (case-insensitive) -> reads the first zip entry whose file name is
++   `conversations.json` (at any folder depth); any other file -> read as `conversations.json`.
++
++## Acceptance criteria
++- AC-02-01: A conversations.json with two conversations yields two Sessions with source `ClaudeAi`, ids = uuids, titles = names, correct roles and timestamps.
++- AC-02-02: `content` arrays map to Text / Thinking / ToolUse / ToolResult blocks in order; array tool_result content is joined text.
++- AC-02-03: A message with no `content` array uses its `text` field.
++- AC-02-04: A conversation with an empty name gets its title from the first human message; with no messages it is skipped.
++- AC-02-05: `parse_export` gives the same result for the folder, the json file and a zip (including a zip with the file inside a subfolder).
++- AC-02-06: Invalid JSON or a non-array top level returns `Err(KbError::Parse(_))`; a missing path returns `Err(KbError::Io(_))`; a zip without conversations.json returns `Err(KbError::Parse(_))`.
++
++## External systems to mock
++- File system only: build exports in a `tempfile::TempDir`, build zips with the `zip` crate.
++
++## Dependencies on earlier phases
++- Phase 01: `Session`, `Message`, `Block`, `Source`, `Role`, `KbError`.
+diff --git a/specs/phase-03.md b/specs/phase-03.md
+new file mode 100644
+index 0000000..d4d46f5
+--- /dev/null
++++ b/specs/phase-03.md
+@@ -0,0 +1,106 @@
++# Phase 03: Topic keywords (TF-IDF) + Markdown session nodes
++
++## Intent
++Give every conversation a readable "node": a Markdown file with machine-readable frontmatter,
++wiki links to its project and topics, and the full conversation. Topics are keywords computed
++offline with TF-IDF across all sessions, so no LLM or network is needed.
++
++## Complexity
++M - TF-IDF and deterministic rendering with several formatting edge cases.
++
++## Scope
++- In scope: tokenizer, stop words, TF-IDF topic extraction, session text, slug, node file name,
++  node rendering.
++- Out of scope: writing files (phase 06).
++
++## Interface contract
++Tests in `core/tests/phase03_nodes.rs`. Dev-dependencies available: `serde_json = "1"`.
++
++| Item | Location (file / module) | Signature or shape | Errors |
++|---|---|---|---|
++| `STOP_WORDS` | `kb_core::topics` | `pub const STOP_WORDS: &[&str]` - lowercase words; must include at least: the, and, for, that, this, with, you, are, was, but, not, have, can, will, just, what, from, use, file, code, make, need, want, like, yes, okay, please, thanks, let, now, here, there, also, would, should, could | - |
++| `tokenize` | `kb_core::topics` | `pub fn tokenize(text: &str) -> Vec<String>` | - |
++| `extract_topics` | `kb_core::topics` | `pub fn extract_topics(docs: &[String], k: usize) -> Vec<Vec<String>>` | - |
++| `session_text` | `kb_core::topics` | `pub fn session_text(s: &kb_core::Session) -> String` | - |
++| `slug` | `kb_core::node` | `pub fn slug(s: &str) -> String` | - |
++| `node_file_name` | `kb_core::node` | `pub fn node_file_name(s: &kb_core::Session) -> String` | - |
++| `render_node` | `kb_core::node` | `pub fn render_node(s: &kb_core::Session, topics: &[String]) -> String` | - |
++
++## Behaviour
++### Topics
++1. `tokenize`: lowercase; split on every character that is not ASCII alphanumeric (so `_`, `-`,
++   `.`, `/` split words); keep tokens of 3..=30 characters that are not all digits and are not
++   in `STOP_WORDS`. Order preserved, duplicates kept.
++2. `extract_topics(docs, k)`: returns one vector per doc (same order). For term t in doc d:
++   `tf = count(t,d) / tokens(d)`, `idf = ln((1 + N) / (1 + df(t))) + 1` (N = number of docs,
++   df = number of docs containing t), score = `tf * idf`. Returns the top `k` terms by score
++   descending, ties broken by term ascending. A doc with no tokens gets an empty vector. Same
++   input -> same output.
++3. `session_text(s)` = all `Text` blocks of all messages (user and assistant, not thinking, not
++   tool blocks) joined with `"\n"`, prefixed by the title and a `"\n"`.
++
++### Node file
++4. `slug(s)`: lowercase; every run of non-ASCII-alphanumeric characters becomes one `-`; leading
++   and trailing `-` removed; cut to 60 characters then trailing `-` removed again; empty ->
++   `"untitled"`. Example: `"Fix: Totals are rounded wrongly!"` -> `"fix-totals-are-rounded-wrongly"`.
++5. `node_file_name(s)` = `"{date}-{slug(title)}-{id8}.md"` where date = first 10 chars of
++   `started_at` (or `"undated"`), id8 = first 8 chars of `slug(id)`.
++6. `render_node(s, topics)` output, exactly in this order:
++   ```
++   ---
++   id: <json>
++   source: <json>            ("claude-code" | "claude-ai")
++   title: <json>
++   project: <json>           (string or null)
++   branch: <json>
++   cwd: <json>
++   started_at: <json>
++   ended_at: <json>
++   models: <json array>
++   turns: <json number>      (turn_count)
++   tools: <json array>       (tools_used)
++   files: <json array>       (files_touched)
++   prs: <json array>
++   topics: <json array>      (the topics argument, in order)
++   ---
++
++   # <title>
++
++   Project: [[project/<slug(project)>]]
++   Topics: [[topic/<t1>]] · [[topic/<t2>]]
++   Tools: <tool1>, <tool2>
++
++   ## Conversation
++   ```
++   Every frontmatter value is compact `serde_json` output, so each line is `key: <valid JSON>`.
++   The `Project:` line is omitted when project is None, `Topics:` when topics is empty, `Tools:`
++   when no tools were used. Then for each message in order:
++   - a heading `### User` or `### Assistant`, followed by ` · <timestamp>` when it has one;
++   - each Text block as its own paragraph (raw text);
++   - each Thinking block as `<details><summary>Thinking</summary>\n\n<text>\n\n</details>`;
++   - each ToolUse as `**Tool call** \`<name>\`` followed by a fenced ` ```json ` block with the
++     input pretty-printed;
++   - each ToolResult as `**Tool result**` (plus ` (error)` when is_error) followed by a fenced
++     block with the content; content longer than 2000 characters is cut to 2000 characters and
++     `\n… [truncated <N> chars]` appended (N = number of characters removed).
++   Fences around tool input/result use one more backtick than the longest run of backticks in
++   the content (minimum 3). Blocks are separated by a blank line. Output ends with exactly one
++   `\n`. Same input -> byte-identical output.
++
++## Acceptance criteria
++- AC-03-01: `tokenize` lowercases, splits on punctuation/underscores, drops stop words, short tokens and pure numbers.
++- AC-03-02: For a corpus where one doc repeats "kubernetes" and "ingress" and others do not, those two terms are that doc's top topics; a term present in every doc ranks below a term unique to the doc at equal frequency.
++- AC-03-03: `extract_topics` returns at most k terms per doc, an empty vec for empty docs, ties ordered alphabetically, and is deterministic.
++- AC-03-04: Stop words never appear in topics.
++- AC-03-05: `slug` and `node_file_name` follow the rules (including `"undated"` and `"untitled"`).
++- AC-03-06: Frontmatter lines parse as `key: <JSON>` with all 14 keys in order and correct values (null project for claude.ai sessions).
++- AC-03-07: Body contains `# <title>`, `[[project/<slug>]]`, one `[[topic/<t>]]` per topic, and every user and assistant text in order.
++- AC-03-08: Thinking renders inside `<details>`; tool calls show the tool name and JSON input; error results are marked `(error)`; results over 2000 chars are truncated with the marker.
++- AC-03-09: Content containing triple backticks is wrapped in a longer fence.
++- AC-03-10: `render_node` is byte-identical across calls and ends with a single newline.
++
++## External systems to mock
++- None (pure functions; build `Session` values in the test).
++
++## Dependencies on earlier phases
++- Phase 01: `Session` and its helper methods.
+diff --git a/specs/phase-04.md b/specs/phase-04.md
+new file mode 100644
+index 0000000..74659d7
+--- /dev/null
++++ b/specs/phase-04.md
+@@ -0,0 +1,84 @@
++# Phase 04: Training dataset records + redaction
++
++## Intent
++Turn every conversation into one line of an LLM-trainable dataset in the widely supported
++OpenAI chat `messages` format (text, tool calls, tool results and thinking), with secrets and
++email addresses redacted by default so the dataset is safe to keep and share.
++
++## Complexity
++M - message re-shaping with tool-call pairing rules, truncation and regex-based redaction.
++
++## Scope
++- In scope: `DatasetOptions`, `redact`, `to_record`, `to_jsonl`.
++- Out of scope: writing the file (phase 06), train/validation splits, uploading.
++
++## Interface contract
++Tests in `core/tests/phase04_dataset.rs`. Dev-dependencies available: `serde_json = "1"`.
++
++| Item | Location (file / module) | Signature or shape | Errors |
++|---|---|---|---|
++| `DatasetOptions` | `kb_core::dataset` | `pub struct DatasetOptions { pub redact: bool, pub max_tool_chars: usize, pub include_thinking: bool }`; `impl Default` = `{ redact: true, max_tool_chars: 2000, include_thinking: true }`; derives `Debug, Clone` | - |
++| `redact` | `kb_core::dataset` | `pub fn redact(text: &str) -> String` | - |
++| `to_record` | `kb_core::dataset` | `pub fn to_record(s: &kb_core::Session, opts: &DatasetOptions) -> Option<serde_json::Value>` | `None` when no usable exchange (see 6) |
++| `to_jsonl` | `kb_core::dataset` | `pub fn to_jsonl(records: &[serde_json::Value]) -> String` | - |
++
++### Record shape
++```json
++{"id":"s1","source":"claude-code","title":"…","project":"proj","messages":[
++  {"role":"user","content":"read main.rs"},
++  {"role":"assistant","content":"Reading it.","reasoning_content":"plan","tool_calls":[{"id":"tu_1","type":"function","function":{"name":"Read","arguments":"{\"file_path\":\"/p/main.rs\"}"}}]},
++  {"role":"tool","tool_call_id":"tu_1","content":"fn main(){}"},
++  {"role":"assistant","content":"It prints nothing."}]}
++```
++
++## Behaviour
++1. Messages are converted in order:
++   - `User` message: each `ToolResult` block -> `{"role":"tool","tool_call_id":…,"content":…}`
++     (in block order, emitted first); then, if it has Text blocks, one
++     `{"role":"user","content": <texts joined with "\n\n">}`.
++   - `Assistant` message: one `{"role":"assistant","content": <texts joined with "\n\n", or "">}`;
++     key `reasoning_content` = thinking blocks joined with `"\n\n"`, present only when
++     `include_thinking` is true and there is non-empty thinking; key `tool_calls` present only
++     when the message has ToolUse blocks, each
++     `{"id":…,"type":"function","function":{"name":…,"arguments": <input as compact JSON string>}}`.
++2. Tool message content longer than `max_tool_chars` characters is cut to `max_tool_chars`
++   characters and `"\n…[truncated]"` appended.
++3. A `tool` message whose `tool_call_id` was not issued by an earlier assistant `tool_calls`
++   entry in this record is dropped.
++4. Leading messages before the first `user` message are dropped. Trailing messages after the
++   last `assistant` message are dropped.
++5. An assistant message with empty content, no tool_calls and no reasoning_content is dropped.
++6. Returns `None` when the result has no `user` message or no `assistant` message.
++7. Top-level keys: `id`, `source` (`"claude-code"`/`"claude-ai"`), `title`, `project`
++   (string or null), `messages`.
++8. When `opts.redact` is true, `redact` is applied to `title` and to every string in the
++   messages (`content`, `reasoning_content`, and each `arguments` string before it is stored).
++9. `redact(text)` replaces, in this order:
++   - PEM private keys `-----BEGIN … PRIVATE KEY----- … -----END … PRIVATE KEY-----` -> `[SECRET]`;
++   - `sk-ant-[A-Za-z0-9_-]{10,}`, `sk-[A-Za-z0-9]{20,}`, `AKIA[0-9A-Z]{16}`,
++     `gh[pousr]_[A-Za-z0-9]{20,}`, `xox[baprs]-[A-Za-z0-9-]{10,}`,
++     JWTs `eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}` -> `[SECRET]`;
++   - case-insensitive `(password|passwd|pwd|secret|token|api[_-]?key)(\s*[:=]\s*)(\S+)` -> the
++     key and separator kept, the value replaced: `password=hunter2` -> `password=[SECRET]`,
++     `API_KEY: abc` -> `API_KEY: [SECRET]`;
++   - email addresses `[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}` -> `[EMAIL]`.
++   Text without matches is returned unchanged.
++10. `to_jsonl` = each record as compact JSON on its own line, each line ending in `"\n"`;
++    empty slice -> `""`.
++
++## Acceptance criteria
++- AC-04-01: A session with user text, assistant thinking + text + tool_use, a tool_result and a final assistant reply converts to exactly user / assistant(tool_calls, reasoning_content) / tool / assistant.
++- AC-04-02: `arguments` is a string containing the compact JSON of the tool input; `type` is `"function"`.
++- AC-04-03: With `include_thinking: false` no message has `reasoning_content`.
++- AC-04-04: Tool output over `max_tool_chars` is truncated with `"\n…[truncated]"`; shorter output is unchanged.
++- AC-04-05: Orphan tool results, leading non-user messages and trailing non-assistant messages are removed.
++- AC-04-06: A session with only user messages (or only assistant messages) returns `None`.
++- AC-04-07: `redact` replaces emails with `[EMAIL]` and each listed secret kind (sk-ant, sk-, AKIA, ghp_, xoxb-, JWT, PEM, password=/token:/api_key=) with `[SECRET]`, keeping surrounding text.
++- AC-04-08: With default options secrets in user text, assistant text, thinking, tool arguments and the title are redacted; with `redact: false` they are kept verbatim.
++- AC-04-09: `to_jsonl` writes one parseable JSON object per line, newline-terminated.
++
++## External systems to mock
++- None (pure functions).
++
++## Dependencies on earlier phases
++- Phase 01: `Session`, `Message`, `Block`, `Source`, `Role`.
+diff --git a/specs/phase-05.md b/specs/phase-05.md
+new file mode 100644
+index 0000000..a5adf4b
+--- /dev/null
++++ b/specs/phase-05.md
+@@ -0,0 +1,57 @@
++# Phase 05: Knowledge graph builder (graph.json)
++
++## Intent
++Produce the data for the 3D knowledge graph: every session becomes a node connected to its
++project, topics, touched files and used tools, so related conversations cluster together.
++
++## Complexity
++S - deterministic aggregation into nodes and links.
++
++## Scope
++- In scope: `Graph`, `GraphNode`, `GraphLink`, `build_graph`, `Graph::to_json`.
++- Out of scope: rendering (phase 07), writing the file (phase 06).
++
++## Interface contract
++Tests in `core/tests/phase05_graph.rs`. Dev-dependencies available: `serde_json = "1"`.
++
++| Item | Location (file / module) | Signature or shape | Errors |
++|---|---|---|---|
++| `GraphNode` | `kb_core::graph` | `pub struct GraphNode { pub id: String, pub kind: String, pub label: String, pub size: usize, pub meta: serde_json::Value }`; `kind` serialises as `"type"`; derives `Debug, Clone, PartialEq, Serialize, Deserialize` | - |
++| `GraphLink` | `kb_core::graph` | `pub struct GraphLink { pub source: String, pub target: String, pub kind: String }`; `kind` serialises as `"type"`; same derives | - |
++| `Graph` | `kb_core::graph` | `pub struct Graph { pub nodes: Vec<GraphNode>, pub links: Vec<GraphLink> }`; same derives | - |
++| `build_graph` | `kb_core::graph` | `pub fn build_graph(sessions: &[(kb_core::Session, Vec<String>)]) -> Graph` (each session with its topics) | - |
++| `Graph::to_json` | `kb_core::graph` | `pub fn to_json(&self) -> String` (pretty JSON, ends with `"\n"`) | - |
++
++## Behaviour
++1. Node ids and kinds:
++   - `session:<session id>`, kind `"session"`, label = title, size = `max(turn_count, 1)`,
++     meta = `{"source","project","started_at","ended_at","turns","models","tools","topics","node_file"}`
++     (`node_file` = `kb_core::node::node_file_name(&session)`, `topics` = the given topics).
++   - `project:<project>` for sessions with a project, kind `"project"`, label = project name.
++   - `topic:<term>`, kind `"topic"`, label = term.
++   - `file:<full path>`, kind `"file"`, label = last path component, meta `{"path": <full path>}`.
++   - `tool:<name>`, kind `"tool"`, label = name.
++   Non-session nodes have `size` = number of distinct sessions linked to them and, unless stated,
++   `meta = {}`.
++2. Links (from the session node): `in_project` -> project, `has_topic` -> each topic,
++   `touched_file` -> each of `files_touched()`, `used_tool` -> each of `tools_used()`.
++   Duplicate links are removed.
++3. If two input sessions share an id, the later one replaces the earlier one.
++4. Ordering: nodes sorted by kind in the order session, project, topic, file, tool, then by id;
++   links sorted by (source, target, type). Every link's source and target exist as nodes.
++5. Empty input -> `{"nodes": [], "links": []}`.
++
++## Acceptance criteria
++- AC-05-01: Two sessions in the same project sharing a topic and a tool produce one project node, one shared topic node and one shared tool node, each with size 2, plus links from both sessions.
++- AC-05-02: Node ids/kinds/labels follow the rules; file nodes are labelled with the file name and carry the full path in meta.
++- AC-05-03: Session node meta contains turns, source, project, models, topics and the node file name from `node_file_name`.
++- AC-05-04: A claude.ai session (no project, no tools) gets topic links only and no project node.
++- AC-05-05: No duplicate nodes or links; no dangling links; duplicate session ids keep the later session.
++- AC-05-06: Output order is deterministic and `to_json` is identical for the same input; JSON uses the key `type` for kinds.
++- AC-05-07: Empty input gives empty nodes and links.
++
++## External systems to mock
++- None.
++
++## Dependencies on earlier phases
++- Phase 01: `Session` helpers. Phase 03: `node_file_name`.
+diff --git a/specs/phase-06.md b/specs/phase-06.md
+new file mode 100644
+index 0000000..deaada3
+--- /dev/null
++++ b/specs/phase-06.md
+@@ -0,0 +1,101 @@
++# Phase 06: `kb` command - incremental ingest, SessionEnd hook, hook installer
++
++## Intent
++One command that does all three things for every conversation: writes session nodes, the
++training dataset and the graph. It is incremental (only changed transcripts are re-read), can run
++automatically at the end of every Claude Code session through a SessionEnd hook, and can install
++that hook into a settings file without touching other settings.
++
++## Complexity
++M - file-system orchestration, caching, idempotency and a safe JSON settings edit.
++
++## Scope
++- In scope: binary `kb` with sub-commands `ingest`, `hook`, `install-hook`; output layout;
++  incremental cache; stale node cleanup.
++- Out of scope: the explorer (phase 07); installing into the real `~/.claude/settings.json`.
++
++## Interface contract
++Binary target `kb` (`core/src/main.rs`). Tests in `core/tests/phase06_cli.rs` run it with
++`std::process::Command::new(env!("CARGO_BIN_EXE_kb"))`, always passing `--out` and setting
++`HOME` to a temp dir and removing `KB_HOME`. Dev-dependencies available: `tempfile = "3"`,
++`serde_json = "1"`.
++
++| Item | Location | Signature or shape | Errors |
++|---|---|---|---|
++| `kb ingest` | CLI | `kb ingest [--claude-dir <dir>] [--claude-ai <path>]... [--out <dir>] [--no-redact]` | exit 1 if `--out` cannot be created/written; exit 2 on bad arguments |
++| `kb hook` | CLI | `kb hook [--out <dir>] [--no-redact]`, reads one JSON object from stdin | never fails: always exit 0 |
++| `kb install-hook` | CLI | `kb install-hook --settings <file> [--command <cmd>]` | exit 1 on invalid JSON (file untouched); exit 2 on bad arguments |
++| output: nodes | `<out>/nodes/<node_file_name>.md` | one `render_node` file per session | - |
++| output: dataset | `<out>/dataset/conversations.jsonl` | `to_jsonl` of all records, sessions sorted by id | - |
++| output: graph | `<out>/graph/graph.json` | `Graph::to_json` of all sessions | - |
++| internal cache | `<out>/cache/` | implementation-defined; tests must not depend on its format | - |
++
++## Behaviour
++### Defaults
++1. `--out` default: `$KB_HOME` if set, else `$HOME/claude-kb`. `--claude-dir` default:
++   `$HOME/.claude/projects` (silently skipped if it does not exist). No `--claude-ai` by default.
++
++### ingest
++2. Sources = `claude_code::discover(claude_dir)` files plus each `--claude-ai` path
++   (`claude_ai::parse_export`).
++3. A source file whose size and SHA-256 are unchanged since the last run is not re-parsed; its
++   sessions come from the cache. Changed or new files are parsed. Sessions from source files that
++   no longer exist are removed from the knowledge base.
++4. Transcript files that fail with `KbError::Empty` or an I/O/parse error are counted as skipped,
++   reported on stderr as `skipped <path>: <reason>`, and do not stop the run.
++5. Topics are recomputed over all sessions every run: `extract_topics` with k = 8 over
++   `session_text` of each session (sessions sorted by id).
++6. Writes nodes, dataset (with `DatasetOptions::default()`, or `redact: false` with
++   `--no-redact`) and graph. Node files that are no longer produced (renamed title, removed
++   source) are deleted from `<out>/nodes/`; other files there that do not end in `.md` are left
++   alone. Files are only rewritten when their content changes.
++7. Prints exactly one summary line to stdout:
++   `ingested: <new> new, <updated> updated, <unchanged> unchanged, <skipped> skipped` where
++   new = sessions whose id was not in the knowledge base before, updated = existing sessions
++   re-parsed from a changed file, unchanged = sessions taken from the cache, skipped = source
++   files that produced no session. Exit 0.
++8. Running `ingest` twice with no source changes prints `0 new, 0 updated, <n> unchanged` and
++   leaves every output file byte-identical.
++
++### hook
++9. Reads stdin JSON like
++   `{"session_id":"s1","transcript_path":"/…/s1.jsonl","cwd":"/…","hook_event_name":"SessionEnd","reason":"exit"}`.
++   It parses `transcript_path`, adds or replaces that session in the knowledge base at `--out`
++   (keeping all previously ingested sessions from the cache), recomputes topics and rewrites
++   nodes, dataset and graph as in ingest. It does not scan `--claude-dir`.
++10. Invalid stdin, a missing `transcript_path`, or a transcript that fails to parse -> message on
++    stderr starting with `kb hook:`, nothing written, exit 0. Success prints the summary line.
++
++### install-hook
++11. Default `--command` = `"<absolute path of the running kb executable> hook"`.
++12. Missing settings file -> created containing
++    `{"hooks":{"SessionEnd":[{"hooks":[{"type":"command","command":"<cmd>"}]}]}}`.
++13. Existing file: parsed as JSON; every existing key and value is kept (key order preserved);
++    an entry `{"hooks":[{"type":"command","command":"<cmd>"}]}` is appended to
++    `hooks.SessionEnd` (created if missing). If any existing `hooks.SessionEnd[*].hooks[*]` has
++    `command` equal to `<cmd>`, nothing is written and stdout says `already installed`;
++    otherwise stdout says `installed`. Written as pretty JSON (2-space indent) with a trailing
++    newline. Exit 0.
++14. Invalid JSON, or `hooks` / `hooks.SessionEnd` of the wrong JSON type -> stderr message,
++    exit 1, file unchanged.
++
++## Acceptance criteria
++- AC-06-01: `kb ingest --claude-dir <fixture> --out <tmp>` on two valid transcripts in two projects writes two node files, a dataset with two lines and a graph.json containing both session nodes and both project nodes; prints `ingested: 2 new, 0 updated, 0 unchanged, 0 skipped`.
++- AC-06-02: A second identical run prints `ingested: 0 new, 0 updated, 2 unchanged, 0 skipped` and all output files are byte-identical.
++- AC-06-03: Appending a message to one transcript makes the next run report `1 updated, 1 unchanged`, and the new text appears in that node and the dataset.
++- AC-06-04: Changing a transcript's custom-title removes the old node file and writes the new one; deleting a transcript removes its node, dataset line and graph node.
++- AC-06-05: An empty or garbage transcript is counted as skipped, reported on stderr, and the run still exits 0 with the other sessions written.
++- AC-06-06: `--claude-ai <conversations.json>` adds claude.ai sessions alongside Claude Code ones.
++- AC-06-07: The dataset is redacted by default (an email in a prompt becomes `[EMAIL]`) and not with `--no-redact`.
++- AC-06-08: `kb hook --out <tmp>` with SessionEnd JSON on stdin adds that session's node, dataset line and graph node while keeping previously ingested sessions.
++- AC-06-09: `kb hook` with invalid stdin or a missing transcript exits 0, writes nothing and prints a `kb hook:` message on stderr.
++- AC-06-10: `kb install-hook --settings <file> --command "kb hook"` on a settings file with other keys and other hooks keeps them all and adds the SessionEnd entry; a second run prints `already installed` and leaves the file byte-identical.
++- AC-06-11: `install-hook` on a missing file creates it with only the SessionEnd hook; on invalid JSON exits 1 and leaves the file unchanged.
++
++## External systems to mock
++- File system: fixtures in `tempfile::TempDir`. Never touch the real `~/.claude` or `~/claude-kb`:
++  always pass `--out`, `--claude-dir` (or a non-existent dir) and set `HOME` to the temp dir.
++- stdin for `kb hook`: pipe JSON via `Stdio::piped()`.
++
++## Dependencies on earlier phases
++- Phases 01-05 (parsers, topics, nodes, dataset, graph).
+diff --git a/specs/phase-07.md b/specs/phase-07.md
+new file mode 100644
+index 0000000..cba497e
+--- /dev/null
++++ b/specs/phase-07.md
+@@ -0,0 +1,81 @@
++# Phase 07: 3D explorer web app
++
++## Intent
++Let the person explore their conversation knowledge graph in 3D in the browser: sessions,
++projects, topics, files and tools as coloured nodes, with search, type filters, a details
++panel and neighbour highlighting.
++
++## Complexity
++M - pure graph functions with edge cases plus a rendering shell around a 3D library.
++
++## Scope
++- In scope: pure functions in `explorer/src/graph.ts` (tested), the app shell
++  (`explorer/index.html`, `explorer/src/main.ts`, `explorer/vite.config.ts`) using
++  `3d-force-graph`, serving `graph.json` from the knowledge base folder, and a file picker
++  fallback.
++- Out of scope: editing the graph, any backend beyond the Vite dev server.
++
++## Interface contract
++Component `explorer/` (TypeScript, ES modules, vitest). Visible tests in
++`explorer/tests/*.test.ts`, hidden tests in `explorer/tests/holdout/`. Tests import from
++`../src/graph` (or `../../src/graph` from holdout). Only `src/graph.ts` is unit-tested.
++
++| Item | Location | Signature or shape | Errors |
++|---|---|---|---|
++| `NodeType` | `explorer/src/graph.ts` | `export type NodeType = 'session' \| 'project' \| 'topic' \| 'file' \| 'tool'` | - |
++| `NODE_TYPES` | same | `export const NODE_TYPES: readonly NodeType[] = ['session','project','topic','file','tool']` | - |
++| `GraphNode` | same | `export interface GraphNode { id: string; type: NodeType; label: string; size: number; meta: Record<string, unknown> }` | - |
++| `GraphLink` | same | `export interface GraphLink { source: string \| { id: string }; target: string \| { id: string }; type: string }` | - |
++| `GraphData` | same | `export interface GraphData { nodes: GraphNode[]; links: GraphLink[] }` | - |
++| `GraphError` | same | `export class GraphError extends Error` (`name === 'GraphError'`) | - |
++| `TYPE_COLORS` | same | `export const TYPE_COLORS: Record<NodeType, string>` - five distinct `#rrggbb` colours | - |
++| `linkEnd` | same | `export function linkEnd(end: string \| { id: string }): string` | - |
++| `parseGraph` | same | `export function parseGraph(input: unknown): GraphData` | throws `GraphError` with message starting `Invalid graph` |
++| `filterByTypes` | same | `export function filterByTypes(g: GraphData, types: Iterable<NodeType>): GraphData` | - |
++| `searchNodes` | same | `export function searchNodes(g: GraphData, query: string, limit?: number): GraphNode[]` (default limit 20) | - |
++| `neighbors` | same | `export function neighbors(g: GraphData, id: string): { nodes: GraphNode[]; links: GraphLink[] }` | - |
++| `nodeDetails` | same | `export function nodeDetails(g: GraphData, id: string): { node: GraphNode; neighborsByType: Record<NodeType, GraphNode[]> } \| null` | - |
++
++## Behaviour
++1. `parseGraph(input)`: `input` is a JSON string or an already-parsed object. It must be an
++   object with array `nodes` and array `links`; each node needs string `id`, a `type` in
++   `NODE_TYPES` and string `label`; `size` defaults to 1 when missing or not a positive number;
++   `meta` defaults to `{}`. Duplicate node ids: first one kept. Links need string (or `{id}`)
++   `source`/`target`; `type` defaults to `""`; links whose endpoints are not node ids are dropped.
++   Anything else (bad JSON, missing arrays, bad node) -> `GraphError("Invalid graph: <reason>")`.
++   Returns new objects (input not mutated) with link endpoints as strings.
++2. `linkEnd` returns the string itself or the object's `id` (3d-force-graph replaces endpoint
++   strings with node objects after rendering; every function must accept both forms).
++3. `filterByTypes(g, types)` keeps nodes whose type is in `types` and links whose both
++   endpoints are kept. Input not mutated.
++4. `searchNodes(g, query, limit)`: query trimmed and lower-cased; empty -> `[]`. Matches nodes
++   whose label or id contains the query (case-insensitive). Ranking: label starts with query,
++   then label contains query, then id-only match; ties by label (locale-insensitive `<`
++   comparison of lower-cased labels), then id. At most `limit` results.
++5. `neighbors(g, id)`: nodes directly linked to `id` in either direction (excluding `id`
++   itself, no duplicates, sorted by id) and the links touching `id`. Unknown id -> empty arrays.
++6. `nodeDetails(g, id)`: `null` for unknown id; otherwise the node and its neighbours grouped by
++   type, every `NodeType` key present (empty arrays allowed), each group sorted by label.
++7. App shell (not unit-tested): `npm run dev` serves the app; `GET /graph.json` returns
++   `$KB_HOME/graph/graph.json` or `~/claude-kb/graph/graph.json`; if that fails or is invalid the
++   page shows the `parseGraph` error text and a file picker to load a graph.json manually. Nodes
++   coloured by `TYPE_COLORS`, sized by `size`; clicking a node opens a details panel (label,
++   type, meta, neighbours grouped by type) and highlights it and its neighbours; a search box
++   lists `searchNodes` results and flies the camera to the chosen node; checkboxes per type
++   apply `filterByTypes`. Dependency `3d-force-graph` added to `package.json`.
++
++## Acceptance criteria
++- AC-07-01: `parseGraph` accepts a valid graph as a JSON string and as an object, defaults `size` and `meta`, and returns string link endpoints.
++- AC-07-02: `parseGraph` throws `GraphError` with a message starting `Invalid graph` for bad JSON, missing `nodes`/`links`, a node without id, or an unknown node type.
++- AC-07-03: `parseGraph` drops links to unknown nodes and duplicate node ids, and does not mutate its input.
++- AC-07-04: `filterByTypes` removes nodes of other types and every link touching them, accepting both string and `{id}` link endpoints.
++- AC-07-05: `searchNodes` is case-insensitive, ranks prefix label matches before substring matches before id-only matches, honours `limit`, and returns `[]` for a blank query.
++- AC-07-06: `neighbors` returns direct neighbours in both link directions, sorted, without duplicates or the node itself; unknown id gives empty arrays.
++- AC-07-07: `nodeDetails` returns `null` for unknown ids and groups neighbours by type with all five keys present.
++- AC-07-08: `TYPE_COLORS` has five distinct hex colours, one per node type.
++
++## External systems to mock
++- None for unit tests (pure functions, no DOM, no WebGL). Do not import `3d-force-graph` in tests.
++
++## Dependencies on earlier phases
++- Phase 05: the `graph.json` shape (`nodes[{id,type,label,size,meta}]`, `links[{source,target,type}]`).

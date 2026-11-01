@@ -38,6 +38,15 @@ def comp_dir(root, comp):
     return Path(root) if r in ("", ".") else Path(root, r)
 
 
+def component_test_files(root, cfg, comp):
+    """This component's test files (visible and hidden), from the files on disk."""
+    globs = list(comp.get("test_globs", []))
+    if comp.get("holdout_dir"):
+        globs.append(comp["holdout_dir"].rstrip("/") + "/**")
+    files = L.current_test_files(root, cfg)
+    return [f for f in files if C.matches(f, globs) and not Path(f).name.startswith(".")]
+
+
 def holdout_has_files(root, comp):
     h = comp.get("holdout_dir")
     if not h or not Path(root, h).is_dir():
@@ -64,11 +73,16 @@ def run_tests(root, cfg, include_holdout=True, runs=1, hide_holdout=True, baseli
             results.append({"component": comp, "code": 1, "output": "no test_command configured", "no_tests": False})
             all_ok = False
             continue
+        if not component_test_files(root, cfg, comp):
+            # No test file in this component yet (for example a front end whose tests come in a
+            # later phase). Nothing to run; it is checked from its first test file on. Test files
+            # are locked, so a component cannot drop back to zero to dodge the gate.
+            out.append(f"== {name}: no test files yet - skipped until its first test exists")
+            continue
         codes = []
         for i in range(max(1, runs)):
             code, text = C.run_shell(cmd, comp_dir(root, comp))
-            no_tests = (code in comp.get("no_tests_exit_codes", [])) or bool(
-                C.first_match(comp.get("no_tests_patterns", []), text))
+            no_tests = C.no_tests_ran(comp, code, text)
             if no_tests and baseline:
                 code = 0
             codes.append(code)
