@@ -51,6 +51,14 @@
     "core/tests/phase09_context_hidden.rs": {
       "sha256": "81dffc41360fdbaa6da481f580104c1e3575eafe52a946e875eae5bdd0d25ed9",
       "phase": "09"
+    },
+    "explorer/tests/analysis.test.ts": {
+      "sha256": "92ea0887ece28031e8299d7716d5223d40a642225ab0382680a0cb12a75dc9b4",
+      "phase": "10"
+    },
+    "explorer/tests/holdout/analysis_hidden.test.ts": {
+      "sha256": "b1311b75b86a11615713aab03227545f88ff6ad26fe63e281ffa65d07a64cb39",
+      "phase": "10"
     }
   }
 }
