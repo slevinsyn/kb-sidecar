@@ -43,6 +43,14 @@
     "core/tests/phase08_topics.rs": {
       "sha256": "d558faf3822988636fcd52464e927d358a263d680170397aa71b224d96009acd",
       "phase": "08"
+    },
+    "core/tests/phase09_context.rs": {
+      "sha256": "9fe4cec0539118c2f59f2714812e2ab054152b48ce713cf87b80c73904782035",
+      "phase": "09"
+    },
+    "core/tests/phase09_context_hidden.rs": {
+      "sha256": "81dffc41360fdbaa6da481f580104c1e3575eafe52a946e875eae5bdd0d25ed9",
+      "phase": "09"
     }
   }
 }

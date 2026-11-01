@@ -1,8 +1,8 @@
 {
   "initialized": true,
   "self_test_passed": true,
-  "phase": "08",
-  "title": "Clean topics",
+  "phase": "09",
+  "title": "`kb context` - token-light context for assistants (GraphRAG)",
   "stage": "implementing",
   "history": [
     {
@@ -661,6 +661,75 @@
       "round": 2,
       "verdict": "PASS",
       "important": 0
+    },
+    {
+      "at": "2026-11-02T00:04:05+05:30",
+      "event": "finish",
+      "phase": "08",
+      "commit": "e0c156e613bced67dc30048db36ba68d001dd4fb"
+    },
+    {
+      "at": "2026-11-02T00:04:07+05:30",
+      "event": "start",
+      "phase": "09",
+      "title": "`kb context` - token-light context for assistants (GraphRAG)"
+    },
+    {
+      "at": "2026-11-02T00:04:07+05:30",
+      "event": "approve-spec",
+      "phase": "09",
+      "criteria": [
+        "AC-09-01",
+        "AC-09-02",
+        "AC-09-03",
+        "AC-09-04",
+        "AC-09-05",
+        "AC-09-06",
+        "AC-09-07",
+        "AC-09-08",
+        "AC-09-09"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-02T00:04:07+05:30",
+      "event": "tests-moved-in",
+      "phase": "09",
+      "files": 2
+    },
+    {
+      "at": "2026-11-02T00:04:48+05:30",
+      "event": "red",
+      "phase": "09",
+      "tests": 2
+    },
+    {
+      "at": "2026-11-02T00:05:44+05:30",
+      "event": "review-prep",
+      "phase": "09",
+      "round": 1
+    },
+    {
+      "at": "2026-11-02T00:06:49+05:30",
+      "event": "review",
+      "phase": "09",
+      "round": 1,
+      "verdict": "FAIL",
+      "important": 1
+    },
+    {
+      "at": "2026-11-02T00:07:35+05:30",
+      "event": "review-prep",
+      "phase": "09",
+      "round": 2
+    },
+    {
+      "at": "2026-11-02T00:08:17+05:30",
+      "event": "review",
+      "phase": "09",
+      "round": 2,
+      "verdict": "PASS",
+      "important": 0
     }
   ],
   "change_dir": "changes/2026-11-01-graph-insights",
@@ -681,24 +750,19 @@
     "08",
     "09"
   ],
-  "pending_tests": {
-    "09": {
-      "core/tests/phase09_context.rs": "9fe4cec0539118c2f59f2714812e2ab054152b48ce713cf87b80c73904782035",
-      "core/tests/phase09_context_hidden.rs": "81dffc41360fdbaa6da481f580104c1e3575eafe52a946e875eae5bdd0d25ed9"
-    }
-  },
+  "pending_tests": {},
   "review": {
     "verdict": "PASS",
-    "lock_digest": "9f57bff527d41579026a9bca141eff5a8fbb6eccb5a5f3c9dd237a2fda982edf",
-    "at": "2026-11-01T23:59:50+05:30",
+    "lock_digest": "474c9d89d7089761cd69dbfb78ce26dba64eceafb50e667748f6ceea938ac296",
+    "at": "2026-11-02T00:04:07+05:30",
     "prefetched": true
   },
   "red": {
     "ok": true,
-    "lock_digest": "9f57bff527d41579026a9bca141eff5a8fbb6eccb5a5f3c9dd237a2fda982edf",
-    "evidence": ".phased/evidence/phase-08-red.log"
+    "lock_digest": "474c9d89d7089761cd69dbfb78ce26dba64eceafb50e667748f6ceea938ac296",
+    "evidence": ".phased/evidence/phase-09-red.log"
   },
-  "spec_sha256": "34062d84b3b93f6e62a9b4a0c17754dc949d3fc4cc6bbd7704fcf9e369881f10",
+  "spec_sha256": "ee26e597b1a04a07840b9384d34393490f9cc8e94be8c8b84bd9aeca0bc9a117",
   "code_reviews": {
     "01": {
       "rounds": [
@@ -848,6 +912,30 @@
           "classes": []
         }
       ]
+    },
+    "09": {
+      "rounds": [
+        {
+          "tree": "3b27090c845bd042f91e367af88923abe0726811",
+          "at": "2026-11-02T00:05:44+05:30",
+          "verdict": "FAIL",
+          "important": 1,
+          "nits": 4,
+          "preexisting": 0,
+          "classes": [
+            "term and topic compared in different normalised forms for tech terms"
+          ]
+        },
+        {
+          "tree": "ce6b7bbc66bad5e73779a66c575d39baae557d1e",
+          "at": "2026-11-02T00:07:35+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 1,
+          "preexisting": 0,
+          "classes": []
+        }
+      ]
     }
   },
   "durations": [
@@ -885,6 +973,11 @@
       "phase": "07",
       "level": "M",
       "minutes": 8.7
+    },
+    {
+      "phase": "08",
+      "level": "M",
+      "minutes": 4.3
     }
   ]
 }

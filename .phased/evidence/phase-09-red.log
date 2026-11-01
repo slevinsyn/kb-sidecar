@@ -1,0 +1,91 @@
+== core-rust (run 1): cargo test --quiet -> exit 101
+
+warning: function `test_AC_08_07_no_docs_gives_no_vectors` should have a snake case name
+   --> tests/phase08_topics.rs:626:4
+    |
+626 | fn test_AC_08_07_no_docs_gives_no_vectors() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_08_07_no_docs_gives_no_vectors`
+
+warning: function `test_AC_08_07_ties_are_ordered_alphabetically` should have a snake case name
+   --> tests/phase08_topics.rs:631:4
+    |
+631 | fn test_AC_08_07_ties_are_ordered_alphabetically() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_08_07_ties_are_ordered_alphabetically`
+
+warning: function `test_AC_08_07_many_tied_terms_come_out_in_sorted_order_every_time` should have a snake case name
+   --> tests/phase08_topics.rs:644:4
+    |
+644 | fn test_AC_08_07_many_tied_terms_come_out_in_sorted_order_every_time() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_08_07_many_tied_terms_come_out_in_sorted_order_every_time`
+
+warning: function `test_AC_08_07_is_deterministic` should have a snake case name
+   --> tests/phase08_topics.rs:655:4
+    |
+655 | fn test_AC_08_07_is_deterministic() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_08_07_is_deterministic`
+
+warning: function `test_AC_08_07_one_result_per_doc_in_the_same_order` should have a snake case name
+   --> tests/phase08_topics.rs:671:4
+    |
+671 | fn test_AC_08_07_one_result_per_doc_in_the_same_order() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_08_07_one_result_per_doc_in_the_same_order`
+
+warning: function `test_AC_08_09_tokenize_still_keeps_plurals_and_the_new_noise_words` should have a snake case name
+   --> tests/phase08_topics.rs:682:4
+    |
+682 | fn test_AC_08_09_tokenize_still_keeps_plurals_and_the_new_noise_words() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_08_09_tokenize_still_keeps_plurals_and_the_new_noise_words`
+
+warning: function `test_AC_08_09_extract_topics_still_splits_plural_and_singular` should have a snake case name
+   --> tests/phase08_topics.rs:696:4
+    |
+696 | fn test_AC_08_09_extract_topics_still_splits_plural_and_singular() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_08_09_extract_topics_still_splits_plural_and_singular`
+
+warning: function `test_AC_08_09_extract_topics_still_has_phase_03_ranking_and_ties` should have a snake case name
+   --> tests/phase08_topics.rs:703:4
+    |
+703 | fn test_AC_08_09_extract_topics_still_has_phase_03_ranking_and_ties() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_08_09_extract_topics_still_has_phase_03_ranking_and_ties`
+
+warning: function `test_AC_08_09_stop_words_list_is_unchanged_for_required_words` should have a snake case name
+   --> tests/phase08_topics.rs:724:4
+    |
+724 | fn test_AC_08_09_stop_words_list_is_unchanged_for_required_words() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_08_09_stop_words_list_is_unchanged_for_required_words`
+
+warning: function `test_AC_08_08_ingest_graph_has_clean_topic_nodes` should have a snake case name
+   --> tests/phase08_topics.rs:929:4
+    |
+929 | fn test_AC_08_08_ingest_graph_has_clean_topic_nodes() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_08_08_ingest_graph_has_clean_topic_nodes`
+
+warning: function `test_AC_08_08_session_meta_and_note_carry_the_same_clean_topics` should have a snake case name
+   --> tests/phase08_topics.rs:960:4
+    |
+960 | fn test_AC_08_08_session_meta_and_note_carry_the_same_clean_topics() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_08_08_session_meta_and_note_carry_the_same_clean_topics`
+
+warning: function `test_AC_08_08_rerunning_ingest_keeps_the_clean_topics` should have a snake case name
+   --> tests/phase08_topics.rs:992:4
+    |
+992 | fn test_AC_08_08_rerunning_ingest_keeps_the_clean_topics() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_08_08_rerunning_ingest_keeps_the_clean_topics`
+
+warning: function `test_AC_08_08_hook_publishes_clean_topics_too` should have a snake case name
+    --> tests/phase08_topics.rs:1010:4
+     |
+1010 | fn test_AC_08_08_hook_publishes_clean_topics_too() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_08_08_hook_publishes_clean_topics_too`
+
+error: test failed, to rerun pass `--test phase09_context`
+== explorer-javascript (run 1): npx vitest run --exclude 'tests/holdout/**' -> exit 0
+
+ RUN  v5.0.5 /Users/sarthakbhatt/Devel/kb-sidecar/explorer
+
+
+ Test Files  1 passed (1)
+      Tests  49 passed (49)
+   Start at  00:04:48
+   Duration  138ms (tests 38%, import 33%, transform 17%, worker 12%)
+== explorer-javascript hidden tests -> exit 0:       Tests  9 passed (9) (details hidden)
