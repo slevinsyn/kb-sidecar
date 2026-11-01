@@ -11,6 +11,10 @@
     "core/tests/phase03_nodes.rs": {
       "sha256": "b6ef727e28fb72d1085b06af8275b2e264e6873fe8cba6bc8ccb17f7ccae4767",
       "phase": "03"
+    },
+    "core/tests/phase04_dataset.rs": {
+      "sha256": "344042a4e653130d328d55de320e2ba317c27b6941cb8dd4e64f7ae46dec703e",
+      "phase": "04"
     }
   }
 }

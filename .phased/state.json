@@ -1,8 +1,8 @@
 {
   "initialized": true,
   "self_test_passed": true,
-  "phase": "03",
-  "title": "Topic keywords (TF-IDF) + Markdown session nodes",
+  "phase": "04",
+  "title": "Training dataset records + redaction",
   "stage": "implementing",
   "history": [
     {
@@ -301,6 +301,61 @@
       "round": 2,
       "verdict": "PASS",
       "important": 0
+    },
+    {
+      "at": "2026-11-01T20:32:16+05:30",
+      "event": "finish",
+      "phase": "03",
+      "commit": "c38e8c0e4caee93f8f45dac85f8be13557c78fe3"
+    },
+    {
+      "at": "2026-11-01T20:32:21+05:30",
+      "event": "start",
+      "phase": "04",
+      "title": "Training dataset records + redaction"
+    },
+    {
+      "at": "2026-11-01T20:32:21+05:30",
+      "event": "approve-spec",
+      "phase": "04",
+      "criteria": [
+        "AC-04-01",
+        "AC-04-02",
+        "AC-04-03",
+        "AC-04-04",
+        "AC-04-05",
+        "AC-04-06",
+        "AC-04-07",
+        "AC-04-08",
+        "AC-04-09"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-01T20:35:47+05:30",
+      "event": "review",
+      "phase": "04",
+      "verdict": "PASS"
+    },
+    {
+      "at": "2026-11-01T20:37:09+05:30",
+      "event": "red",
+      "phase": "04",
+      "tests": 1
+    },
+    {
+      "at": "2026-11-01T20:38:07+05:30",
+      "event": "review-prep",
+      "phase": "04",
+      "round": 1
+    },
+    {
+      "at": "2026-11-01T20:40:57+05:30",
+      "event": "review",
+      "phase": "04",
+      "round": 1,
+      "verdict": "PASS",
+      "important": 0
     }
   ],
   "change_dir": "changes/2026-11-01-conversation-kb",
@@ -327,15 +382,15 @@
   "pending_tests": {},
   "review": {
     "verdict": "PASS",
-    "lock_digest": "0aed27a662664ec070b61d478c82fda0198c2113b926d40da14d7f5f05d1375e",
-    "at": "2026-11-01T20:28:02+05:30"
+    "lock_digest": "455e0f61b264d075e9d1dbdab47f36c4ecd87400b75421f977eeed27b88f206e",
+    "at": "2026-11-01T20:35:47+05:30"
   },
   "red": {
     "ok": true,
-    "lock_digest": "0aed27a662664ec070b61d478c82fda0198c2113b926d40da14d7f5f05d1375e",
-    "evidence": ".phased/evidence/phase-03-red.log"
+    "lock_digest": "455e0f61b264d075e9d1dbdab47f36c4ecd87400b75421f977eeed27b88f206e",
+    "evidence": ".phased/evidence/phase-04-red.log"
   },
-  "spec_sha256": "60c869a5083ce6a53331c7db59ffbb546281ba0f48421d17f415147a60c40d33",
+  "spec_sha256": "ce2d94154e4b7303315fcb7edec70bd24fa11801558971629f71bac902e86649",
   "code_reviews": {
     "01": {
       "rounds": [
@@ -387,6 +442,19 @@
           "classes": []
         }
       ]
+    },
+    "04": {
+      "rounds": [
+        {
+          "tree": "88866d972d7876dd64a247bb8655efbc81c95fcd",
+          "at": "2026-11-01T20:38:07+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 4,
+          "preexisting": 0,
+          "classes": []
+        }
+      ]
     }
   },
   "durations": [
@@ -399,6 +467,11 @@
       "phase": "02",
       "level": "S",
       "minutes": 12.8
+    },
+    {
+      "phase": "03",
+      "level": "M",
+      "minutes": 113.2
     }
   ]
 }
