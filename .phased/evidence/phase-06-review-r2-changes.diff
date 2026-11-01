@@ -1,0 +1,67 @@
+diff --git a/core/src/main.rs b/core/src/main.rs
+index 01e9abe..02d4f94 100644
+--- a/core/src/main.rs
++++ b/core/src/main.rs
+@@ -6,7 +6,7 @@ mod sha256;
+ mod store;
+ 
+ use std::collections::BTreeSet;
+-use std::io::Read;
++use std::io::{Read, Write};
+ use std::path::{Path, PathBuf};
+ use std::process::ExitCode;
+ 
+@@ -263,7 +263,8 @@ fn run_hook(args: &[String]) -> Result<(), String> {
+         unchanged,
+         skipped: 0,
+     };
+-    println!("{}", counts.line());
++    // A closed stdout must not fail the hook, so the write result is ignored.
++    let _ = writeln!(std::io::stdout(), "{}", counts.line());
+     Ok(())
+ }
+ 
+@@ -303,8 +304,31 @@ fn fail(code: u8, msg: &str) -> ExitCode {
+     ExitCode::from(code)
+ }
+ 
++/// Run the SessionEnd hook. It never fails and never panics out: errors and panics are reported
++/// on stderr (best effort) and the caller exits 0 so the Claude Code session is undisturbed.
++fn hook_main(rest: &[String]) {
++    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| run_hook(rest)));
++    let msg = match result {
++        Ok(Ok(())) => return,
++        Ok(Err(msg)) => msg,
++        Err(payload) => {
++            let detail = payload
++                .downcast_ref::<&str>()
++                .map(|s| (*s).to_string())
++                .or_else(|| payload.downcast_ref::<String>().cloned())
++                .unwrap_or_else(|| "unknown panic".to_string());
++            format!("internal error: {detail}")
++        }
++    };
++    let _ = writeln!(std::io::stderr(), "kb hook: {msg}");
++}
++
+ fn main() -> ExitCode {
+-    let args: Vec<String> = std::env::args().skip(1).collect();
++    // Lossy conversion so non-UTF-8 arguments never panic (the hook must always exit 0).
++    let args: Vec<String> = std::env::args_os()
++        .skip(1)
++        .map(|a| a.to_string_lossy().into_owned())
++        .collect();
+     let Some((command, rest)) = args.split_first() else {
+         return fail(EXIT_USAGE, "missing command");
+     };
+@@ -319,9 +343,7 @@ fn main() -> ExitCode {
+         },
+         "hook" => {
+             // A failing hook must never disturb the Claude Code session.
+-            if let Err(msg) = run_hook(rest) {
+-                eprintln!("kb hook: {msg}");
+-            }
++            hook_main(rest);
+             ExitCode::SUCCESS
+         }
+         "-h" | "--help" | "help" => {

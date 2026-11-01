@@ -8,6 +8,7 @@ _Written by `.phased/bin/phase.py`. Do not edit by hand._
 | 02 | claude.ai export parser | done | 2026-11-01T18:26 | 2026-11-01T18:26 | 1 | 2026-11-01T18:37 | 09e9496d93 |
 | 03 | Topic keywords (TF-IDF) + Markdown session nodes | done | 2026-11-01T18:39 | 2026-11-01T18:39 | 1 | 2026-11-01T20:28 | c38e8c0e4c |
 | 04 | Training dataset records + redaction | done | 2026-11-01T20:32 | 2026-11-01T20:32 | 1 | 2026-11-01T20:37 | 492606be3f |
-| 05 | Knowledge graph builder (graph.json) | implementing | 2026-11-01T20:41 | 2026-11-01T20:41 | 1 | 2026-11-01T20:43 |  |
+| 05 | Knowledge graph builder (graph.json) | done | 2026-11-01T20:41 | 2026-11-01T20:41 | 1 | 2026-11-01T20:43 | 4bb96b7e8a |
+| 06 | `kb` command - incremental ingest, SessionEnd hook, hook installer | implementing | 2026-11-01T20:45 | 2026-11-01T20:45 | 1 | 2026-11-01T20:52 |  |
 
 Evidence of failing-first test runs is in `.phased/evidence/`.

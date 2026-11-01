@@ -19,6 +19,10 @@
     "core/tests/phase05_graph.rs": {
       "sha256": "5fcd40b1713ee582e121c7bb8f7886a38d071159c53df3d038600e3b6f272c62",
       "phase": "05"
+    },
+    "core/tests/phase06_cli.rs": {
+      "sha256": "19e1d6cdbd237897e38c2c0a9b543f9a33e5e7dfc553b5b30ebd8de8c9621796",
+      "phase": "06"
     }
   }
 }
