@@ -3,7 +3,7 @@
   "self_test_passed": true,
   "phase": "09",
   "title": "`kb context` - token-light context for assistants (GraphRAG)",
-  "stage": "implementing",
+  "stage": "done",
   "history": [
     {
       "event": "self-test",
@@ -730,6 +730,22 @@
       "round": 2,
       "verdict": "PASS",
       "important": 0
+    },
+    {
+      "at": "2026-11-02T00:08:26+05:30",
+      "event": "finish",
+      "phase": "09",
+      "commit": "9ea9520b0be76699b249752a9b8b31a93329d9e6"
+    },
+    {
+      "at": "2026-11-02T00:08:34+05:30",
+      "event": "report",
+      "phase": "09"
+    },
+    {
+      "at": "2026-11-02T00:08:34+05:30",
+      "event": "kba-facts",
+      "phase": "09"
     }
   ],
   "change_dir": "changes/2026-11-01-graph-insights",
@@ -976,6 +992,11 @@
     },
     {
       "phase": "08",
+      "level": "M",
+      "minutes": 4.3
+    },
+    {
+      "phase": "09",
       "level": "M",
       "minutes": 4.3
     }
