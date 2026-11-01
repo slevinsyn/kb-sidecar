@@ -25,12 +25,15 @@
                             when the implementer and a fresh test-reviewer agree a locked test
                             contradicts the spec (limit: auto_retest_limit, default 1)
   hook-review               SubagentStop hook for test-reviewer (not for agents)
+  review-verdict --agent-id ID   fallback: read a test-reviewer's verdict from its own transcript
+                            (only ids the hook recorded; for when the hook got no message)
 """
 import datetime as dt
 import json
 import os
 import re
 import sys
+import time
 sys.dont_write_bytecode = True
 from pathlib import Path
 
@@ -297,8 +300,9 @@ def cmd_red(root, cfg, state):
     require(rv.get("verdict") == "PASS" and rv.get("lock_digest") == L.digest(root, nn),
             "The test-reviewer has not passed the current tests "
             f"(recorded: {rv.get('verdict') or 'nothing'}). Run the test-reviewer agent again; the last line "
-            "of its reply must be 'VERDICT: PASS'. If it said PASS and this still shows NO VERDICT, see "
-            f".phased/evidence/phase-{nn}-review-unparsed.log and tell the user.")
+            "of its reply must be 'VERDICT: PASS'. If it said PASS and this still shows NO VERDICT, run: "
+            "python3 .phased/bin/phase.py review-verdict --agent-id <that reviewer's agent id> "
+            f"(details: .phased/evidence/hook-payload.log, phase-{nn}-review-unparsed.log).")
     spec = Path(root, f"specs/phase-{nn}.md")
     require(state.get("spec_sha256") == C.sha256_file(spec), "The spec changed after approval. Ask the user to reopen.")
     ok, output, results = K.run_tests(root, cfg, include_holdout=True, runs=1, hide_holdout=True)
@@ -585,7 +589,13 @@ def transcript_texts(path, role):
                 if isinstance(c, str):
                     out.append(c)
                 elif isinstance(c, list):
-                    out.extend(x.get("text", "") for x in c if isinstance(x, dict) and x.get("type") == "text")
+                    for x in c:
+                        if not isinstance(x, dict):
+                            continue
+                        if x.get("type") == "text":
+                            out.append(x.get("text", ""))
+                        elif x.get("type") == "tool_use" and x.get("name") == "SubagentHandback":
+                            out.extend(v for v in (x.get("input") or {}).values() if isinstance(v, str))
     except (OSError, TypeError):
         pass
     return out
@@ -598,21 +608,109 @@ def parse_verdicts(text):
     return [(n.zfill(2) if n else None, v.upper()) for n, v in VERDICT_RE.findall(clean)]
 
 
-def cmd_hook_review(root, cfg, state):
+CLAUDE_HOMES = [Path(os.path.expanduser("~/.claude"))]
+if os.environ.get("CLAUDE_CONFIG_DIR"):
+    CLAUDE_HOMES.append(Path(os.path.expanduser(os.environ["CLAUDE_CONFIG_DIR"])))
+REVIEW_AGENTS = ".phased/evidence/review-agents"
+
+
+def under_claude_homes(path):
     try:
-        data = json.load(sys.stdin)
-    except Exception:
-        data = {}
-    tpath = data.get("agent_transcript_path") or ""
+        real = Path(os.path.realpath(str(path)))
+    except OSError:
+        return False
+    for h in CLAUDE_HOMES:
+        try:
+            real.relative_to(Path(os.path.realpath(str(h))))
+            return True
+        except ValueError:
+            pass
+    return False
+
+
+def subagent_transcript(data):
+    """The reviewer's own transcript, written by Claude Code under ~/.claude (agents cannot
+    write there: the guard blocks it). Tried in order: the path Claude Code passes, the
+    sessions folder next to the main transcript, then a search by agent id."""
+    tp = data.get("agent_transcript_path")
+    if tp and Path(tp).is_file():
+        return Path(tp)
+    aid = re.sub(r"[^A-Za-z0-9_-]", "", str(data.get("agent_id") or ""))
+    if not aid:
+        return None
+    main = data.get("transcript_path")
+    if main:
+        mp = Path(main)
+        for c in (mp.with_suffix("") / "subagents" / f"agent-{aid}.jsonl",
+                  mp.parent / str(data.get("session_id") or "-") / "subagents" / f"agent-{aid}.jsonl"):
+            if c.is_file():
+                return c
+        if mp.parent.is_dir():
+            for c in mp.parent.rglob(f"*{aid}*.jsonl"):
+                return c
+    for h in CLAUDE_HOMES:
+        proj = h / "projects"
+        if proj.is_dir():
+            for c in proj.rglob(f"*{aid}*.jsonl"):
+                return c
+    return None
+
+
+def reviewer_text(data, wait=True):
+    """(verdicts, last text, transcript path, where it came from). The transcript is written
+    asynchronously, so wait briefly for it when the message itself is not in the payload."""
     text = data.get("last_assistant_message") or ""
     found = parse_verdicts(text)
-    if not found and tpath:  # older Claude Code versions, or the verdict was in an earlier message
-        texts = transcript_texts(tpath, "assistant")
-        text = texts[-1] if texts else text
-        for t in reversed(texts):
-            found = parse_verdicts(t)
-            if found:
-                break
+    if found:
+        return found, text, data.get("agent_transcript_path") or "", "last_assistant_message"
+    tries = 8 if wait else 1
+    tpath = None
+    for i in range(tries):
+        tpath = subagent_transcript(data)
+        if tpath and under_claude_homes(tpath) or (tpath and tpath == Path(data.get("agent_transcript_path") or "-")):
+            texts = transcript_texts(tpath, "assistant")
+            for t in reversed(texts):
+                found = parse_verdicts(t)
+                if found:
+                    return found, t, str(tpath), "subagent transcript"
+            text = texts[-1] if texts else text
+        if i < tries - 1:
+            time.sleep(1)
+    return [], text, str(tpath or ""), "nothing found"
+
+
+def log_payload(root, data, source):
+    """Which fields Claude Code sent (names and sizes only, never contents)."""
+    try:
+        ev = Path(root, ".phased/evidence")
+        ev.mkdir(parents=True, exist_ok=True)
+        shape = {k: (len(v) if isinstance(v, (str, list, dict)) else v if isinstance(v, bool) else type(v).__name__)
+                 for k, v in data.items()}
+        with open(ev / "hook-payload.log", "a", encoding="utf-8") as f:
+            f.write(json.dumps({"at": now(), "event": data.get("hook_event_name"), "agent_type": data.get("agent_type"),
+                                "verdict_from": source, "fields": shape}) + "\n")
+    except OSError:
+        pass
+
+
+def remember_reviewer(root, data, phase):
+    """Agent ids the test-reviewer hook saw (one file each, so parallel reviewers never clash).
+    'review-verdict' accepts only these, so another agent's transcript can never be passed off
+    as a test review."""
+    aid = re.sub(r"[^A-Za-z0-9_-]", "", str(data.get("agent_id") or ""))
+    if not aid:
+        return
+    try:
+        d = Path(root, REVIEW_AGENTS)
+        d.mkdir(parents=True, exist_ok=True)
+        (d / f"{aid}.json").write_text(json.dumps({"phase": phase, "transcript_path": data.get("transcript_path"),
+                                                   "session_id": data.get("session_id"), "at": now()}), encoding="utf-8")
+    except OSError:
+        pass
+
+
+def apply_review(root, cfg, state, found, text, tpath):
+    """Record verdicts. Returns 'prefetch' when state.json must not be rewritten."""
     if state.get("stage") == "prefetch":
         phases = (state.get("prefetch") or {}).get("phases", [])
         if any(n is None for n, _ in found):  # 'VERDICT: PASS' without a phase: take it from the task prompt
@@ -629,15 +727,51 @@ def cmd_hook_review(root, cfg, state):
                 os.replace(tmp, rdir / f"phase-{nn}.json")
         if not any(nn in phases for nn, _ in found):
             note_unparsed(root, "prefetch", text)
-        raise SystemExit(0)  # do not rewrite state.json: other reviewers may be finishing right now
+        return "prefetch", [nn for nn, _ in found if nn in phases]
     if state.get("stage") != "tests":
-        return 0
+        return "ignored", []
     mine = [v for n, v in found if n in (None, state["phase"])]
     verdict = mine[-1] if mine else "NO VERDICT"
     if not mine:
         note_unparsed(root, state["phase"], text)
     state["review"] = {"verdict": verdict, "lock_digest": L.digest(root, state["phase"]), "at": now()}
     log(state, "review", verdict=verdict)
+    return "tests", [verdict]
+
+
+def cmd_hook_review(root, cfg, state):
+    try:
+        data = json.load(sys.stdin)
+    except Exception:
+        data = {}
+    found, text, tpath, source = reviewer_text(data)
+    log_payload(root, data, source)
+    remember_reviewer(root, data, "prefetch" if state.get("stage") == "prefetch" else state.get("phase"))
+    kind, _ = apply_review(root, cfg, state, found, text, tpath)
+    if kind == "prefetch":
+        raise SystemExit(0)  # do not rewrite state.json: other reviewers may be finishing right now
+    return 0
+
+
+def cmd_review_verdict(root, cfg, state, args):
+    """Fallback when the hook could not read the verdict: read it from that reviewer's own
+    transcript. Only agent ids the test-reviewer hook recorded are accepted."""
+    aid = argval(args, "--agent-id") or ""
+    require(aid, "usage: phase.py review-verdict --agent-id <id of the test-reviewer agent>")
+    aid = re.sub(r"[^A-Za-z0-9_-]", "", aid)
+    rec_file = Path(root, REVIEW_AGENTS, f"{aid}.json")
+    require(aid and rec_file.is_file(), f"Agent {aid} is not a test-reviewer this project's hook has seen. "
+                                        "Run the test-reviewer agent again.")
+    seen = C.read_json(rec_file, {}) or {}
+    data = {"agent_id": aid, **{k: v for k, v in seen.items() if k in ("transcript_path", "session_id")}}
+    found, text, tpath, source = reviewer_text(data, wait=False)
+    require(found, f"No VERDICT line found in that reviewer's transcript ({tpath or 'transcript not found'}). "
+                   "Run the test-reviewer again.")
+    kind, rec = apply_review(root, cfg, state, found, text, tpath)
+    log_payload(root, {"agent_id": aid, "hook_event_name": "review-verdict"}, source)
+    C.say(f"Verdict recorded from the reviewer's transcript ({kind}): {', '.join(rec) or 'nothing matched this stage'}.")
+    if kind == "prefetch":
+        raise SystemExit(0)
     return 0
 
 
@@ -987,6 +1121,7 @@ def main(argv):
             "report": lambda: cmd_report(root, cfg, state),
             "kba-facts": lambda: cmd_kba_facts(root, cfg, state),
             "hook-review": lambda: cmd_hook_review(root, cfg, state),
+            "review-verdict": lambda: cmd_review_verdict(root, cfg, state, args),
         }
         if cmd not in handlers:
             C.say(__doc__)

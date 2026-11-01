@@ -1,0 +1,82 @@
+== core-rust (run 1): cargo test --quiet -> exit 101
+
+warning: function `test_AC_03_08_truncated_error_result_keeps_both_markers` should have a snake case name
+    --> tests/phase03_nodes.rs:1033:4
+     |
+1033 | fn test_AC_03_08_truncated_error_result_keeps_both_markers() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_03_08_truncated_error_result_keeps_both_markers`
+
+warning: function `test_AC_03_08_tool_input_is_not_truncated` should have a snake case name
+    --> tests/phase03_nodes.rs:1041:4
+     |
+1041 | fn test_AC_03_08_tool_input_is_not_truncated() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_03_08_tool_input_is_not_truncated`
+
+warning: function `test_AC_03_09_result_with_triple_backticks_gets_four_backtick_fence` should have a snake case name
+    --> tests/phase03_nodes.rs:1058:4
+     |
+1058 | fn test_AC_03_09_result_with_triple_backticks_gets_four_backtick_fence() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_03_09_result_with_triple_backticks_gets_four_backtick_fence`
+
+warning: function `test_AC_03_09_fence_is_one_longer_than_the_longest_run` should have a snake case name
+    --> tests/phase03_nodes.rs:1067:4
+     |
+1067 | fn test_AC_03_09_fence_is_one_longer_than_the_longest_run() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_03_09_fence_is_one_longer_than_the_longest_run`
+
+warning: function `test_AC_03_09_longest_run_counts_even_when_it_is_not_first` should have a snake case name
+    --> tests/phase03_nodes.rs:1074:4
+     |
+1074 | fn test_AC_03_09_longest_run_counts_even_when_it_is_not_first() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_03_09_longest_run_counts_even_when_it_is_not_first`
+
+warning: function `test_AC_03_09_short_backtick_runs_keep_the_minimum_three_backtick_fence` should have a snake case name
+    --> tests/phase03_nodes.rs:1081:4
+     |
+1081 | fn test_AC_03_09_short_backtick_runs_keep_the_minimum_three_backtick_fence() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_03_09_short_backtick_runs_keep_the_minimum_three_backtick_fence`
+
+warning: function `test_AC_03_09_tool_input_with_backticks_gets_longer_json_fence` should have a snake case name
+    --> tests/phase03_nodes.rs:1089:4
+     |
+1089 | fn test_AC_03_09_tool_input_with_backticks_gets_longer_json_fence() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_03_09_tool_input_with_backticks_gets_longer_json_fence`
+
+warning: function `test_AC_03_09_tool_input_without_backticks_uses_three_backticks` should have a snake case name
+    --> tests/phase03_nodes.rs:1102:4
+     |
+1102 | fn test_AC_03_09_tool_input_without_backticks_uses_three_backticks() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_03_09_tool_input_without_backticks_uses_three_backticks`
+
+warning: function `test_AC_03_09_each_block_gets_its_own_fence_length` should have a snake case name
+    --> tests/phase03_nodes.rs:1114:4
+     |
+1114 | fn test_AC_03_09_each_block_gets_its_own_fence_length() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_03_09_each_block_gets_its_own_fence_length`
+
+warning: function `test_AC_03_10_render_is_byte_identical_across_calls` should have a snake case name
+    --> tests/phase03_nodes.rs:1131:4
+     |
+1131 | fn test_AC_03_10_render_is_byte_identical_across_calls() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_03_10_render_is_byte_identical_across_calls`
+
+warning: function `test_AC_03_10_output_ends_with_exactly_one_newline` should have a snake case name
+    --> tests/phase03_nodes.rs:1142:4
+     |
+1142 | fn test_AC_03_10_output_ends_with_exactly_one_newline() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_03_10_output_ends_with_exactly_one_newline`
+
+warning: function `test_AC_03_10_session_without_messages_ends_after_the_conversation_heading` should have a snake case name
+    --> tests/phase03_nodes.rs:1159:4
+     |
+1159 | fn test_AC_03_10_session_without_messages_ends_after_the_conversation_heading() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_03_10_session_without_messages_ends_after_the_conversation_heading`
+
+warning: function `test_AC_03_10_output_does_not_depend_on_other_calls` should have a snake case name
+    --> tests/phase03_nodes.rs:1165:4
+     |
+1165 | fn test_AC_03_10_output_does_not_depend_on_other_calls() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_03_10_output_does_not_depend_on_other_calls`
+
+error: test failed, to rerun pass `--test phase03_nodes`
+== explorer-javascript: no test files yet - skipped until its first test exists

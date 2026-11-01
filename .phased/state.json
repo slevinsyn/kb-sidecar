@@ -1,8 +1,8 @@
 {
   "initialized": true,
   "self_test_passed": true,
-  "phase": "02",
-  "title": "claude.ai export parser",
+  "phase": "03",
+  "title": "Topic keywords (TF-IDF) + Markdown session nodes",
   "stage": "implementing",
   "history": [
     {
@@ -208,6 +208,99 @@
       "round": 1,
       "verdict": "PASS",
       "important": 0
+    },
+    {
+      "at": "2026-11-01T18:39:04+05:30",
+      "event": "finish",
+      "phase": "02",
+      "commit": "09e9496d9398d6286281af696901261c09b9a313"
+    },
+    {
+      "at": "2026-11-01T18:39:07+05:30",
+      "event": "start",
+      "phase": "03",
+      "title": "Topic keywords (TF-IDF) + Markdown session nodes"
+    },
+    {
+      "at": "2026-11-01T18:39:07+05:30",
+      "event": "approve-spec",
+      "phase": "03",
+      "criteria": [
+        "AC-03-01",
+        "AC-03-02",
+        "AC-03-03",
+        "AC-03-04",
+        "AC-03-05",
+        "AC-03-06",
+        "AC-03-07",
+        "AC-03-08",
+        "AC-03-09",
+        "AC-03-10"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-01T18:45:30+05:30",
+      "event": "review",
+      "phase": "03",
+      "verdict": "NO VERDICT"
+    },
+    {
+      "at": "2026-11-01T18:51:46+05:30",
+      "event": "review",
+      "phase": "03",
+      "verdict": "NO VERDICT"
+    },
+    {
+      "event": "self-test",
+      "passed": true,
+      "failed": 0
+    },
+    {
+      "at": "2026-11-01T20:23:15+05:30",
+      "event": "review",
+      "phase": "03",
+      "verdict": "NO VERDICT"
+    },
+    {
+      "at": "2026-11-01T20:28:02+05:30",
+      "event": "review",
+      "phase": "03",
+      "verdict": "PASS"
+    },
+    {
+      "at": "2026-11-01T20:28:41+05:30",
+      "event": "red",
+      "phase": "03",
+      "tests": 1
+    },
+    {
+      "at": "2026-11-01T20:29:30+05:30",
+      "event": "review-prep",
+      "phase": "03",
+      "round": 1
+    },
+    {
+      "at": "2026-11-01T20:30:15+05:30",
+      "event": "review",
+      "phase": "03",
+      "round": 1,
+      "verdict": "FAIL",
+      "important": 2
+    },
+    {
+      "at": "2026-11-01T20:30:46+05:30",
+      "event": "review-prep",
+      "phase": "03",
+      "round": 2
+    },
+    {
+      "at": "2026-11-01T20:32:01+05:30",
+      "event": "review",
+      "phase": "03",
+      "round": 2,
+      "verdict": "PASS",
+      "important": 0
     }
   ],
   "change_dir": "changes/2026-11-01-conversation-kb",
@@ -234,15 +327,15 @@
   "pending_tests": {},
   "review": {
     "verdict": "PASS",
-    "lock_digest": "772e18029119e20117c6b403c697d0377800ce1e89f2cc4f3f904688524b3bf2",
-    "at": "2026-11-01T18:37:00+05:30"
+    "lock_digest": "0aed27a662664ec070b61d478c82fda0198c2113b926d40da14d7f5f05d1375e",
+    "at": "2026-11-01T20:28:02+05:30"
   },
   "red": {
     "ok": true,
-    "lock_digest": "772e18029119e20117c6b403c697d0377800ce1e89f2cc4f3f904688524b3bf2",
-    "evidence": ".phased/evidence/phase-02-red.log"
+    "lock_digest": "0aed27a662664ec070b61d478c82fda0198c2113b926d40da14d7f5f05d1375e",
+    "evidence": ".phased/evidence/phase-03-red.log"
   },
-  "spec_sha256": "d1083c8313f6c92a4b22916064d84005ca65389623c38fe5a37ac1b4ed1f8c47",
+  "spec_sha256": "60c869a5083ce6a53331c7db59ffbb546281ba0f48421d17f415147a60c40d33",
   "code_reviews": {
     "01": {
       "rounds": [
@@ -269,6 +362,31 @@
           "classes": []
         }
       ]
+    },
+    "03": {
+      "rounds": [
+        {
+          "tree": "7a2ef690654b6866bbdd0bfc8afe79b2d8a4c0c8",
+          "at": "2026-11-01T20:29:30+05:30",
+          "verdict": "FAIL",
+          "important": 2,
+          "nits": 3,
+          "preexisting": 0,
+          "classes": [
+            "missing input normalisation (output not ending in exactly one newline)",
+            "path traversal via unvalidated date in file name"
+          ]
+        },
+        {
+          "tree": "b075f84e2f1c75ddc0033ad8bcb897bc1d1fda79",
+          "at": "2026-11-01T20:30:46+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 2,
+          "preexisting": 0,
+          "classes": []
+        }
+      ]
     }
   },
   "durations": [
@@ -276,6 +394,11 @@
       "phase": "01",
       "level": "M",
       "minutes": 135.5
+    },
+    {
+      "phase": "02",
+      "level": "S",
+      "minutes": 12.8
     }
   ]
 }

@@ -7,6 +7,10 @@
     "core/tests/phase02_claude_ai.rs": {
       "sha256": "b18a840dfc6b2e34cf50743e917ddbc3590513e7d3aa561e8b507762698ce15c",
       "phase": "02"
+    },
+    "core/tests/phase03_nodes.rs": {
+      "sha256": "b6ef727e28fb72d1085b06af8275b2e264e6873fe8cba6bc8ccb17f7ccae4767",
+      "phase": "03"
     }
   }
 }

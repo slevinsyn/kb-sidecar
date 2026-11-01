@@ -1,0 +1,36 @@
+diff --git a/core/src/node.rs b/core/src/node.rs
+index 3c0e886..ab0cdec 100644
+--- a/core/src/node.rs
++++ b/core/src/node.rs
+@@ -34,8 +34,19 @@ pub fn slug(s: &str) -> String {
+ /// `{date}-{slug(title)}-{id8}.md`
+ pub fn node_file_name(s: &Session) -> String {
+     let date: String = match &s.started_at {
+-        Some(t) if !t.is_empty() => t.chars().take(10).collect(),
+-        _ => "undated".to_string(),
++        Some(t) => {
++            let d: String = t
++                .chars()
++                .take(10)
++                .filter(|c| c.is_ascii_digit() || *c == '-')
++                .collect();
++            if d.is_empty() {
++                "undated".to_string()
++            } else {
++                d
++            }
++        }
++        None => "undated".to_string(),
+     };
+     let id8: String = slug(&s.id).chars().take(8).collect();
+     format!("{}-{}-{}.md", date, slug(&s.title), id8)
+@@ -145,5 +156,9 @@ pub fn render_node(s: &Session, topics: &[String]) -> String {
+             out.push('\n');
+         }
+     }
++    // Canonical ending: exactly one trailing newline.
++    let trimmed_len = out.trim_end_matches('\n').len();
++    out.truncate(trimmed_len);
++    out.push('\n');
+     out
+ }
