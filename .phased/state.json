@@ -3,7 +3,7 @@
   "self_test_passed": true,
   "phase": "07",
   "title": "3D explorer web app",
-  "stage": "implementing",
+  "stage": "done",
   "history": [
     {
       "event": "self-test",
@@ -548,6 +548,22 @@
       "round": 2,
       "verdict": "PASS",
       "important": 0
+    },
+    {
+      "at": "2026-11-01T21:08:23+05:30",
+      "event": "finish",
+      "phase": "07",
+      "commit": "b56b27d90058abb149b5f20ef5db849cd973a705"
+    },
+    {
+      "at": "2026-11-01T21:08:31+05:30",
+      "event": "report",
+      "phase": "07"
+    },
+    {
+      "at": "2026-11-01T21:08:33+05:30",
+      "event": "kba-facts",
+      "phase": "07"
     }
   ],
   "change_dir": "changes/2026-11-01-conversation-kb",
@@ -740,6 +756,11 @@
       "phase": "06",
       "level": "M",
       "minutes": 14.3
+    },
+    {
+      "phase": "07",
+      "level": "M",
+      "minutes": 8.7
     }
   ]
 }
