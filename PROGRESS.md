@@ -11,5 +11,6 @@ _Written by `.phased/bin/phase.py`. Do not edit by hand._
 | 05 | Knowledge graph builder (graph.json) | done | 2026-11-01T20:41 | 2026-11-01T20:41 | 1 | 2026-11-01T20:43 | 4bb96b7e8a |
 | 06 | `kb` command - incremental ingest, SessionEnd hook, hook installer | done | 2026-11-01T20:45 | 2026-11-01T20:45 | 1 | 2026-11-01T20:52 | bcfb5f9081 |
 | 07 | 3D explorer web app | done | 2026-11-01T20:59 | 2026-11-01T20:59 | 2 | 2026-11-01T21:02 | b56b27d900 |
+| 08 | Clean topics | implementing | 2026-11-01T23:59 | 2026-11-01T23:59 | 3 | 2026-11-02T00:00 |  |
 
 Evidence of failing-first test runs is in `.phased/evidence/`.

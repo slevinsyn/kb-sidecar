@@ -31,6 +31,18 @@
     "explorer/tests/holdout/graph_hidden.test.ts": {
       "sha256": "3893eb17ea43f01463c254d7a6eab1a704f097f4b3c25e131f832d4956ec0b33",
       "phase": "07"
+    },
+    "core/tests/holdout/main.rs": {
+      "sha256": "e0573c3c3651593631f49ca9eeba10f2f10a6ca8ea13b1d6980f54313162f0d2",
+      "phase": "08"
+    },
+    "core/tests/holdout/phase08_hidden.rs": {
+      "sha256": "7111ddc81e54c7c4660424c18bcf9e0cc7cb5e0c0db86ff6681704e26eacb28b",
+      "phase": "08"
+    },
+    "core/tests/phase08_topics.rs": {
+      "sha256": "d558faf3822988636fcd52464e927d358a263d680170397aa71b224d96009acd",
+      "phase": "08"
     }
   }
 }

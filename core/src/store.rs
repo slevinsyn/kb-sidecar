@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use kb_core::dataset::{to_jsonl, to_record, DatasetOptions};
 use kb_core::graph::build_graph;
 use kb_core::node::{node_file_name, render_node};
-use kb_core::topics::{extract_topics, session_text};
+use kb_core::topics::{extract_topics_clean, session_text};
 use kb_core::Session;
 use serde::{Deserialize, Serialize};
 
@@ -134,7 +134,7 @@ fn all_sessions(cache: &Cache) -> Vec<Session> {
 pub fn publish(out: &Path, cache: &Cache, redact: bool) -> Result<(), String> {
     let sessions = all_sessions(cache);
     let docs: Vec<String> = sessions.iter().map(session_text).collect();
-    let topics = extract_topics(&docs, TOPIC_COUNT);
+    let topics = extract_topics_clean(&docs, TOPIC_COUNT);
 
     let nodes_dir = out.join("nodes");
     let dataset_dir = out.join("dataset");
