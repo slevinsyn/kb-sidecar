@@ -1,8 +1,8 @@
 {
   "initialized": true,
   "self_test_passed": true,
-  "phase": "04",
-  "title": "Training dataset records + redaction",
+  "phase": "05",
+  "title": "Knowledge graph builder (graph.json)",
   "stage": "implementing",
   "history": [
     {
@@ -356,6 +356,59 @@
       "round": 1,
       "verdict": "PASS",
       "important": 0
+    },
+    {
+      "at": "2026-11-01T20:41:12+05:30",
+      "event": "finish",
+      "phase": "04",
+      "commit": "492606be3f7a3881d0dc3f01b5478b363b8bb0e9"
+    },
+    {
+      "at": "2026-11-01T20:41:14+05:30",
+      "event": "start",
+      "phase": "05",
+      "title": "Knowledge graph builder (graph.json)"
+    },
+    {
+      "at": "2026-11-01T20:41:14+05:30",
+      "event": "approve-spec",
+      "phase": "05",
+      "criteria": [
+        "AC-05-01",
+        "AC-05-02",
+        "AC-05-03",
+        "AC-05-04",
+        "AC-05-05",
+        "AC-05-06",
+        "AC-05-07"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-01T20:43:17+05:30",
+      "event": "review",
+      "phase": "05",
+      "verdict": "PASS"
+    },
+    {
+      "at": "2026-11-01T20:43:45+05:30",
+      "event": "red",
+      "phase": "05",
+      "tests": 1
+    },
+    {
+      "at": "2026-11-01T20:44:30+05:30",
+      "event": "review-prep",
+      "phase": "05",
+      "round": 1
+    },
+    {
+      "at": "2026-11-01T20:45:16+05:30",
+      "event": "review",
+      "phase": "05",
+      "round": 1,
+      "verdict": "PASS",
+      "important": 0
     }
   ],
   "change_dir": "changes/2026-11-01-conversation-kb",
@@ -382,15 +435,15 @@
   "pending_tests": {},
   "review": {
     "verdict": "PASS",
-    "lock_digest": "455e0f61b264d075e9d1dbdab47f36c4ecd87400b75421f977eeed27b88f206e",
-    "at": "2026-11-01T20:35:47+05:30"
+    "lock_digest": "217cb8be2ffe94293189333759d56e8ec5c3f507cedca79a654b58390856089b",
+    "at": "2026-11-01T20:43:17+05:30"
   },
   "red": {
     "ok": true,
-    "lock_digest": "455e0f61b264d075e9d1dbdab47f36c4ecd87400b75421f977eeed27b88f206e",
-    "evidence": ".phased/evidence/phase-04-red.log"
+    "lock_digest": "217cb8be2ffe94293189333759d56e8ec5c3f507cedca79a654b58390856089b",
+    "evidence": ".phased/evidence/phase-05-red.log"
   },
-  "spec_sha256": "ce2d94154e4b7303315fcb7edec70bd24fa11801558971629f71bac902e86649",
+  "spec_sha256": "2dad2f850e17cdd7cfcc127aeadcabd65b0a8b27e2946daaf3ceb387a7b8d895",
   "code_reviews": {
     "01": {
       "rounds": [
@@ -455,6 +508,19 @@
           "classes": []
         }
       ]
+    },
+    "05": {
+      "rounds": [
+        {
+          "tree": "a48ccd93f957fd8fbfeb5e527ddef119aaf628dc",
+          "at": "2026-11-01T20:44:30+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 3,
+          "preexisting": 0,
+          "classes": []
+        }
+      ]
     }
   },
   "durations": [
@@ -472,6 +538,11 @@
       "phase": "03",
       "level": "M",
       "minutes": 113.2
+    },
+    {
+      "phase": "04",
+      "level": "M",
+      "minutes": 8.9
     }
   ]
 }

@@ -15,6 +15,10 @@
     "core/tests/phase04_dataset.rs": {
       "sha256": "344042a4e653130d328d55de320e2ba317c27b6941cb8dd4e64f7ae46dec703e",
       "phase": "04"
+    },
+    "core/tests/phase05_graph.rs": {
+      "sha256": "5fcd40b1713ee582e121c7bb8f7886a38d071159c53df3d038600e3b6f272c62",
+      "phase": "05"
     }
   }
 }

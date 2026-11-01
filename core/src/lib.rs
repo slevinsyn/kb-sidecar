@@ -4,6 +4,7 @@ pub mod claude_ai;
 pub mod claude_code;
 pub mod dataset;
 pub mod error;
+pub mod graph;
 pub mod model;
 pub mod node;
 pub mod topics;
