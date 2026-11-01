@@ -1,0 +1,1761 @@
+diff --git a/explorer/index.html b/explorer/index.html
+new file mode 100644
+index 0000000..681d8fa
+--- /dev/null
++++ b/explorer/index.html
+@@ -0,0 +1,47 @@
++<!doctype html>
++<html lang="en">
++  <head>
++    <meta charset="UTF-8" />
++    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
++    <title>Knowledge graph explorer</title>
++    <style>
++      html, body { margin: 0; height: 100%; background: #0b0e14; color: #e6e6e6;
++        font: 13px/1.4 system-ui, sans-serif; overflow: hidden; }
++      #graph { position: absolute; inset: 0; }
++      .panel { position: absolute; background: rgba(20, 24, 34, 0.92); border: 1px solid #2a3142;
++        border-radius: 6px; padding: 10px; box-sizing: border-box; }
++      #controls { top: 12px; left: 12px; width: 260px; }
++      #controls input[type="search"] { width: 100%; box-sizing: border-box; padding: 4px 6px;
++        background: #0b0e14; color: inherit; border: 1px solid #2a3142; border-radius: 4px; }
++      #results { list-style: none; margin: 6px 0 0; padding: 0; max-height: 220px; overflow: auto; }
++      #results li { padding: 3px 4px; cursor: pointer; border-radius: 3px; }
++      #results li:hover { background: #222a3c; }
++      #filters { margin-top: 8px; }
++      #filters label { display: block; }
++      .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; }
++      #details { top: 12px; right: 12px; width: 300px; max-height: calc(100% - 24px); overflow: auto; }
++      #details h2 { margin: 0 0 4px; font-size: 15px; }
++      #details h3 { margin: 10px 0 2px; font-size: 12px; text-transform: uppercase; color: #8a93a6; }
++      #details pre { white-space: pre-wrap; word-break: break-word; margin: 4px 0; }
++      #details ul { margin: 0; padding-left: 16px; }
++      #details a { color: #7fb2ff; cursor: pointer; }
++      #error { bottom: 12px; left: 12px; max-width: 420px; border-color: #7a2b2b; }
++      #error p { margin: 0 0 8px; color: #ff9b9b; }
++      [hidden] { display: none !important; }
++    </style>
++  </head>
++  <body>
++    <div id="graph"></div>
++    <div id="controls" class="panel">
++      <input id="search" type="search" placeholder="Search nodes" autocomplete="off" />
++      <ul id="results"></ul>
++      <div id="filters"></div>
++    </div>
++    <div id="details" class="panel" hidden></div>
++    <div id="error" class="panel" hidden>
++      <p id="error-text"></p>
++      <label>Load a graph.json: <input id="file" type="file" accept=".json,application/json" /></label>
++    </div>
++    <script type="module" src="/src/main.ts"></script>
++  </body>
++</html>
+diff --git a/explorer/package-lock.json b/explorer/package-lock.json
+index 47b2415..5f36c04 100644
+--- a/explorer/package-lock.json
++++ b/explorer/package-lock.json
+@@ -7,12 +7,25 @@
+     "": {
+       "name": "kb-explorer",
+       "version": "0.1.0",
++      "dependencies": {
++        "3d-force-graph": "^1.80.1"
++      },
+       "devDependencies": {
++        "@types/node": "^22.0.0",
+         "typescript": "^7.0.2",
+         "vite": "^8.3.5",
+         "vitest": "^5.0.5"
+       }
+     },
++    "node_modules/@babel/runtime": {
++      "version": "7.29.10",
++      "resolved": "https://registry.npmjs.org/@babel/runtime/-/runtime-7.29.10.tgz",
++      "integrity": "sha512-NpugTzbKgGrNe45Ui32cN8vCFFMxVtP/9rtfwv0nP5FRDAjvYBxJcLVpYA9mr1jxP6cnIT7x9LUzuDTbWYYNRA==",
++      "license": "MIT",
++      "engines": {
++        "node": ">=6.9.0"
++      }
++    },
+     "node_modules/@jridgewell/resolve-uri": {
+       "version": "3.1.2",
+       "resolved": "https://registry.npmjs.org/@jridgewell/resolve-uri/-/resolve-uri-3.1.2.tgz",
+@@ -331,6 +344,12 @@
+       "dev": true,
+       "license": "MIT"
+     },
++    "node_modules/@tweenjs/tween.js": {
++      "version": "25.0.0",
++      "resolved": "https://registry.npmjs.org/@tweenjs/tween.js/-/tween.js-25.0.0.tgz",
++      "integrity": "sha512-XKLA6syeBUaPzx4j3qwMqzzq+V4uo72BnlbOjmuljLrRqdsd3qnzvZZoxvMHZ23ndsRS4aufU6JOZYpCbU6T1A==",
++      "license": "MIT"
++    },
+     "node_modules/@types/chai": {
+       "version": "5.2.3",
+       "resolved": "https://registry.npmjs.org/@types/chai/-/chai-5.2.3.tgz",
+@@ -356,6 +375,16 @@
+       "dev": true,
+       "license": "MIT"
+     },
++    "node_modules/@types/node": {
++      "version": "22.20.5",
++      "resolved": "https://registry.npmjs.org/@types/node/-/node-22.20.5.tgz",
++      "integrity": "sha512-U2+DNr+wSjpsTS/wZGYHq7GcwfuSmKiKvoPvK22zwTlRhU91yOniN4qRR5KhIjvif7ysw/dz/hKmfDH0Ris4aA==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "undici-types": "~6.21.0"
++      }
++    },
+     "node_modules/@typescript/typescript-aix-ppc64": {
+       "version": "7.0.2",
+       "resolved": "https://registry.npmjs.org/@typescript/typescript-aix-ppc64/-/typescript-aix-ppc64-7.0.2.tgz",
+@@ -734,6 +763,31 @@
+         "url": "https://opencollective.com/vitest"
+       }
+     },
++    "node_modules/3d-force-graph": {
++      "version": "1.80.1",
++      "resolved": "https://registry.npmjs.org/3d-force-graph/-/3d-force-graph-1.80.1.tgz",
++      "integrity": "sha512-8+JcH/K1MkVncxthCVg1vdNY49PSUY7gPMlFzBHJD91AmofqqxZNnVo5RfY61BShwZk6koqyYK7f5hp+NT6utQ==",
++      "license": "MIT",
++      "dependencies": {
++        "accessor-fn": "1",
++        "kapsule": "^1.16",
++        "three": ">=0.179 <1",
++        "three-forcegraph": "1",
++        "three-render-objects": "^1.41"
++      },
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/accessor-fn": {
++      "version": "1.5.3",
++      "resolved": "https://registry.npmjs.org/accessor-fn/-/accessor-fn-1.5.3.tgz",
++      "integrity": "sha512-rkAofCwe/FvYFUlMB0v0gWmhqtfAtV1IUkdPbfhTUyYniu5LrC0A0UJkTH0Jv3S8SvwkmfuAlY+mQIJATdocMA==",
++      "license": "MIT",
++      "engines": {
++        "node": ">=12"
++      }
++    },
+     "node_modules/assertion-error": {
+       "version": "2.0.1",
+       "resolved": "https://registry.npmjs.org/assertion-error/-/assertion-error-2.0.1.tgz",
+@@ -754,6 +808,177 @@
+         "node": ">=18"
+       }
+     },
++    "node_modules/d3-array": {
++      "version": "3.2.4",
++      "resolved": "https://registry.npmjs.org/d3-array/-/d3-array-3.2.4.tgz",
++      "integrity": "sha512-tdQAmyA18i4J7wprpYq8ClcxZy3SC31QMeByyCFyRt7BVHdREQZ5lpzoe5mFEYZUWe+oq8HBvk9JjpibyEV4Jg==",
++      "license": "ISC",
++      "dependencies": {
++        "internmap": "1 - 2"
++      },
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/d3-binarytree": {
++      "version": "1.0.2",
++      "resolved": "https://registry.npmjs.org/d3-binarytree/-/d3-binarytree-1.0.2.tgz",
++      "integrity": "sha512-cElUNH+sHu95L04m92pG73t2MEJXKu+GeKUN1TJkFsu93E5W8E9Sc3kHEGJKgenGvj19m6upSn2EunvMgMD2Yw==",
++      "license": "MIT"
++    },
++    "node_modules/d3-color": {
++      "version": "3.1.0",
++      "resolved": "https://registry.npmjs.org/d3-color/-/d3-color-3.1.0.tgz",
++      "integrity": "sha512-zg/chbXyeBtMQ1LbD/WSoW2DpC3I0mpmPdW+ynRTj/x2DAWYrIY7qeZIHidozwV24m4iavr15lNwIwLxRmOxhA==",
++      "license": "ISC",
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/d3-dispatch": {
++      "version": "3.0.1",
++      "resolved": "https://registry.npmjs.org/d3-dispatch/-/d3-dispatch-3.0.1.tgz",
++      "integrity": "sha512-rzUyPU/S7rwUflMyLc1ETDeBj0NRuHKKAcvukozwhshr6g6c5d8zh4c2gQjY2bZ0dXeGLWc1PF174P2tVvKhfg==",
++      "license": "ISC",
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/d3-force-3d": {
++      "version": "3.0.6",
++      "resolved": "https://registry.npmjs.org/d3-force-3d/-/d3-force-3d-3.0.6.tgz",
++      "integrity": "sha512-4tsKHUPLOVkyfEffZo1v6sFHvGFwAIIjt/W8IThbp08DYAsXZck+2pSHEG5W1+gQgEvFLdZkYvmJAbRM2EzMnA==",
++      "license": "MIT",
++      "dependencies": {
++        "d3-binarytree": "1",
++        "d3-dispatch": "1 - 3",
++        "d3-octree": "1",
++        "d3-quadtree": "1 - 3",
++        "d3-timer": "1 - 3"
++      },
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/d3-format": {
++      "version": "3.1.2",
++      "resolved": "https://registry.npmjs.org/d3-format/-/d3-format-3.1.2.tgz",
++      "integrity": "sha512-AJDdYOdnyRDV5b6ArilzCPPwc1ejkHcoyFarqlPqT7zRYjhavcT3uSrqcMvsgh2CgoPbK3RCwyHaVyxYcP2Arg==",
++      "license": "ISC",
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/d3-interpolate": {
++      "version": "3.0.1",
++      "resolved": "https://registry.npmjs.org/d3-interpolate/-/d3-interpolate-3.0.1.tgz",
++      "integrity": "sha512-3bYs1rOD33uo8aqJfKP3JWPAibgw8Zm2+L9vBKEHJ2Rg+viTR7o5Mmv5mZcieN+FRYaAOWX5SJATX6k1PWz72g==",
++      "license": "ISC",
++      "dependencies": {
++        "d3-color": "1 - 3"
++      },
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/d3-octree": {
++      "version": "1.1.0",
++      "resolved": "https://registry.npmjs.org/d3-octree/-/d3-octree-1.1.0.tgz",
++      "integrity": "sha512-F8gPlqpP+HwRPMO/8uOu5wjH110+6q4cgJvgJT6vlpy3BEaDIKlTZrgHKZSp/i1InRpVfh4puY/kvL6MxK930A==",
++      "license": "MIT"
++    },
++    "node_modules/d3-quadtree": {
++      "version": "3.0.1",
++      "resolved": "https://registry.npmjs.org/d3-quadtree/-/d3-quadtree-3.0.1.tgz",
++      "integrity": "sha512-04xDrxQTDTCFwP5H6hRhsRcb9xxv2RzkcsygFzmkSIOJy3PeRJP7sNk3VRIbKXcog561P9oU0/rVH6vDROAgUw==",
++      "license": "ISC",
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/d3-scale": {
++      "version": "4.0.2",
++      "resolved": "https://registry.npmjs.org/d3-scale/-/d3-scale-4.0.2.tgz",
++      "integrity": "sha512-GZW464g1SH7ag3Y7hXjf8RoUuAFIqklOAq3MRl4OaWabTFJY9PN/E1YklhXLh+OQ3fM9yS2nOkCoS+WLZ6kvxQ==",
++      "license": "ISC",
++      "dependencies": {
++        "d3-array": "2.10.0 - 3",
++        "d3-format": "1 - 3",
++        "d3-interpolate": "1.2.0 - 3",
++        "d3-time": "2.1.1 - 3",
++        "d3-time-format": "2 - 4"
++      },
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/d3-scale-chromatic": {
++      "version": "3.1.0",
++      "resolved": "https://registry.npmjs.org/d3-scale-chromatic/-/d3-scale-chromatic-3.1.0.tgz",
++      "integrity": "sha512-A3s5PWiZ9YCXFye1o246KoscMWqf8BsD9eRiJ3He7C9OBaxKhAd5TFCdEx/7VbKtxxTsu//1mMJFrEt572cEyQ==",
++      "license": "ISC",
++      "dependencies": {
++        "d3-color": "1 - 3",
++        "d3-interpolate": "1 - 3"
++      },
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/d3-selection": {
++      "version": "3.0.0",
++      "resolved": "https://registry.npmjs.org/d3-selection/-/d3-selection-3.0.0.tgz",
++      "integrity": "sha512-fmTRWbNMmsmWq6xJV8D19U/gw/bwrHfNXxrIN+HfZgnzqTHp9jOmKMhsTUjXOJnZOdZY9Q28y4yebKzqDKlxlQ==",
++      "license": "ISC",
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/d3-time": {
++      "version": "3.1.0",
++      "resolved": "https://registry.npmjs.org/d3-time/-/d3-time-3.1.0.tgz",
++      "integrity": "sha512-VqKjzBLejbSMT4IgbmVgDjpkYrNWUYJnbCGo874u7MMKIWsILRX+OpX/gTk8MqjpT1A/c6HY2dCA77ZN0lkQ2Q==",
++      "license": "ISC",
++      "dependencies": {
++        "d3-array": "2 - 3"
++      },
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/d3-time-format": {
++      "version": "4.1.0",
++      "resolved": "https://registry.npmjs.org/d3-time-format/-/d3-time-format-4.1.0.tgz",
++      "integrity": "sha512-dJxPBlzC7NugB2PDLwo9Q8JiTR3M3e4/XANkreKSUxF8vvXKqm1Yfq4Q5dl8budlunRVlUUaDUgFt7eA8D6NLg==",
++      "license": "ISC",
++      "dependencies": {
++        "d3-time": "1 - 3"
++      },
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/d3-timer": {
++      "version": "3.0.1",
++      "resolved": "https://registry.npmjs.org/d3-timer/-/d3-timer-3.0.1.tgz",
++      "integrity": "sha512-ndfJ/JxxMd3nw31uyKoY2naivF+r29V+Lc0svZxe1JvvIRmi8hUsrMvdOwgS1o6uBHmiz91geQ0ylPP0aj1VUA==",
++      "license": "ISC",
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/data-bind-mapper": {
++      "version": "1.0.3",
++      "resolved": "https://registry.npmjs.org/data-bind-mapper/-/data-bind-mapper-1.0.3.tgz",
++      "integrity": "sha512-QmU3lyEnbENQPo0M1F9BMu4s6cqNNp8iJA+b/HP2sSb7pf3dxwF3+EP1eO69rwBfH9kFJ1apmzrtogAmVt2/Xw==",
++      "license": "MIT",
++      "dependencies": {
++        "accessor-fn": "1"
++      },
++      "engines": {
++        "node": ">=12"
++      }
++    },
+     "node_modules/detect-libc": {
+       "version": "2.1.2",
+       "resolved": "https://registry.npmjs.org/detect-libc/-/detect-libc-2.1.2.tgz",
+@@ -809,6 +1034,20 @@
+         }
+       }
+     },
++    "node_modules/float-tooltip": {
++      "version": "1.7.5",
++      "resolved": "https://registry.npmjs.org/float-tooltip/-/float-tooltip-1.7.5.tgz",
++      "integrity": "sha512-/kXzuDnnBqyyWyhDMH7+PfP8J/oXiAavGzcRxASOMRHFuReDtofizLLJsf7nnDLAfEaMW4pVWaXrAjtnglpEkg==",
++      "license": "MIT",
++      "dependencies": {
++        "d3-selection": "2 - 3",
++        "kapsule": "^1.16",
++        "preact": "10"
++      },
++      "engines": {
++        "node": ">=12"
++      }
++    },
+     "node_modules/fsevents": {
+       "version": "2.3.3",
+       "resolved": "https://registry.npmjs.org/fsevents/-/fsevents-2.3.3.tgz",
+@@ -824,6 +1063,27 @@
+         "node": "^8.16.0 || ^10.6.0 || >=11.0.0"
+       }
+     },
++    "node_modules/internmap": {
++      "version": "2.0.3",
++      "resolved": "https://registry.npmjs.org/internmap/-/internmap-2.0.3.tgz",
++      "integrity": "sha512-5Hh7Y1wQbvY5ooGgPbDaL5iYLAPzMTUrjMulskHLH6wnv/A+1q5rgEaiuqEjB+oxGXIVZs1FF+R/KPN3ZSQYYg==",
++      "license": "ISC",
++      "engines": {
++        "node": ">=12"
++      }
++    },
++    "node_modules/kapsule": {
++      "version": "1.16.3",
++      "resolved": "https://registry.npmjs.org/kapsule/-/kapsule-1.16.3.tgz",
++      "integrity": "sha512-4+5mNNf4vZDSwPhKprKwz3330iisPrb08JyMgbsdFrimBCKNHecua/WBwvVg3n7vwx0C1ARjfhwIpbrbd9n5wg==",
++      "license": "MIT",
++      "dependencies": {
++        "lodash-es": "4"
++      },
++      "engines": {
++        "node": ">=12"
++      }
++    },
+     "node_modules/lightningcss": {
+       "version": "1.33.0",
+       "resolved": "https://registry.npmjs.org/lightningcss/-/lightningcss-1.33.0.tgz",
+@@ -1097,6 +1357,12 @@
+         "url": "https://opencollective.com/parcel"
+       }
+     },
++    "node_modules/lodash-es": {
++      "version": "4.18.1",
++      "resolved": "https://registry.npmjs.org/lodash-es/-/lodash-es-4.18.1.tgz",
++      "integrity": "sha512-J8xewKD/Gk22OZbhpOVSwcs60zhd95ESDwezOFuA3/099925PdHJ7OFHNTGtajL3AlZkykD32HykiMo+BIBI8A==",
++      "license": "MIT"
++    },
+     "node_modules/magic-string": {
+       "version": "1.4.5",
+       "resolved": "https://registry.npmjs.org/magic-string/-/magic-string-1.4.5.tgz",
+@@ -1126,6 +1392,44 @@
+         "node": "^10 || ^12 || ^13.7 || ^14 || >=15.0.1"
+       }
+     },
++    "node_modules/ngraph.events": {
++      "version": "1.4.0",
++      "resolved": "https://registry.npmjs.org/ngraph.events/-/ngraph.events-1.4.0.tgz",
++      "integrity": "sha512-NeDGI4DSyjBNBRtA86222JoYietsmCXbs8CEB0dZ51Xeh4lhVl1y3wpWLumczvnha8sFQIW4E0vvVWwgmX2mGw==",
++      "license": "BSD-3-Clause"
++    },
++    "node_modules/ngraph.forcelayout": {
++      "version": "3.3.1",
++      "resolved": "https://registry.npmjs.org/ngraph.forcelayout/-/ngraph.forcelayout-3.3.1.tgz",
++      "integrity": "sha512-MKBuEh1wujyQHFTW57y5vd/uuEOK0XfXYxm3lC7kktjJLRdt/KEKEknyOlc6tjXflqBKEuYBBcu7Ax5VY+S6aw==",
++      "license": "BSD-3-Clause",
++      "dependencies": {
++        "ngraph.events": "^1.0.0",
++        "ngraph.merge": "^1.0.0",
++        "ngraph.random": "^1.0.0"
++      }
++    },
++    "node_modules/ngraph.graph": {
++      "version": "20.1.2",
++      "resolved": "https://registry.npmjs.org/ngraph.graph/-/ngraph.graph-20.1.2.tgz",
++      "integrity": "sha512-W/G3GBR3Y5UxMLHTUCPP9v+pbtpzwuAEIqP5oZV+9IwgxAIEZwh+Foc60iPc1idlnK7Zxu0p3puxAyNmDvBd0Q==",
++      "license": "BSD-3-Clause",
++      "dependencies": {
++        "ngraph.events": "^1.4.0"
++      }
++    },
++    "node_modules/ngraph.merge": {
++      "version": "1.0.0",
++      "resolved": "https://registry.npmjs.org/ngraph.merge/-/ngraph.merge-1.0.0.tgz",
++      "integrity": "sha512-5J8YjGITUJeapsomtTALYsw7rFveYkM+lBj3QiYZ79EymQcuri65Nw3knQtFxQBU1r5iOaVRXrSwMENUPK62Vg==",
++      "license": "MIT"
++    },
++    "node_modules/ngraph.random": {
++      "version": "1.2.0",
++      "resolved": "https://registry.npmjs.org/ngraph.random/-/ngraph.random-1.2.0.tgz",
++      "integrity": "sha512-4EUeAGbB2HWX9njd6bP6tciN6ByJfoaAvmVL9QTaZSeXrW46eNGA9GajiXiPBbvFqxUWFkEbyo6x5qsACUuVfA==",
++      "license": "BSD-3-Clause"
++    },
+     "node_modules/obug": {
+       "version": "3.0.0",
+       "resolved": "https://registry.npmjs.org/obug/-/obug-3.0.0.tgz",
+@@ -1160,6 +1464,18 @@
+         "url": "https://github.com/sponsors/jonschlinkert"
+       }
+     },
++    "node_modules/polished": {
++      "version": "4.3.1",
++      "resolved": "https://registry.npmjs.org/polished/-/polished-4.3.1.tgz",
++      "integrity": "sha512-OBatVyC/N7SCW/FaDHrSd+vn0o5cS855TOmYi4OkdWUMSJCET/xip//ch8xGUvtr3i44X9LVyWwQlRMTN3pwSA==",
++      "license": "MIT",
++      "dependencies": {
++        "@babel/runtime": "^7.17.8"
++      },
++      "engines": {
++        "node": ">=10"
++      }
++    },
+     "node_modules/postcss": {
+       "version": "8.5.32",
+       "resolved": "https://registry.npmjs.org/postcss/-/postcss-8.5.32.tgz",
+@@ -1189,6 +1505,24 @@
+         "node": "^10 || ^12 || >=14"
+       }
+     },
++    "node_modules/preact": {
++      "version": "10.29.8",
++      "resolved": "https://registry.npmjs.org/preact/-/preact-10.29.8.tgz",
++      "integrity": "sha512-ej2aVZ+vZ8WO7tvlQWRM9N63A0KzF9q4mWJfDUHgYaIofWY9hu74QdnQrjoPMmZi2/nZ5gN0bJCQF49xQqx09Q==",
++      "license": "MIT",
++      "funding": {
++        "type": "opencollective",
++        "url": "https://opencollective.com/preact"
++      },
++      "peerDependencies": {
++        "preact-render-to-string": ">=5"
++      },
++      "peerDependenciesMeta": {
++        "preact-render-to-string": {
++          "optional": true
++        }
++      }
++    },
+     "node_modules/rolldown": {
+       "version": "1.2.16",
+       "resolved": "https://registry.npmjs.org/rolldown/-/rolldown-1.2.16.tgz",
+@@ -1240,6 +1574,55 @@
+       "dev": true,
+       "license": "MIT"
+     },
++    "node_modules/three": {
++      "version": "0.187.0",
++      "resolved": "https://registry.npmjs.org/three/-/three-0.187.0.tgz",
++      "integrity": "sha512-Qiu7R+Cmh8CstZsY1uJOSWnVlfo7ZtNLV7mF8Jltk3LB3AtDu9cRZlcnRKkAk8Y4z6KKw35z7Y7Urd7jWY8etA==",
++      "license": "MIT"
++    },
++    "node_modules/three-forcegraph": {
++      "version": "1.43.6",
++      "resolved": "https://registry.npmjs.org/three-forcegraph/-/three-forcegraph-1.43.6.tgz",
++      "integrity": "sha512-fayF9Cn6XfSUJOcKUcJ1tg8EQEHP9X3wELzNX/Ik3TxnbHTfYuEFspSld7GvK8RwEpsyoJaPbfEGgMTJoiywYg==",
++      "license": "MIT",
++      "dependencies": {
++        "accessor-fn": "1",
++        "d3-array": "1 - 3",
++        "d3-force-3d": "2 - 3",
++        "d3-scale": "1 - 4",
++        "d3-scale-chromatic": "1 - 3",
++        "data-bind-mapper": "1",
++        "kapsule": "^1.16",
++        "ngraph.forcelayout": "3",
++        "ngraph.graph": "20",
++        "tinycolor2": "1"
++      },
++      "engines": {
++        "node": ">=12"
++      },
++      "peerDependencies": {
++        "three": ">=0.118.3"
++      }
++    },
++    "node_modules/three-render-objects": {
++      "version": "1.43.0",
++      "resolved": "https://registry.npmjs.org/three-render-objects/-/three-render-objects-1.43.0.tgz",
++      "integrity": "sha512-CoGJ7dRJsbtGoR4YhxUQlgocZ4vnmVC0YEFsvTye0DKifHPogoa7zl9knea+3EG2+biDicTC1PW7O02TxlV2vQ==",
++      "license": "MIT",
++      "dependencies": {
++        "@tweenjs/tween.js": "18 - 25",
++        "accessor-fn": "1",
++        "float-tooltip": "^1.7",
++        "kapsule": "^1.16",
++        "polished": "4"
++      },
++      "engines": {
++        "node": ">=12"
++      },
++      "peerDependencies": {
++        "three": ">=0.179"
++      }
++    },
+     "node_modules/tinybench": {
+       "version": "6.2.2",
+       "resolved": "https://registry.npmjs.org/tinybench/-/tinybench-6.2.2.tgz",
+@@ -1250,6 +1633,12 @@
+         "node": ">=20.0.0"
+       }
+     },
++    "node_modules/tinycolor2": {
++      "version": "1.6.0",
++      "resolved": "https://registry.npmjs.org/tinycolor2/-/tinycolor2-1.6.0.tgz",
++      "integrity": "sha512-XPaBkWQJdsf3pLKJV9p4qN/S+fm2Oj8AIPo1BTUhg5oxkvm9+SVEGFdhyOz7tTdUTfvxMiAs4sp6/eZO2Ew+pw==",
++      "license": "MIT"
++    },
+     "node_modules/tinyexec": {
+       "version": "1.3.1",
+       "resolved": "https://registry.npmjs.org/tinyexec/-/tinyexec-1.3.1.tgz",
+@@ -1312,6 +1701,13 @@
+         "@typescript/typescript-win32-x64": "7.0.2"
+       }
+     },
++    "node_modules/undici-types": {
++      "version": "6.21.0",
++      "resolved": "https://registry.npmjs.org/undici-types/-/undici-types-6.21.0.tgz",
++      "integrity": "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==",
++      "dev": true,
++      "license": "MIT"
++    },
+     "node_modules/vite": {
+       "version": "8.3.5",
+       "resolved": "https://registry.npmjs.org/vite/-/vite-8.3.5.tgz",
+diff --git a/explorer/package.json b/explorer/package.json
+index 41cf8a0..f6d9f7a 100644
+--- a/explorer/package.json
++++ b/explorer/package.json
+@@ -8,7 +8,11 @@
+     "build": "tsc --noEmit && vite build",
+     "test": "vitest run"
+   },
++  "dependencies": {
++    "3d-force-graph": "^1.80.1"
++  },
+   "devDependencies": {
++    "@types/node": "^22.0.0",
+     "typescript": "^7.0.2",
+     "vite": "^8.3.5",
+     "vitest": "^5.0.5"
+diff --git a/explorer/src/graph.ts b/explorer/src/graph.ts
+new file mode 100644
+index 0000000..b2d41ed
+--- /dev/null
++++ b/explorer/src/graph.ts
+@@ -0,0 +1,177 @@
++export type NodeType = 'session' | 'project' | 'topic' | 'file' | 'tool';
++
++export const NODE_TYPES: readonly NodeType[] = ['session', 'project', 'topic', 'file', 'tool'];
++
++export interface GraphNode {
++  id: string;
++  type: NodeType;
++  label: string;
++  size: number;
++  meta: Record<string, unknown>;
++}
++
++export interface GraphLink {
++  source: string | { id: string };
++  target: string | { id: string };
++  type: string;
++}
++
++export interface GraphData {
++  nodes: GraphNode[];
++  links: GraphLink[];
++}
++
++export class GraphError extends Error {
++  constructor(message: string) {
++    super(message);
++    this.name = 'GraphError';
++  }
++}
++
++export const TYPE_COLORS: Record<NodeType, string> = {
++  session: '#4e9af1',
++  project: '#f5a623',
++  topic: '#7ed321',
++  file: '#bd10e0',
++  tool: '#e94b6a',
++};
++
++export function linkEnd(end: string | { id: string }): string {
++  return typeof end === 'string' ? end : end.id;
++}
++
++function invalid(reason: string): GraphError {
++  return new GraphError(`Invalid graph: ${reason}`);
++}
++
++function isRecord(v: unknown): v is Record<string, unknown> {
++  return typeof v === 'object' && v !== null && !Array.isArray(v);
++}
++
++function copyMeta(v: unknown): Record<string, unknown> {
++  if (!isRecord(v)) return {};
++  try {
++    return structuredClone(v);
++  } catch {
++    return { ...v };
++  }
++}
++
++function parseEnd(v: unknown, what: string, index: number): string {
++  if (typeof v === 'string') return v;
++  if (isRecord(v) && typeof v.id === 'string') return v.id;
++  throw invalid(`link ${index} has an invalid ${what}`);
++}
++
++export function parseGraph(input: unknown): GraphData {
++  let raw: unknown = input;
++  if (typeof input === 'string') {
++    try {
++      raw = JSON.parse(input);
++    } catch (e) {
++      const msg = e instanceof Error ? e.message : String(e);
++      throw invalid(`not valid JSON (${msg})`);
++    }
++  }
++  if (!isRecord(raw)) throw invalid('expected an object with nodes and links');
++  if (!Array.isArray(raw.nodes)) throw invalid('"nodes" must be an array');
++  if (!Array.isArray(raw.links)) throw invalid('"links" must be an array');
++
++  const nodes: GraphNode[] = [];
++  const seen = new Set<string>();
++  raw.nodes.forEach((n: unknown, i: number) => {
++    if (!isRecord(n)) throw invalid(`node ${i} is not an object`);
++    if (typeof n.id !== 'string') throw invalid(`node ${i} has no string id`);
++    if (typeof n.type !== 'string' || !(NODE_TYPES as readonly string[]).includes(n.type)) {
++      throw invalid(`node ${i} has an unknown type`);
++    }
++    if (typeof n.label !== 'string') throw invalid(`node ${i} has no string label`);
++    if (seen.has(n.id)) return;
++    seen.add(n.id);
++    const size =
++      typeof n.size === 'number' && Number.isFinite(n.size) && n.size > 0 ? n.size : 1;
++    nodes.push({ id: n.id, type: n.type as NodeType, label: n.label, size, meta: copyMeta(n.meta) });
++  });
++
++  const links: GraphLink[] = [];
++  raw.links.forEach((l: unknown, i: number) => {
++    if (!isRecord(l)) throw invalid(`link ${i} is not an object`);
++    const source = parseEnd(l.source, 'source', i);
++    const target = parseEnd(l.target, 'target', i);
++    if (!seen.has(source) || !seen.has(target)) return;
++    links.push({ source, target, type: typeof l.type === 'string' ? l.type : '' });
++  });
++
++  return { nodes, links };
++}
++
++export function filterByTypes(g: GraphData, types: Iterable<NodeType>): GraphData {
++  const allowed = new Set<NodeType>(types);
++  const nodes = g.nodes.filter((n) => allowed.has(n.type));
++  const kept = new Set(nodes.map((n) => n.id));
++  const links = g.links.filter((l) => kept.has(linkEnd(l.source)) && kept.has(linkEnd(l.target)));
++  return { nodes, links };
++}
++
++function cmp(a: string, b: string): number {
++  return a < b ? -1 : a > b ? 1 : 0;
++}
++
++export function searchNodes(g: GraphData, query: string, limit = 20): GraphNode[] {
++  const q = query.trim().toLowerCase();
++  if (q === '' || !(limit > 0)) return [];
++  const ranked: { n: GraphNode; rank: number; label: string }[] = [];
++  for (const n of g.nodes) {
++    const label = n.label.toLowerCase();
++    let rank: number;
++    if (label.startsWith(q)) rank = 0;
++    else if (label.includes(q)) rank = 1;
++    else if (n.id.toLowerCase().includes(q)) rank = 2;
++    else continue;
++    ranked.push({ n, rank, label });
++  }
++  ranked.sort((a, b) => a.rank - b.rank || cmp(a.label, b.label) || cmp(a.n.id, b.n.id));
++  return ranked.slice(0, limit).map((r) => r.n);
++}
++
++export function neighbors(
++  g: GraphData,
++  id: string,
++): { nodes: GraphNode[]; links: GraphLink[] } {
++  const byId = new Map(g.nodes.map((n) => [n.id, n] as const));
++  if (!byId.has(id)) return { nodes: [], links: [] };
++  const links: GraphLink[] = [];
++  const ids = new Set<string>();
++  for (const l of g.links) {
++    const s = linkEnd(l.source);
++    const t = linkEnd(l.target);
++    if (s !== id && t !== id) continue;
++    links.push(l);
++    const other = s === id ? t : s;
++    if (other !== id && byId.has(other)) ids.add(other);
++  }
++  const nodes = [...ids].sort(cmp).map((i) => byId.get(i) as GraphNode);
++  return { nodes, links };
++}
++
++export function nodeDetails(
++  g: GraphData,
++  id: string,
++): { node: GraphNode; neighborsByType: Record<NodeType, GraphNode[]> } | null {
++  const node = g.nodes.find((n) => n.id === id);
++  if (!node) return null;
++  const neighborsByType: Record<NodeType, GraphNode[]> = {
++    session: [],
++    project: [],
++    topic: [],
++    file: [],
++    tool: [],
++  };
++  for (const n of neighbors(g, id).nodes) neighborsByType[n.type].push(n);
++  for (const t of NODE_TYPES) {
++    neighborsByType[t].sort(
++      (a, b) => cmp(a.label.toLowerCase(), b.label.toLowerCase()) || cmp(a.id, b.id),
++    );
++  }
++  return { node, neighborsByType };
++}
+diff --git a/explorer/src/main.ts b/explorer/src/main.ts
+index cb0ff5c..75ba117 100644
+--- a/explorer/src/main.ts
++++ b/explorer/src/main.ts
+@@ -1 +1,225 @@
+-export {};
++import ForceGraph3D from '3d-force-graph';
++import {
++  GraphError,
++  NODE_TYPES,
++  TYPE_COLORS,
++  filterByTypes,
++  linkEnd,
++  neighbors,
++  nodeDetails,
++  parseGraph,
++  searchNodes,
++} from './graph';
++import type { GraphData, GraphLink, GraphNode, NodeType } from './graph';
++
++const DIM_COLOR = '#2b3040';
++
++function el<T extends HTMLElement>(id: string): T {
++  const found = document.getElementById(id);
++  if (!found) throw new Error(`missing element #${id}`);
++  return found as T;
++}
++
++// 3d-force-graph renders label accessors as HTML; labels are untrusted conversation text.
++function escapeHtml(text: string): string {
++  return String(text)
++    .replace(/&/g, '&amp;')
++    .replace(/</g, '&lt;')
++    .replace(/>/g, '&gt;')
++    .replace(/"/g, '&quot;')
++    .replace(/'/g, '&#39;');
++}
++
++const container = el<HTMLDivElement>('graph');
++const searchBox = el<HTMLInputElement>('search');
++const resultsList = el<HTMLUListElement>('results');
++const filtersBox = el<HTMLDivElement>('filters');
++const detailsBox = el<HTMLDivElement>('details');
++const errorBox = el<HTMLDivElement>('error');
++const errorText = el<HTMLParagraphElement>('error-text');
++const filePicker = el<HTMLInputElement>('file');
++
++let full: GraphData = { nodes: [], links: [] };
++let visible: GraphData = full;
++let selectedId: string | null = null;
++let highlighted = new Set<string>();
++const activeTypes = new Set<NodeType>(NODE_TYPES);
++
++const graph = new ForceGraph3D(container)
++  .backgroundColor('#0b0e14')
++  .nodeId('id')
++  .nodeLabel((n) => escapeHtml((n as GraphNode).label))
++  // The default link label reads link.name as HTML; links carry no label text, so show none.
++  .linkLabel(() => '')
++  .nodeVal((n) => (n as GraphNode).size)
++  .nodeColor((n) => {
++    const node = n as GraphNode;
++    if (selectedId !== null && !highlighted.has(node.id)) return DIM_COLOR;
++    return TYPE_COLORS[node.type];
++  })
++  .linkColor((l) => {
++    if (selectedId === null) return '#5a6378';
++    const link = l as GraphLink;
++    const touches = linkEnd(link.source) === selectedId || linkEnd(link.target) === selectedId;
++    return touches ? '#ffffff' : DIM_COLOR;
++  })
++  .linkWidth((l) => {
++    const link = l as GraphLink;
++    return selectedId !== null &&
++      (linkEnd(link.source) === selectedId || linkEnd(link.target) === selectedId)
++      ? 2
++      : 0.5;
++  })
++  .onNodeClick((n) => select((n as GraphNode).id, false));
++
++function refreshColors(): void {
++  graph.nodeColor(graph.nodeColor()).linkColor(graph.linkColor()).linkWidth(graph.linkWidth());
++}
++
++function showError(message: string): void {
++  errorText.textContent = message;
++  errorBox.hidden = false;
++}
++
++function setGraph(data: GraphData): void {
++  full = data;
++  errorBox.hidden = true;
++  selectedId = null;
++  highlighted = new Set();
++  detailsBox.hidden = true;
++  applyFilters();
++  renderResults();
++}
++
++function applyFilters(): void {
++  visible = filterByTypes(full, activeTypes);
++  if (selectedId !== null && !visible.nodes.some((n) => n.id === selectedId)) {
++    selectedId = null;
++    highlighted = new Set();
++    detailsBox.hidden = true;
++  }
++  // 3d-force-graph mutates the data it is given, so hand it copies.
++  graph.graphData({
++    nodes: visible.nodes.map((n) => ({ ...n })),
++    links: visible.links.map((l) => ({ ...l })),
++  });
++  if (selectedId !== null) select(selectedId, false);
++}
++
++function flyTo(id: string): void {
++  const node = (graph.graphData().nodes as Array<GraphNode & { x?: number; y?: number; z?: number }>)
++    .find((n) => n.id === id);
++  if (!node || node.x === undefined || node.y === undefined || node.z === undefined) return;
++  const distance = 120;
++  const ratio = 1 + distance / (Math.hypot(node.x, node.y, node.z) || 1);
++  graph.cameraPosition(
++    { x: node.x * ratio, y: node.y * ratio, z: node.z * ratio },
++    { x: node.x, y: node.y, z: node.z },
++    1000,
++  );
++}
++
++function select(id: string, fly: boolean): void {
++  const details = nodeDetails(visible, id);
++  if (!details) return;
++  selectedId = id;
++  highlighted = new Set([id, ...neighbors(visible, id).nodes.map((n) => n.id)]);
++  renderDetails(details.node, details.neighborsByType);
++  refreshColors();
++  if (fly) flyTo(id);
++}
++
++function renderDetails(node: GraphNode, byType: Record<NodeType, GraphNode[]>): void {
++  detailsBox.replaceChildren();
++  const title = document.createElement('h2');
++  title.textContent = node.label;
++  const type = document.createElement('div');
++  type.textContent = `Type: ${node.type}`;
++  const meta = document.createElement('pre');
++  meta.textContent = JSON.stringify(node.meta, null, 2);
++  detailsBox.append(title, type, meta);
++  for (const t of NODE_TYPES) {
++    const group = byType[t];
++    if (group.length === 0) continue;
++    const heading = document.createElement('h3');
++    heading.textContent = `${t} (${group.length})`;
++    const list = document.createElement('ul');
++    for (const n of group) {
++      const item = document.createElement('li');
++      const link = document.createElement('a');
++      link.textContent = n.label;
++      link.addEventListener('click', () => select(n.id, true));
++      item.append(link);
++      list.append(item);
++    }
++    detailsBox.append(heading, list);
++  }
++  detailsBox.hidden = false;
++}
++
++function renderResults(): void {
++  resultsList.replaceChildren();
++  for (const n of searchNodes(visible, searchBox.value)) {
++    const item = document.createElement('li');
++    const swatch = document.createElement('span');
++    swatch.className = 'swatch';
++    swatch.style.background = TYPE_COLORS[n.type];
++    item.append(swatch, document.createTextNode(n.label));
++    item.addEventListener('click', () => select(n.id, true));
++    resultsList.append(item);
++  }
++}
++
++function buildFilters(): void {
++  for (const t of NODE_TYPES) {
++    const label = document.createElement('label');
++    const box = document.createElement('input');
++    box.type = 'checkbox';
++    box.checked = true;
++    box.addEventListener('change', () => {
++      if (box.checked) activeTypes.add(t);
++      else activeTypes.delete(t);
++      applyFilters();
++      renderResults();
++    });
++    const swatch = document.createElement('span');
++    swatch.className = 'swatch';
++    swatch.style.background = TYPE_COLORS[t];
++    label.append(box, swatch, document.createTextNode(t));
++    filtersBox.append(label);
++  }
++}
++
++function load(text: string): void {
++  try {
++    setGraph(parseGraph(text));
++  } catch (e) {
++    showError(e instanceof GraphError ? e.message : `Could not load graph: ${String(e)}`);
++  }
++}
++
++async function loadFromServer(): Promise<void> {
++  try {
++    const res = await fetch('/graph.json');
++    if (!res.ok) {
++      showError(`Could not fetch /graph.json (HTTP ${res.status}). Pick a graph.json file instead.`);
++      return;
++    }
++    load(await res.text());
++  } catch (e) {
++    showError(`Could not fetch /graph.json: ${String(e)}. Pick a graph.json file instead.`);
++  }
++}
++
++buildFilters();
++searchBox.addEventListener('input', renderResults);
++filePicker.addEventListener('change', () => {
++  const file = filePicker.files?.[0];
++  if (!file) return;
++  const read = file.text();
++  filePicker.value = '';
++  read.then(load, (e) => showError(`Could not read file: ${String(e)}`));
++});
++window.addEventListener('resize', () => graph.width(window.innerWidth).height(window.innerHeight));
++
++void loadFromServer();
+diff --git a/explorer/tests/graph.test.ts b/explorer/tests/graph.test.ts
+new file mode 100644
+index 0000000..1b3b3f4
+--- /dev/null
++++ b/explorer/tests/graph.test.ts
+@@ -0,0 +1,513 @@
++import { describe, it, expect } from 'vitest';
++import {
++  GraphError,
++  NODE_TYPES,
++  TYPE_COLORS,
++  filterByTypes,
++  linkEnd,
++  neighbors,
++  nodeDetails,
++  parseGraph,
++  searchNodes,
++} from '../src/graph';
++import type { GraphData, GraphLink, GraphNode, NodeType } from '../src/graph';
++
++function node(id: string, type: NodeType, label: string, size = 1): GraphNode {
++  return { id, type, label, size, meta: {} };
++}
++
++function link(
++  source: string | { id: string },
++  target: string | { id: string },
++  type = 'rel',
++): GraphLink {
++  return { source, target, type };
++}
++
++function edgeKeys(links: GraphLink[]): string[] {
++  return links.map((l) => `${linkEnd(l.source)}->${linkEnd(l.target)}`).sort();
++}
++
++function ids(nodes: GraphNode[]): string[] {
++  return nodes.map((n) => n.id);
++}
++
++function deepFreeze<T>(value: T): T {
++  if (value !== null && typeof value === 'object') {
++    Object.freeze(value);
++    for (const key of Object.keys(value as Record<string, unknown>)) {
++      deepFreeze((value as Record<string, unknown>)[key]);
++    }
++  }
++  return value;
++}
++
++function expectInvalid(input: unknown): void {
++  let caught: unknown;
++  try {
++    parseGraph(input);
++  } catch (e) {
++    caught = e;
++  }
++  expect(caught).toBeInstanceOf(GraphError);
++  expect((caught as GraphError).name).toBe('GraphError');
++  expect((caught as GraphError).message.startsWith('Invalid graph')).toBe(true);
++}
++
++describe('linkEnd', () => {
++  it('AC-07-04 returns a string endpoint unchanged', () => {
++    expect(linkEnd('abc')).toBe('abc');
++  });
++
++  it('AC-07-04 returns the id of an object endpoint', () => {
++    expect(linkEnd({ id: 'xyz' })).toBe('xyz');
++  });
++});
++
++describe('parseGraph valid input', () => {
++  const raw = {
++    nodes: [
++      { id: 's1', type: 'session', label: 'Session One', size: 4, meta: { when: '2025-01-01' } },
++      { id: 'p1', type: 'project', label: 'Project One' },
++      { id: 't1', type: 'topic', label: 'Topic One', size: 0 },
++    ],
++    links: [
++      { source: 's1', target: 'p1', type: 'in_project' },
++      { source: { id: 's1' }, target: { id: 't1' } },
++    ],
++  };
++
++  it('AC-07-01 accepts a valid graph given as an object and defaults size and meta', () => {
++    const g = parseGraph(raw);
++    expect(g.nodes).toHaveLength(3);
++    const byId = new Map(g.nodes.map((n) => [n.id, n]));
++    expect(byId.get('s1')).toEqual({
++      id: 's1',
++      type: 'session',
++      label: 'Session One',
++      size: 4,
++      meta: { when: '2025-01-01' },
++    });
++    expect(byId.get('p1')).toEqual({
++      id: 'p1',
++      type: 'project',
++      label: 'Project One',
++      size: 1,
++      meta: {},
++    });
++    expect(byId.get('t1')?.size).toBe(1);
++    expect(byId.get('t1')?.meta).toEqual({});
++  });
++
++  it('AC-07-01 accepts a valid graph given as a JSON string', () => {
++    const g = parseGraph(JSON.stringify(raw));
++    expect(ids(g.nodes).sort()).toEqual(['p1', 's1', 't1']);
++    expect(g.links).toHaveLength(2);
++  });
++
++  it('AC-07-01 string and object inputs give equal results', () => {
++    expect(parseGraph(JSON.stringify(raw))).toEqual(parseGraph(raw));
++  });
++
++  it('AC-07-01 returns link endpoints as strings and defaults link type to empty string', () => {
++    const g = parseGraph(raw);
++    for (const l of g.links) {
++      expect(typeof l.source).toBe('string');
++      expect(typeof l.target).toBe('string');
++    }
++    const withType = g.links.find((l) => l.target === 'p1');
++    const withoutType = g.links.find((l) => l.target === 't1');
++    expect(withType).toEqual({ source: 's1', target: 'p1', type: 'in_project' });
++    expect(withoutType).toEqual({ source: 's1', target: 't1', type: '' });
++  });
++
++  it('AC-07-01 defaults size to 1 when it is not a positive number', () => {
++    const bad: unknown[] = [undefined, 0, -2, '7', null, Number.NaN];
++    const g = parseGraph({
++      nodes: bad.map((size, i) => ({ id: `n${i}`, type: 'file', label: `L${i}`, size })),
++      links: [],
++    });
++    expect(g.nodes.map((n) => n.size)).toEqual([1, 1, 1, 1, 1, 1]);
++  });
++
++  it('AC-07-01 keeps a positive fractional size', () => {
++    const g = parseGraph({
++      nodes: [{ id: 'a', type: 'tool', label: 'A', size: 2.5 }],
++      links: [],
++    });
++    expect(g.nodes[0].size).toBe(2.5);
++  });
++
++  it('AC-07-01 accepts all five node types and an empty graph', () => {
++    const g = parseGraph({
++      nodes: NODE_TYPES.map((t) => ({ id: `id-${t}`, type: t, label: `label-${t}` })),
++      links: [],
++    });
++    expect(g.nodes.map((n) => n.type)).toEqual([...NODE_TYPES]);
++    expect(parseGraph({ nodes: [], links: [] })).toEqual({ nodes: [], links: [] });
++  });
++});
++
++describe('parseGraph invalid input', () => {
++  it('AC-07-02 rejects malformed JSON text', () => {
++    expectInvalid('{not json');
++    expectInvalid('');
++  });
++
++  it('AC-07-02 rejects a missing nodes array', () => {
++    expectInvalid({ links: [] });
++    expectInvalid({ nodes: 'nope', links: [] });
++    expectInvalid(JSON.stringify({ links: [] }));
++  });
++
++  it('AC-07-02 rejects a missing links array', () => {
++    expectInvalid({ nodes: [] });
++    expectInvalid({ nodes: [], links: {} });
++    expectInvalid(JSON.stringify({ nodes: [] }));
++  });
++
++  it('AC-07-02 rejects input that is not an object', () => {
++    expectInvalid(null);
++    expectInvalid(42);
++    expectInvalid('null');
++  });
++
++  it('AC-07-02 rejects a node without an id', () => {
++    expectInvalid({ nodes: [{ type: 'session', label: 'x' }], links: [] });
++    expectInvalid({ nodes: [{ id: 5, type: 'session', label: 'x' }], links: [] });
++  });
++
++  it('AC-07-02 rejects an unknown or missing node type', () => {
++    expectInvalid({ nodes: [{ id: 'a', type: 'banana', label: 'x' }], links: [] });
++    expectInvalid({ nodes: [{ id: 'a', label: 'x' }], links: [] });
++  });
++
++  it('AC-07-02 rejects a node without a string label', () => {
++    expectInvalid({ nodes: [{ id: 'a', type: 'file' }], links: [] });
++    expectInvalid({ nodes: [{ id: 'a', type: 'file', label: 3 }], links: [] });
++  });
++
++  it('AC-07-02 GraphError is an Error with name GraphError', () => {
++    const e = new GraphError('Invalid graph: x');
++    expect(e).toBeInstanceOf(Error);
++    expect(e.name).toBe('GraphError');
++    expect(e.message).toBe('Invalid graph: x');
++  });
++});
++
++describe('parseGraph cleaning', () => {
++  it('AC-07-03 drops links whose endpoints are not node ids', () => {
++    const g = parseGraph({
++      nodes: [
++        { id: 'a', type: 'session', label: 'A' },
++        { id: 'b', type: 'topic', label: 'B' },
++      ],
++      links: [
++        { source: 'a', target: 'b', type: 'k' },
++        { source: 'a', target: 'ghost', type: 'k' },
++        { source: 'ghost', target: 'b', type: 'k' },
++        { source: { id: 'a' }, target: { id: 'nowhere' }, type: 'k' },
++      ],
++    });
++    expect(g.links).toEqual([{ source: 'a', target: 'b', type: 'k' }]);
++  });
++
++  it('AC-07-03 keeps the first node when ids are duplicated', () => {
++    const g = parseGraph({
++      nodes: [
++        { id: 'dup', type: 'file', label: 'First', size: 3 },
++        { id: 'other', type: 'tool', label: 'Other' },
++        { id: 'dup', type: 'topic', label: 'Second', size: 9 },
++      ],
++      links: [{ source: 'dup', target: 'other', type: 'k' }],
++    });
++    expect(g.nodes).toHaveLength(2);
++    const dup = g.nodes.find((n) => n.id === 'dup');
++    expect(dup?.label).toBe('First');
++    expect(dup?.type).toBe('file');
++    expect(dup?.size).toBe(3);
++    expect(g.links).toHaveLength(1);
++  });
++
++  it('AC-07-03 does not mutate its input and returns new objects', () => {
++    const input = {
++      nodes: [
++        { id: 'a', type: 'session', label: 'A', meta: { k: [1, 2] } },
++        { id: 'b', type: 'project', label: 'B', size: 2 },
++        { id: 'a', type: 'tool', label: 'Dup' },
++      ],
++      links: [
++        { source: { id: 'a' }, target: { id: 'b' } },
++        { source: 'a', target: 'missing', type: 'x' },
++      ],
++    };
++    const before = structuredClone(input);
++    deepFreeze(input);
++    const g = parseGraph(input);
++    expect(input).toEqual(before);
++    expect(g.nodes[0]).not.toBe(input.nodes[0]);
++    expect(g.nodes).not.toBe(input.nodes);
++    expect(g.links).not.toBe(input.links);
++    expect(g.links).toEqual([{ source: 'a', target: 'b', type: '' }]);
++  });
++});
++
++describe('filterByTypes', () => {
++  const g: GraphData = {
++    nodes: [
++      node('s1', 'session', 'S1'),
++      node('p1', 'project', 'P1'),
++      node('t1', 'topic', 'T1'),
++      node('f1', 'file', 'F1'),
++    ],
++    links: [
++      link('s1', 'p1'),
++      link({ id: 's1' }, { id: 't1' }),
++      link('t1', { id: 'f1' }),
++      link({ id: 'p1' }, 't1'),
++    ],
++  };
++
++  it('AC-07-04 removes nodes of other types and every link touching them', () => {
++    const out = filterByTypes(g, ['session', 'project']);
++    expect(ids(out.nodes).sort()).toEqual(['p1', 's1']);
++    expect(edgeKeys(out.links)).toEqual(['s1->p1']);
++  });
++
++  it('AC-07-04 handles object endpoints when removing links', () => {
++    const out = filterByTypes(g, ['session', 'topic']);
++    expect(ids(out.nodes).sort()).toEqual(['s1', 't1']);
++    expect(edgeKeys(out.links)).toEqual(['s1->t1']);
++  });
++
++  it('AC-07-04 accepts any iterable of types', () => {
++    const out = filterByTypes(g, new Set<NodeType>(['topic', 'file']));
++    expect(ids(out.nodes).sort()).toEqual(['f1', 't1']);
++    expect(edgeKeys(out.links)).toEqual(['t1->f1']);
++  });
++
++  it('AC-07-04 keeps everything when all types are selected', () => {
++    const out = filterByTypes(g, NODE_TYPES);
++    expect(ids(out.nodes).sort()).toEqual(['f1', 'p1', 's1', 't1']);
++    expect(out.links).toHaveLength(4);
++  });
++
++  it('AC-07-04 returns an empty graph for no types', () => {
++    const out = filterByTypes(g, []);
++    expect(out.nodes).toEqual([]);
++    expect(out.links).toEqual([]);
++  });
++
++  it('AC-07-04 does not mutate the input', () => {
++    const copy = structuredClone(g);
++    deepFreeze(g);
++    filterByTypes(g, ['file']);
++    expect(g).toEqual(copy);
++  });
++});
++
++describe('searchNodes', () => {
++  const g: GraphData = {
++    nodes: [
++      node('x1', 'topic', 'Zebra auth notes'),
++      node('x2', 'file', 'Auth service'),
++      node('auth-id', 'tool', 'Unrelated'),
++      node('x3', 'session', 'Nothing here'),
++    ],
++    links: [],
++  };
++
++  it('AC-07-05 ranks prefix label matches, then substring matches, then id-only matches', () => {
++    expect(ids(searchNodes(g, 'auth'))).toEqual(['x2', 'x1', 'auth-id']);
++  });
++
++  it('AC-07-05 is case-insensitive and trims the query', () => {
++    expect(ids(searchNodes(g, '  AuTh  '))).toEqual(['x2', 'x1', 'auth-id']);
++  });
++
++  it('AC-07-05 returns an empty array for blank queries', () => {
++    expect(searchNodes(g, '')).toEqual([]);
++    expect(searchNodes(g, '   ')).toEqual([]);
++    expect(searchNodes(g, '\t\n')).toEqual([]);
++  });
++
++  it('AC-07-05 returns an empty array when nothing matches', () => {
++    expect(searchNodes(g, 'qqqq')).toEqual([]);
++  });
++
++  it('AC-07-05 honours an explicit limit', () => {
++    expect(ids(searchNodes(g, 'auth', 2))).toEqual(['x2', 'x1']);
++    expect(ids(searchNodes(g, 'auth', 1))).toEqual(['x2']);
++  });
++
++  it('AC-07-05 defaults the limit to 20', () => {
++    const many: GraphData = {
++      nodes: Array.from({ length: 25 }, (_, i) =>
++        node(`id${String(i).padStart(2, '0')}`, 'file', `match ${String(i).padStart(2, '0')}`),
++      ),
++      links: [],
++    };
++    const out = searchNodes(many, 'match');
++    expect(out).toHaveLength(20);
++    expect(out[0].label).toBe('match 00');
++    expect(out[19].label).toBe('match 19');
++  });
++
++  it('AC-07-05 breaks ties by lower-cased label, then by id', () => {
++    const t: GraphData = {
++      nodes: [
++        node('n3', 'file', 'Beta'),
++        node('n2', 'file', 'alpha'),
++        node('n9', 'file', 'Same'),
++        node('n1', 'file', 'same'),
++      ],
++      links: [],
++    };
++    expect(ids(searchNodes(t, 'a'))).toEqual(['n2', 'n3', 'n1', 'n9']);
++  });
++
++  it('AC-07-05 orders equal labels by id', () => {
++    const t: GraphData = {
++      nodes: [node('b', 'file', 'Same'), node('a', 'file', 'Same'), node('c', 'file', 'same')],
++      links: [],
++    };
++    expect(ids(searchNodes(t, 'sam'))).toEqual(['a', 'b', 'c']);
++  });
++
++  it('AC-07-05 compares labels without locale rules', () => {
++    const t: GraphData = {
++      nodes: [node('1', 'file', 'xé'), node('2', 'file', 'xf')],
++      links: [],
++    };
++    expect(ids(searchNodes(t, 'x'))).toEqual(['2', '1']);
++  });
++
++  it('AC-07-05 does not mutate the graph', () => {
++    const copy = structuredClone(g);
++    deepFreeze(g);
++    searchNodes(g, 'auth');
++    expect(g).toEqual(copy);
++  });
++});
++
++describe('neighbors', () => {
++  const g: GraphData = {
++    nodes: [
++      node('c', 'topic', 'C'),
++      node('a', 'session', 'A'),
++      node('b', 'project', 'B'),
++      node('d', 'file', 'D'),
++      node('e', 'tool', 'E'),
++    ],
++    links: [
++      link('a', 'c'),
++      link({ id: 'd' }, { id: 'a' }),
++      link('a', 'b'),
++      link('b', 'a'),
++      link('c', 'd'),
++    ],
++  };
++
++  it('AC-07-06 returns direct neighbours in both directions, sorted by id, without duplicates', () => {
++    const out = neighbors(g, 'a');
++    expect(ids(out.nodes)).toEqual(['b', 'c', 'd']);
++  });
++
++  it('AC-07-06 returns the links touching the node', () => {
++    const out = neighbors(g, 'a');
++    expect(edgeKeys(out.links)).toEqual(['a->b', 'a->c', 'b->a', 'd->a']);
++  });
++
++  it('AC-07-06 excludes the node itself even with a self link', () => {
++    const withLoop: GraphData = {
++      nodes: [node('a', 'session', 'A'), node('b', 'topic', 'B')],
++      links: [link('a', 'a'), link('a', 'b')],
++    };
++    expect(ids(neighbors(withLoop, 'a').nodes)).toEqual(['b']);
++  });
++
++  it('AC-07-06 returns empty arrays for an isolated node', () => {
++    const out = neighbors(g, 'e');
++    expect(out.nodes).toEqual([]);
++    expect(out.links).toEqual([]);
++  });
++
++  it('AC-07-06 returns empty arrays for an unknown id', () => {
++    const out = neighbors(g, 'nope');
++    expect(out.nodes).toEqual([]);
++    expect(out.links).toEqual([]);
++  });
++
++  it('AC-07-06 does not mutate the graph', () => {
++    const copy = structuredClone(g);
++    deepFreeze(g);
++    neighbors(g, 'a');
++    expect(g).toEqual(copy);
++  });
++});
++
++describe('nodeDetails', () => {
++  const g: GraphData = {
++    nodes: [
++      node('s1', 'session', 'Main session'),
++      node('t2', 'topic', 'zeta'),
++      node('t1', 'topic', 'alpha'),
++      node('f1', 'file', 'file.ts'),
++      node('p1', 'project', 'proj'),
++      node('lonely', 'tool', 'Lonely'),
++    ],
++    links: [
++      link('s1', 't2'),
++      link({ id: 't1' }, { id: 's1' }),
++      link('s1', 'f1'),
++      link('s1', 'f1'),
++    ],
++  };
++
++  it('AC-07-07 returns null for an unknown id', () => {
++    expect(nodeDetails(g, 'missing')).toBeNull();
++  });
++
++  it('AC-07-07 returns the node and neighbours grouped by type with all five keys', () => {
++    const d = nodeDetails(g, 's1');
++    expect(d).not.toBeNull();
++    expect(d?.node.id).toBe('s1');
++    expect(d?.node.label).toBe('Main session');
++    expect(Object.keys(d!.neighborsByType).sort()).toEqual([...NODE_TYPES].sort());
++    expect(ids(d!.neighborsByType.file)).toEqual(['f1']);
++    expect(ids(d!.neighborsByType.session)).toEqual([]);
++    expect(ids(d!.neighborsByType.project)).toEqual([]);
++    expect(ids(d!.neighborsByType.tool)).toEqual([]);
++  });
++
++  it('AC-07-07 sorts each group by label', () => {
++    const d = nodeDetails(g, 's1');
++    expect(d!.neighborsByType.topic.map((n) => n.label)).toEqual(['alpha', 'zeta']);
++  });
++
++  it('AC-07-07 gives every key with an empty array for a node without neighbours', () => {
++    const d = nodeDetails(g, 'lonely');
++    expect(d?.node.id).toBe('lonely');
++    for (const t of NODE_TYPES) {
++      expect(d!.neighborsByType[t]).toEqual([]);
++    }
++  });
++});
++
++describe('TYPE_COLORS', () => {
++  it('AC-07-08 has exactly one entry per node type', () => {
++    expect(Object.keys(TYPE_COLORS).sort()).toEqual([...NODE_TYPES].sort());
++    expect([...NODE_TYPES]).toEqual(['session', 'project', 'topic', 'file', 'tool']);
++  });
++
++  it('AC-07-08 uses #rrggbb hex colours', () => {
++    for (const t of NODE_TYPES) {
++      expect(TYPE_COLORS[t]).toMatch(/^#[0-9a-fA-F]{6}$/);
++    }
++  });
++
++  it('AC-07-08 uses five distinct colours', () => {
++    const colours = NODE_TYPES.map((t) => TYPE_COLORS[t].toLowerCase());
++    expect(new Set(colours).size).toBe(5);
++  });
++});
+diff --git a/explorer/tests/holdout/graph_hidden.test.ts b/explorer/tests/holdout/graph_hidden.test.ts
+new file mode 100644
+index 0000000..3fcecaf
+--- /dev/null
++++ b/explorer/tests/holdout/graph_hidden.test.ts
+@@ -0,0 +1,199 @@
++import { describe, it, expect } from 'vitest';
++import {
++  GraphError,
++  NODE_TYPES,
++  TYPE_COLORS,
++  filterByTypes,
++  linkEnd,
++  neighbors,
++  nodeDetails,
++  parseGraph,
++  searchNodes,
++} from '../../src/graph';
++import type { GraphData, GraphNode, NodeType } from '../../src/graph';
++
++function n(id: string, type: NodeType, label: string): GraphNode {
++  return { id, type, label, size: 1, meta: {} };
++}
++
++function keys(links: { source: string | { id: string }; target: string | { id: string } }[]): string[] {
++  return links.map((l) => `${linkEnd(l.source)}>${linkEnd(l.target)}`).sort();
++}
++
++describe('hidden graph tests', () => {
++  it('AC-07-01 AC-07-03 parses a string graph, cleans it and normalises links', () => {
++    const text = JSON.stringify({
++      nodes: [
++        { id: 'proj/alpha', type: 'project', label: 'Alpha', size: 12, meta: { path: '/x' } },
++        { id: 'tool:Bash', type: 'tool', label: 'Bash', size: -1 },
++        { id: 'proj/alpha', type: 'file', label: 'Impostor' },
++        { id: 'sess-9', type: 'session', label: 'Nine', meta: { n: 9 } },
++      ],
++      links: [
++        { source: { id: 'sess-9' }, target: 'proj/alpha', type: 'part_of' },
++        { source: 'sess-9', target: { id: 'tool:Bash' } },
++        { source: 'tool:Bash', target: 'tool:Zsh', type: 'bad' },
++        { source: 'unknown', target: 'sess-9' },
++      ],
++    });
++    const g = parseGraph(text);
++    expect(g.nodes.map((x) => x.id).sort()).toEqual(['proj/alpha', 'sess-9', 'tool:Bash']);
++    const alpha = g.nodes.find((x) => x.id === 'proj/alpha');
++    expect(alpha).toEqual({
++      id: 'proj/alpha',
++      type: 'project',
++      label: 'Alpha',
++      size: 12,
++      meta: { path: '/x' },
++    });
++    const bash = g.nodes.find((x) => x.id === 'tool:Bash');
++    expect(bash?.size).toBe(1);
++    expect(bash?.meta).toEqual({});
++    expect(g.links).toHaveLength(2);
++    expect(g.links.find((l) => l.target === 'proj/alpha')).toEqual({
++      source: 'sess-9',
++      target: 'proj/alpha',
++      type: 'part_of',
++    });
++    expect(g.links.find((l) => l.target === 'tool:Bash')?.type).toBe('');
++  });
++
++  it('AC-07-02 rejects several kinds of bad graphs with the Invalid graph prefix', () => {
++    const bad: unknown[] = [
++      '[1, 2',
++      '[]',
++      '{"nodes": [], "links": 3}',
++      { nodes: [{ id: '', type: 'file' }], links: [] },
++      { nodes: [{ id: 'q', type: 'Session', label: 'case matters' }], links: [] },
++      { nodes: [{ id: 'q', type: 'folder', label: 'x' }], links: [] },
++      { nodes: [null], links: [] },
++    ];
++    for (const input of bad) {
++      let caught: unknown;
++      try {
++        parseGraph(input);
++      } catch (e) {
++        caught = e;
++      }
++      expect(caught).toBeInstanceOf(GraphError);
++      expect((caught as Error).message).toMatch(/^Invalid graph/);
++    }
++  });
++
++  it('AC-07-03 leaves a frozen input untouched', () => {
++    const input = Object.freeze({
++      nodes: Object.freeze([
++        Object.freeze({ id: 'k', type: 'topic', label: 'K' }),
++        Object.freeze({ id: 'm', type: 'file', label: 'M' }),
++      ]),
++      links: Object.freeze([Object.freeze({ source: 'k', target: 'm', type: 'z' })]),
++    });
++    const g = parseGraph(input);
++    expect(g.links).toEqual([{ source: 'k', target: 'm', type: 'z' }]);
++    expect(Object.keys(input.nodes[0]).sort()).toEqual(['id', 'label', 'type']);
++  });
++
++  it('AC-07-04 filters a graph with mixed endpoint forms', () => {
++    const g: GraphData = {
++      nodes: [n('a', 'tool', 'A'), n('b', 'tool', 'B'), n('c', 'file', 'C'), n('d', 'topic', 'D')],
++      links: [
++        { source: { id: 'a' }, target: { id: 'b' }, type: '' },
++        { source: 'b', target: { id: 'c' }, type: '' },
++        { source: { id: 'd' }, target: 'a', type: '' },
++      ],
++    };
++    const out = filterByTypes(g, ['tool']);
++    expect(out.nodes.map((x) => x.id).sort()).toEqual(['a', 'b']);
++    expect(keys(out.links)).toEqual(['a>b']);
++    const gen = (function* () {
++      yield 'file' as NodeType;
++      yield 'topic' as NodeType;
++    })();
++    const out2 = filterByTypes(g, gen);
++    expect(out2.nodes.map((x) => x.id).sort()).toEqual(['c', 'd']);
++    expect(out2.links).toEqual([]);
++  });
++
++  it('AC-07-05 ranks and limits search results on a different data set', () => {
++    const g: GraphData = {
++      nodes: [
++        n('id-1', 'file', 'readme.md'),
++        n('docs/readme', 'topic', 'Documentation'),
++        n('id-3', 'tool', 'Read'),
++        n('id-4', 'session', 'Spread sheet'),
++        n('id-5', 'project', 'READ-ONLY'),
++      ],
++      links: [],
++    };
++    expect(searchNodes(g, 'READ').map((x) => x.id)).toEqual([
++      'id-3',
++      'id-5',
++      'id-1',
++      'id-4',
++      'docs/readme',
++    ]);
++    expect(searchNodes(g, 'read', 3).map((x) => x.id)).toEqual(['id-3', 'id-5', 'id-1']);
++    expect(searchNodes(g, ' \n ')).toEqual([]);
++  });
++
++  it('AC-07-05 breaks ties by label then id', () => {
++    const g: GraphData = {
++      nodes: [n('z', 'file', 'Foo'), n('y', 'file', 'foo'), n('x', 'file', 'FOO'), n('w', 'file', 'Foa')],
++      links: [],
++    };
++    expect(searchNodes(g, 'fo').map((x) => x.id)).toEqual(['w', 'x', 'y', 'z']);
++  });
++
++  it('AC-07-06 finds neighbours across link directions and forms', () => {
++    const g: GraphData = {
++      nodes: [n('hub', 'topic', 'Hub'), n('z', 'file', 'Z'), n('m', 'file', 'M'), n('far', 'tool', 'Far')],
++      links: [
++        { source: 'z', target: { id: 'hub' }, type: '' },
++        { source: { id: 'hub' }, target: 'm', type: '' },
++        { source: 'm', target: 'hub', type: '' },
++        { source: 'm', target: 'far', type: '' },
++      ],
++    };
++    const out = neighbors(g, 'hub');
++    expect(out.nodes.map((x) => x.id)).toEqual(['m', 'z']);
++    expect(keys(out.links)).toEqual(['hub>m', 'm>hub', 'z>hub']);
++    expect(neighbors(g, 'far').nodes.map((x) => x.id)).toEqual(['m']);
++    expect(neighbors(g, 'absent')).toEqual({ nodes: [], links: [] });
++  });
++
++  it('AC-07-07 groups details by type', () => {
++    const g: GraphData = {
++      nodes: [
++        n('p', 'project', 'Proj'),
++        n('s2', 'session', 'bravo'),
++        n('s1', 'session', 'alpha'),
++        n('s3', 'session', 'charlie'),
++        n('tl', 'tool', 'Grep'),
++      ],
++      links: [
++        { source: 's3', target: 'p', type: '' },
++        { source: { id: 's1' }, target: { id: 'p' }, type: '' },
++        { source: 'p', target: 's2', type: '' },
++        { source: 'p', target: 'tl', type: '' },
++      ],
++    };
++    const d = nodeDetails(g, 'p');
++    expect(d).not.toBeNull();
++    expect(d?.node.label).toBe('Proj');
++    expect(Object.keys(d?.neighborsByType ?? {}).sort()).toEqual(['file', 'project', 'session', 'tool', 'topic']);
++    expect(d?.neighborsByType.session.map((x) => x.label)).toEqual(['alpha', 'bravo', 'charlie']);
++    expect(d?.neighborsByType.tool.map((x) => x.id)).toEqual(['tl']);
++    expect(d?.neighborsByType.topic).toEqual([]);
++    expect(nodeDetails(g, 'S1')).toBeNull();
++  });
++
++  it('AC-07-08 colours are distinct hex strings for each type', () => {
++    expect(NODE_TYPES).toHaveLength(5);
++    const values = Object.values(TYPE_COLORS).map((c) => c.toLowerCase());
++    expect(values).toHaveLength(5);
++    expect(new Set(values).size).toBe(5);
++    for (const c of values) {
++      expect(c).toMatch(/^#[0-9a-f]{6}$/);
++    }
++  });
++});
+diff --git a/explorer/vite.config.ts b/explorer/vite.config.ts
+new file mode 100644
+index 0000000..0ddf083
+--- /dev/null
++++ b/explorer/vite.config.ts
+@@ -0,0 +1,44 @@
++import { readFile } from 'node:fs/promises';
++import { homedir } from 'node:os';
++import { join } from 'node:path';
++import { defineConfig } from 'vite';
++import type { Plugin } from 'vite';
++
++function graphJsonPath(): string {
++  const home = process.env.KB_HOME;
++  const base = home && home.length > 0 ? home : join(homedir(), 'claude-kb');
++  return join(base, 'graph', 'graph.json');
++}
++
++function serveGraphJson(): Plugin {
++  return {
++    name: 'serve-graph-json',
++    configureServer(server) {
++      server.middlewares.use('/graph.json', (req, res, next) => {
++        if (req.method !== 'GET') {
++          next();
++          return;
++        }
++        readFile(graphJsonPath(), 'utf8').then(
++          (text) => {
++            res.statusCode = 200;
++            res.setHeader('Content-Type', 'application/json; charset=utf-8');
++            res.setHeader('Cache-Control', 'no-store');
++            res.end(text);
++          },
++          (err: NodeJS.ErrnoException) => {
++            const notFound = err.code === 'ENOENT';
++            console.error(`Cannot read ${graphJsonPath()}: ${err.message}`);
++            res.statusCode = notFound ? 404 : 500;
++            res.setHeader('Content-Type', 'text/plain; charset=utf-8');
++            res.end(notFound ? 'graph.json not found' : 'could not read graph.json');
++          },
++        );
++      });
++    },
++  };
++}
++
++export default defineConfig({
++  plugins: [serveGraphJson()],
++});

@@ -9,6 +9,7 @@ _Written by `.phased/bin/phase.py`. Do not edit by hand._
 | 03 | Topic keywords (TF-IDF) + Markdown session nodes | done | 2026-11-01T18:39 | 2026-11-01T18:39 | 1 | 2026-11-01T20:28 | c38e8c0e4c |
 | 04 | Training dataset records + redaction | done | 2026-11-01T20:32 | 2026-11-01T20:32 | 1 | 2026-11-01T20:37 | 492606be3f |
 | 05 | Knowledge graph builder (graph.json) | done | 2026-11-01T20:41 | 2026-11-01T20:41 | 1 | 2026-11-01T20:43 | 4bb96b7e8a |
-| 06 | `kb` command - incremental ingest, SessionEnd hook, hook installer | implementing | 2026-11-01T20:45 | 2026-11-01T20:45 | 1 | 2026-11-01T20:52 |  |
+| 06 | `kb` command - incremental ingest, SessionEnd hook, hook installer | done | 2026-11-01T20:45 | 2026-11-01T20:45 | 1 | 2026-11-01T20:52 | bcfb5f9081 |
+| 07 | 3D explorer web app | implementing | 2026-11-01T20:59 | 2026-11-01T20:59 | 2 | 2026-11-01T21:02 |  |
 
 Evidence of failing-first test runs is in `.phased/evidence/`.

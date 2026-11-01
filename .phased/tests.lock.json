@@ -23,6 +23,14 @@
     "core/tests/phase06_cli.rs": {
       "sha256": "19e1d6cdbd237897e38c2c0a9b543f9a33e5e7dfc553b5b30ebd8de8c9621796",
       "phase": "06"
+    },
+    "explorer/tests/graph.test.ts": {
+      "sha256": "7083bb71f8cc2fe485944c7e7a1d47a33f42036427d09f723b916825043ddf63",
+      "phase": "07"
+    },
+    "explorer/tests/holdout/graph_hidden.test.ts": {
+      "sha256": "3893eb17ea43f01463c254d7a6eab1a704f097f4b3c25e131f832d4956ec0b33",
+      "phase": "07"
     }
   }
 }
