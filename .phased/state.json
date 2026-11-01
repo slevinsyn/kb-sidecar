@@ -1,8 +1,8 @@
 {
   "initialized": true,
   "self_test_passed": true,
-  "phase": "10",
-  "title": "Explorer analysis - communities, rank, bridges, gaps, timeline",
+  "phase": "11",
+  "title": "Offline insights - executive summary, roadmap, Markdown export",
   "stage": "implementing",
   "history": [
     {
@@ -833,6 +833,60 @@
       "round": 1,
       "verdict": "PASS",
       "important": 0
+    },
+    {
+      "at": "2026-11-02T00:40:02+05:30",
+      "event": "finish",
+      "phase": "10",
+      "commit": "913cb8229ee6276408d8191ea65ac9ba5e006fa6"
+    },
+    {
+      "at": "2026-11-02T00:40:05+05:30",
+      "event": "start",
+      "phase": "11",
+      "title": "Offline insights - executive summary, roadmap, Markdown export"
+    },
+    {
+      "at": "2026-11-02T00:40:05+05:30",
+      "event": "approve-spec",
+      "phase": "11",
+      "criteria": [
+        "AC-11-01",
+        "AC-11-02",
+        "AC-11-03",
+        "AC-11-04",
+        "AC-11-05",
+        "AC-11-06",
+        "AC-11-07",
+        "AC-11-08"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-02T00:40:05+05:30",
+      "event": "tests-moved-in",
+      "phase": "11",
+      "files": 2
+    },
+    {
+      "at": "2026-11-02T00:40:36+05:30",
+      "event": "red",
+      "phase": "11",
+      "tests": 2
+    },
+    {
+      "at": "2026-11-02T00:41:23+05:30",
+      "event": "review-prep",
+      "phase": "11",
+      "round": 1
+    },
+    {
+      "at": "2026-11-02T00:42:01+05:30",
+      "event": "review",
+      "phase": "11",
+      "round": 1,
+      "verdict": "PASS",
+      "important": 0
     }
   ],
   "change_dir": "changes/2026-11-01-graph-map",
@@ -858,10 +912,6 @@
     "12"
   ],
   "pending_tests": {
-    "11": {
-      "explorer/tests/holdout/insights_hidden.test.ts": "dc65171a5482d60ee0c2bd57adc7fd0cc3922e85c9b51a2b94dc2003fd33312e",
-      "explorer/tests/insights.test.ts": "a9f2c2d77adc9d2c67dc716d435d233b93ce762d7ba711df3d6d7023cfd2d95c"
-    },
     "12": {
       "explorer/tests/holdout/view_hidden.test.ts": "daf7c7423af40fe4613f9510285fa573620090b41d5068800ac9a3c87fd559ee",
       "explorer/tests/view.test.ts": "026b4f8062460e62176d04f4b4bc6c7e1482a8f2e8cd7fb8bf3ab169b5626c01"
@@ -869,16 +919,16 @@
   },
   "review": {
     "verdict": "PASS",
-    "lock_digest": "51dfb96e6c9612b05543a0b65004ab0833ffa0b700ae956996481e7532549faa",
-    "at": "2026-11-02T00:34:26+05:30",
+    "lock_digest": "84eea25b81975bb67978ed9bc3ea6f5a12b1183a78e7b35370f77d730ee05a3e",
+    "at": "2026-11-02T00:40:05+05:30",
     "prefetched": true
   },
   "red": {
     "ok": true,
-    "lock_digest": "51dfb96e6c9612b05543a0b65004ab0833ffa0b700ae956996481e7532549faa",
-    "evidence": ".phased/evidence/phase-10-red.log"
+    "lock_digest": "84eea25b81975bb67978ed9bc3ea6f5a12b1183a78e7b35370f77d730ee05a3e",
+    "evidence": ".phased/evidence/phase-11-red.log"
   },
-  "spec_sha256": "115921bb49d2ce5e7c20882049cea7adc1be1654e7a402e044b6cebc765a55f3",
+  "spec_sha256": "817ec346cc5605055e98a145d0b033917ddbe8a469c95188bf044e41f4395fa0",
   "code_reviews": {
     "01": {
       "rounds": [
@@ -1067,6 +1117,21 @@
           ]
         }
       ]
+    },
+    "11": {
+      "rounds": [
+        {
+          "tree": "8c66dd101b7a2e4f8bf2ad0a5a32d865fb9f522f",
+          "at": "2026-11-02T00:41:23+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 2,
+          "preexisting": 0,
+          "classes": [
+            "none"
+          ]
+        }
+      ]
     }
   },
   "durations": [
@@ -1114,6 +1179,11 @@
       "phase": "09",
       "level": "M",
       "minutes": 4.3
+    },
+    {
+      "phase": "10",
+      "level": "L",
+      "minutes": 5.6
     }
   ]
 }
