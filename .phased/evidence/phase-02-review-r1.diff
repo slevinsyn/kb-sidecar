@@ -1,0 +1,1110 @@
+diff --git a/core/Cargo.lock b/core/Cargo.lock
+index 074d314..dfaebe6 100644
+--- a/core/Cargo.lock
++++ b/core/Cargo.lock
+@@ -2,18 +2,71 @@
+ # It is not intended for manual editing.
+ version = 4
+ 
++[[package]]
++name = "adler2"
++version = "2.0.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
++
++[[package]]
++name = "arbitrary"
++version = "1.5.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "3bc62ac97cc33321f50863d514c3bc38a453947a8f9e781137e47c7401020aed"
++dependencies = [
++ "derive_arbitrary",
++]
++
+ [[package]]
+ name = "bitflags"
+ version = "2.13.2"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "3ded4057c258ba199e2d26386d3af3780957ecaee6c4ef4041c6b4b8b97c0b06"
+ 
++[[package]]
++name = "bumpalo"
++version = "3.20.3"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649"
++
+ [[package]]
+ name = "cfg-if"
+ version = "1.0.5"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "4e7648175b45a9a48536d676f68d918270699102aa8dab5496df06904c914600"
+ 
++[[package]]
++name = "crc32fast"
++version = "1.5.3"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "0ba106e844045ddc02c20768ac4b0b7cb45f2cc2ecbd833ac9f5dacb183c2055"
++dependencies = [
++ "cfg-if",
++]
++
++[[package]]
++name = "crossbeam-utils"
++version = "0.8.23"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "a31eee39dddec8330830986fcd7625edb5a24ec90ea038215273bbc3adb08ac6"
++
++[[package]]
++name = "derive_arbitrary"
++version = "1.5.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "1b034bd7d5f032402a2479444dcc6f74e36a03f31854d41680fb240ef682a1ac"
++dependencies = [
++ "proc-macro2",
++ "quote",
++ "syn",
++]
++
++[[package]]
++name = "equivalent"
++version = "1.0.3"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "00d174d5400e5e8fd687ad1049e2f578285fa914201b1af7e8b112a4546bd826"
++
+ [[package]]
+ name = "errno"
+ version = "0.3.14"
+@@ -30,6 +83,16 @@ version = "2.5.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
+ 
++[[package]]
++name = "flate2"
++version = "1.1.10"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "6e634e2e0ebac1ee034020da1ca582e17ffe4e0f5e985823721e168928136dcb"
++dependencies = [
++ "crc32fast",
++ "miniz_oxide",
++]
++
+ [[package]]
+ name = "getrandom"
+ version = "0.4.3"
+@@ -41,6 +104,22 @@ dependencies = [
+  "r-efi",
+ ]
+ 
++[[package]]
++name = "hashbrown"
++version = "0.17.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
++
++[[package]]
++name = "indexmap"
++version = "2.14.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "cc4e190f5d26ca7051642629da2c52fc03bde85a03197c99408dcd291734c855"
++dependencies = [
++ "equivalent",
++ "hashbrown",
++]
++
+ [[package]]
+ name = "itoa"
+ version = "1.0.18"
+@@ -54,6 +133,7 @@ dependencies = [
+  "serde",
+  "serde_json",
+  "tempfile",
++ "zip",
+ ]
+ 
+ [[package]]
+@@ -68,12 +148,28 @@ version = "0.12.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53"
+ 
++[[package]]
++name = "log"
++version = "0.4.35"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "5d15f86d12da44cd8d4ec3c73984537eb7f4cadcb9776a575a0a8a05ca11005c"
++
+ [[package]]
+ name = "memchr"
+ version = "2.8.3"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
+ 
++[[package]]
++name = "miniz_oxide"
++version = "0.9.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "b63fbc4a50860e98e7b2aa7804ded1db5cbc3aff9193adaff57a6931bf7c4b4c"
++dependencies = [
++ "adler2",
++ "simd-adler32",
++]
++
+ [[package]]
+ name = "once_cell"
+ version = "1.21.4"
+@@ -160,6 +256,12 @@ dependencies = [
+  "zmij",
+ ]
+ 
++[[package]]
++name = "simd-adler32"
++version = "0.3.10"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "3a219298ac11a56ea9a6d2120044824d6f01aeb034955e7af7bc16858527deea"
++
+ [[package]]
+ name = "syn"
+ version = "3.0.9"
+@@ -205,8 +307,35 @@ dependencies = [
+  "windows-link",
+ ]
+ 
++[[package]]
++name = "zip"
++version = "2.6.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "1dcb24d0152526ae49b9b96c1dcf71850ca1e0b882e4e28ed898a93c41334744"
++dependencies = [
++ "arbitrary",
++ "crc32fast",
++ "crossbeam-utils",
++ "flate2",
++ "indexmap",
++ "memchr",
++ "zopfli",
++]
++
+ [[package]]
+ name = "zmij"
+ version = "1.0.23"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
++
++[[package]]
++name = "zopfli"
++version = "0.8.4"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "aaf7fc5d30c28483d93805c4a5e12b05bbb52407fa67c5f8bd552374cd01fb11"
++dependencies = [
++ "bumpalo",
++ "crc32fast",
++ "log",
++ "simd-adler32",
++]
+diff --git a/core/Cargo.toml b/core/Cargo.toml
+index 7fecd6b..7614519 100644
+--- a/core/Cargo.toml
++++ b/core/Cargo.toml
+@@ -15,6 +15,7 @@ path = "src/main.rs"
+ [dependencies]
+ serde = { version = "1", features = ["derive"] }
+ serde_json = "1"
++zip = { version = "2", default-features = false, features = ["deflate"] }
+ 
+ [dev-dependencies]
+ tempfile = "3"
+diff --git a/core/src/claude_ai.rs b/core/src/claude_ai.rs
+new file mode 100644
+index 0000000..2ff7a94
+--- /dev/null
++++ b/core/src/claude_ai.rs
+@@ -0,0 +1,208 @@
++//! claude.ai data export parser.
++
++use std::io::Read;
++use std::path::Path;
++
++use serde_json::Value;
++
++use crate::error::KbError;
++use crate::model::{Block, Message, Role, Session, Source};
++
++const TITLE_MAX_CHARS: usize = 80;
++const CONVERSATIONS_FILE: &str = "conversations.json";
++
++fn str_field<'a>(v: &'a Value, key: &str) -> Option<&'a str> {
++    v.get(key).and_then(Value::as_str)
++}
++
++fn opt_string(v: &Value, key: &str) -> Option<String> {
++    str_field(v, key)
++        .filter(|s| !s.is_empty())
++        .map(str::to_string)
++}
++
++fn text_block(text: &str) -> Option<Block> {
++    if text.trim().is_empty() {
++        None
++    } else {
++        Some(Block::Text(text.to_string()))
++    }
++}
++
++/// Flatten the `content` of a tool result into one string.
++fn tool_result_content(content: Option<&Value>) -> String {
++    match content {
++        Some(Value::String(s)) => s.clone(),
++        Some(Value::Array(items)) => items
++            .iter()
++            .filter(|item| str_field(item, "type") == Some("text"))
++            .filter_map(|item| str_field(item, "text"))
++            .collect::<Vec<_>>()
++            .join("\n"),
++        _ => String::new(),
++    }
++}
++
++fn item_block(item: &Value) -> Option<Block> {
++    match str_field(item, "type")? {
++        "text" => text_block(str_field(item, "text").unwrap_or("")),
++        "thinking" => {
++            let t = str_field(item, "thinking").unwrap_or("");
++            if t.is_empty() {
++                None
++            } else {
++                Some(Block::Thinking(t.to_string()))
++            }
++        }
++        "tool_use" => Some(Block::ToolUse {
++            id: str_field(item, "id").unwrap_or("").to_string(),
++            name: str_field(item, "name").unwrap_or("").to_string(),
++            input: item.get("input").cloned().unwrap_or(Value::Null),
++        }),
++        "tool_result" => Some(Block::ToolResult {
++            tool_use_id: str_field(item, "tool_use_id").unwrap_or("").to_string(),
++            content: tool_result_content(item.get("content")),
++            is_error: item
++                .get("is_error")
++                .and_then(Value::as_bool)
++                .unwrap_or(false),
++        }),
++        _ => None,
++    }
++}
++
++fn message_blocks(msg: &Value) -> Vec<Block> {
++    match msg.get("content").and_then(Value::as_array) {
++        Some(items) if !items.is_empty() => items.iter().filter_map(item_block).collect(),
++        _ => text_block(str_field(msg, "text").unwrap_or(""))
++            .into_iter()
++            .collect(),
++    }
++}
++
++fn parse_message(msg: &Value) -> Option<Message> {
++    let role = match str_field(msg, "sender")? {
++        "human" => Role::User,
++        "assistant" => Role::Assistant,
++        _ => return None,
++    };
++    let blocks = message_blocks(msg);
++    if blocks.is_empty() {
++        return None;
++    }
++    Some(Message {
++        role,
++        timestamp: opt_string(msg, "created_at"),
++        blocks,
++    })
++}
++
++fn derive_title(conv: &Value, messages: &[Message]) -> String {
++    if let Some(name) = str_field(conv, "name").filter(|n| !n.is_empty()) {
++        return name.to_string();
++    }
++    let first_user_text = messages
++        .iter()
++        .filter(|m| m.role == Role::User)
++        .flat_map(|m| m.blocks.iter())
++        .find_map(|b| match b {
++            Block::Text(t) => Some(t),
++            _ => None,
++        });
++    match first_user_text {
++        Some(t) => {
++            let collapsed = t.split_whitespace().collect::<Vec<_>>().join(" ");
++            let title: String = collapsed.chars().take(TITLE_MAX_CHARS).collect();
++            if title.is_empty() {
++                "Untitled".to_string()
++            } else {
++                title
++            }
++        }
++        None => "Untitled".to_string(),
++    }
++}
++
++fn parse_conversation(conv: &Value) -> Option<Session> {
++    let messages: Vec<Message> = conv
++        .get("chat_messages")
++        .and_then(Value::as_array)
++        .map(|msgs| msgs.iter().filter_map(parse_message).collect())
++        .unwrap_or_default();
++    if messages.is_empty() {
++        return None;
++    }
++    let started_at = opt_string(conv, "created_at")
++        .or_else(|| messages.first().and_then(|m| m.timestamp.clone()));
++    let ended_at = opt_string(conv, "updated_at")
++        .or_else(|| messages.last().and_then(|m| m.timestamp.clone()));
++    Some(Session {
++        id: str_field(conv, "uuid").unwrap_or("").to_string(),
++        source: Source::ClaudeAi,
++        title: derive_title(conv, &messages),
++        project: None,
++        cwd: None,
++        git_branch: None,
++        started_at,
++        ended_at,
++        models: Vec::new(),
++        messages,
++        prs: Vec::new(),
++    })
++}
++
++/// Parse the text of `conversations.json`.
++pub fn parse_conversations_json(text: &str) -> Result<Vec<Session>, KbError> {
++    let value: Value =
++        serde_json::from_str(text).map_err(|e| KbError::Parse(format!("invalid JSON: {e}")))?;
++    let convs = value
++        .as_array()
++        .ok_or_else(|| KbError::Parse("conversations.json must be a JSON array".to_string()))?;
++    Ok(convs.iter().filter_map(parse_conversation).collect())
++}
++
++fn read_zip(path: &Path) -> Result<String, KbError> {
++    let file = std::fs::File::open(path)?;
++    let mut archive = zip::ZipArchive::new(file)
++        .map_err(|e| KbError::Parse(format!("cannot read zip: {e}")))?;
++    for i in 0..archive.len() {
++        let mut entry = archive
++            .by_index(i)
++            .map_err(|e| KbError::Parse(format!("cannot read zip entry: {e}")))?;
++        let name = entry.name().replace('\\', "/");
++        if name.rsplit('/').next() != Some(CONVERSATIONS_FILE) {
++            continue;
++        }
++        let mut bytes = Vec::new();
++        entry
++            .read_to_end(&mut bytes)
++            .map_err(|e| KbError::Parse(format!("cannot read {CONVERSATIONS_FILE}: {e}")))?;
++        return String::from_utf8(bytes)
++            .map_err(|e| KbError::Parse(format!("{CONVERSATIONS_FILE} is not UTF-8: {e}")));
++    }
++    Err(KbError::Parse(format!("zip has no {CONVERSATIONS_FILE}")))
++}
++
++/// Parse an export: a folder, a `conversations.json` file or a `.zip`.
++pub fn parse_export(path: &Path) -> Result<Vec<Session>, KbError> {
++    let meta = std::fs::metadata(path)?;
++    let text = if meta.is_dir() {
++        let file = path.join(CONVERSATIONS_FILE);
++        if !file.is_file() {
++            return Err(KbError::Parse(format!(
++                "no {CONVERSATIONS_FILE} in {}",
++                path.display()
++            )));
++        }
++        std::fs::read_to_string(file)?
++    } else if path
++        .extension()
++        .and_then(|e| e.to_str())
++        .is_some_and(|e| e.eq_ignore_ascii_case("zip"))
++    {
++        read_zip(path)?
++    } else {
++        std::fs::read_to_string(path)?
++    };
++    parse_conversations_json(&text)
++}
+diff --git a/core/src/lib.rs b/core/src/lib.rs
+index 21643f7..78d2bdb 100644
+--- a/core/src/lib.rs
++++ b/core/src/lib.rs
+@@ -1,5 +1,6 @@
+ //! Conversation knowledge base core.
+ 
++pub mod claude_ai;
+ pub mod claude_code;
+ pub mod error;
+ pub mod model;
+diff --git a/core/tests/phase02_claude_ai.rs b/core/tests/phase02_claude_ai.rs
+new file mode 100644
+index 0000000..1be3697
+--- /dev/null
++++ b/core/tests/phase02_claude_ai.rs
+@@ -0,0 +1,665 @@
++//! Phase 02 tests: claude.ai export parser.
++//!
++//! All fixtures are built in a `tempfile::TempDir`. Zips are written by a tiny in-file "stored"
++//! (uncompressed) zip writer so the tests do not depend on a particular `zip` crate version.
++
++use std::fs;
++use std::path::{Path, PathBuf};
++
++use kb_core::claude_ai::{parse_conversations_json, parse_export};
++use kb_core::{Block, KbError, Role, Session, Source};
++use serde_json::{json, Value};
++
++// ---------------------------------------------------------------------------------------------
++// Fixture helpers
++// ---------------------------------------------------------------------------------------------
++
++fn crc32(data: &[u8]) -> u32 {
++    let mut crc: u32 = 0xFFFF_FFFF;
++    for &b in data {
++        crc ^= b as u32;
++        for _ in 0..8 {
++            let mask = (!(crc & 1)).wrapping_add(1);
++            crc = (crc >> 1) ^ (0xEDB8_8320 & mask);
++        }
++    }
++    !crc
++}
++
++fn le16(v: &mut Vec<u8>, x: u16) {
++    v.extend_from_slice(&x.to_le_bytes());
++}
++
++fn le32(v: &mut Vec<u8>, x: u32) {
++    v.extend_from_slice(&x.to_le_bytes());
++}
++
++/// Build a zip archive (stored, no compression) with the given entries in order.
++fn build_zip(entries: &[(&str, &[u8])]) -> Vec<u8> {
++    let mut out: Vec<u8> = Vec::new();
++    let mut central: Vec<u8> = Vec::new();
++    for (name, data) in entries {
++        let offset = out.len() as u32;
++        let crc = crc32(data);
++        let name_bytes = name.as_bytes();
++
++        le32(&mut out, 0x0403_4b50);
++        le16(&mut out, 20);
++        le16(&mut out, 0);
++        le16(&mut out, 0);
++        le16(&mut out, 0);
++        le16(&mut out, 0x21);
++        le32(&mut out, crc);
++        le32(&mut out, data.len() as u32);
++        le32(&mut out, data.len() as u32);
++        le16(&mut out, name_bytes.len() as u16);
++        le16(&mut out, 0);
++        out.extend_from_slice(name_bytes);
++        out.extend_from_slice(data);
++
++        le32(&mut central, 0x0201_4b50);
++        le16(&mut central, 20);
++        le16(&mut central, 20);
++        le16(&mut central, 0);
++        le16(&mut central, 0);
++        le16(&mut central, 0);
++        le16(&mut central, 0x21);
++        le32(&mut central, crc);
++        le32(&mut central, data.len() as u32);
++        le32(&mut central, data.len() as u32);
++        le16(&mut central, name_bytes.len() as u16);
++        le16(&mut central, 0);
++        le16(&mut central, 0);
++        le16(&mut central, 0);
++        le16(&mut central, 0);
++        le32(&mut central, 0);
++        le32(&mut central, offset);
++        central.extend_from_slice(name_bytes);
++    }
++    let cd_offset = out.len() as u32;
++    let cd_size = central.len() as u32;
++    out.extend_from_slice(&central);
++    le32(&mut out, 0x0605_4b50);
++    le16(&mut out, 0);
++    le16(&mut out, 0);
++    le16(&mut out, entries.len() as u16);
++    le16(&mut out, entries.len() as u16);
++    le32(&mut out, cd_size);
++    le32(&mut out, cd_offset);
++    le16(&mut out, 0);
++    out
++}
++
++fn human(uuid: &str, text: &str, ts: &str) -> Value {
++    json!({
++        "uuid": uuid, "sender": "human", "text": text, "created_at": ts,
++        "content": [{"type": "text", "text": text}]
++    })
++}
++
++fn assistant(uuid: &str, text: &str, ts: &str) -> Value {
++    json!({
++        "uuid": uuid, "sender": "assistant", "text": text, "created_at": ts,
++        "content": [{"type": "text", "text": text}]
++    })
++}
++
++fn conv(uuid: &str, name: &str, created: &str, updated: &str, msgs: Vec<Value>) -> Value {
++    json!({
++        "uuid": uuid, "name": name, "created_at": created, "updated_at": updated,
++        "chat_messages": msgs
++    })
++}
++
++fn to_text(convs: Vec<Value>) -> String {
++    Value::Array(convs).to_string()
++}
++
++fn parse(convs: Vec<Value>) -> Vec<Session> {
++    parse_conversations_json(&to_text(convs)).expect("conversations.json should parse")
++}
++
++fn text(s: &str) -> Block {
++    Block::Text(s.to_string())
++}
++
++fn two_conversations() -> Vec<Value> {
++    vec![
++        conv(
++            "c1",
++            "Rust lifetimes",
++            "2026-09-01T08:00:00Z",
++            "2026-09-01T09:00:00Z",
++            vec![
++                human("m1", "explain lifetimes", "2026-09-01T08:00:00Z"),
++                assistant("m2", "Lifetimes are...", "2026-09-01T08:00:05Z"),
++            ],
++        ),
++        conv(
++            "c2",
++            "Cooking pasta",
++            "2026-09-02T12:00:00Z",
++            "2026-09-02T12:30:00Z",
++            vec![
++                human("m3", "how long to boil penne", "2026-09-02T12:00:00Z"),
++                assistant("m4", "About 11 minutes.", "2026-09-02T12:00:09Z"),
++            ],
++        ),
++    ]
++}
++
++fn assert_parse_err(result: Result<Vec<Session>, KbError>) {
++    match result {
++        Err(KbError::Parse(_)) => {}
++        other => panic!("expected Err(KbError::Parse(_)), got {other:?}"),
++    }
++}
++
++fn assert_io_err(result: Result<Vec<Session>, KbError>) {
++    match result {
++        Err(KbError::Io(_)) => {}
++        other => panic!("expected Err(KbError::Io(_)), got {other:?}"),
++    }
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-02-01: two conversations
++// ---------------------------------------------------------------------------------------------
++
++#[test]
++fn test_AC_02_01_two_conversations_yield_two_sessions() {
++    let sessions = parse(two_conversations());
++    assert_eq!(sessions.len(), 2);
++
++    let a = &sessions[0];
++    assert_eq!(a.id, "c1");
++    assert_eq!(a.source, Source::ClaudeAi);
++    assert_eq!(a.title, "Rust lifetimes");
++    assert_eq!(a.messages.len(), 2);
++    assert_eq!(a.messages[0].role, Role::User);
++    assert_eq!(a.messages[0].timestamp.as_deref(), Some("2026-09-01T08:00:00Z"));
++    assert_eq!(a.messages[0].blocks, vec![text("explain lifetimes")]);
++    assert_eq!(a.messages[1].role, Role::Assistant);
++    assert_eq!(a.messages[1].timestamp.as_deref(), Some("2026-09-01T08:00:05Z"));
++    assert_eq!(a.messages[1].blocks, vec![text("Lifetimes are...")]);
++    assert_eq!(a.started_at.as_deref(), Some("2026-09-01T08:00:00Z"));
++    assert_eq!(a.ended_at.as_deref(), Some("2026-09-01T09:00:00Z"));
++
++    let b = &sessions[1];
++    assert_eq!(b.id, "c2");
++    assert_eq!(b.source, Source::ClaudeAi);
++    assert_eq!(b.title, "Cooking pasta");
++    assert_eq!(b.messages[1].timestamp.as_deref(), Some("2026-09-02T12:00:09Z"));
++    assert_eq!(b.started_at.as_deref(), Some("2026-09-02T12:00:00Z"));
++    assert_eq!(b.ended_at.as_deref(), Some("2026-09-02T12:30:00Z"));
++}
++
++#[test]
++fn test_AC_02_01_order_is_input_order() {
++    let mut convs = two_conversations();
++    convs.reverse();
++    let sessions = parse(convs);
++    let ids: Vec<&str> = sessions.iter().map(|s| s.id.as_str()).collect();
++    assert_eq!(ids, vec!["c2", "c1"]);
++}
++
++#[test]
++fn test_AC_02_01_fixed_fields_and_unknown_senders() {
++    let sessions = parse(vec![conv(
++        "c1",
++        "T",
++        "2026-09-01T08:00:00Z",
++        "2026-09-01T09:00:00Z",
++        vec![
++            human("m1", "hi", "2026-09-01T08:00:00Z"),
++            json!({"uuid": "m2", "sender": "system", "text": "ignored",
++                   "created_at": "2026-09-01T08:00:01Z"}),
++            assistant("m3", "hello", "2026-09-01T08:00:02Z"),
++        ],
++    )]);
++    let s = &sessions[0];
++    assert_eq!(s.project, None);
++    assert_eq!(s.cwd, None);
++    assert_eq!(s.git_branch, None);
++    assert!(s.models.is_empty());
++    assert!(s.prs.is_empty());
++    assert_eq!(s.messages.len(), 2);
++    assert_eq!(s.messages[0].role, Role::User);
++    assert_eq!(s.messages[1].role, Role::Assistant);
++}
++
++#[test]
++fn test_AC_02_01_empty_array_gives_no_sessions() {
++    let sessions = parse_conversations_json("[]").expect("empty array is valid");
++    assert!(sessions.is_empty());
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-02-02: content arrays
++// ---------------------------------------------------------------------------------------------
++
++#[test]
++fn test_AC_02_02_content_blocks_map_in_order() {
++    let msg = json!({
++        "uuid": "m2", "sender": "assistant", "text": "ignored when content present",
++        "created_at": "2026-09-01T08:00:05Z",
++        "content": [
++            {"type": "thinking", "thinking": "plan it"},
++            {"type": "text", "text": "Lifetimes are..."},
++            {"type": "tool_use", "id": "t1", "name": "web_search", "input": {"query": "x"}},
++            {"type": "tool_result", "tool_use_id": "t1", "name": "web_search",
++             "content": [{"type": "text", "text": "result"}], "is_error": false}
++        ]
++    });
++    let sessions = parse(vec![conv(
++        "c1",
++        "T",
++        "2026-09-01T08:00:00Z",
++        "2026-09-01T09:00:00Z",
++        vec![human("m1", "explain", "2026-09-01T08:00:00Z"), msg],
++    )]);
++    assert_eq!(
++        sessions[0].messages[1].blocks,
++        vec![
++            Block::Thinking("plan it".to_string()),
++            text("Lifetimes are..."),
++            Block::ToolUse {
++                id: "t1".to_string(),
++                name: "web_search".to_string(),
++                input: json!({"query": "x"}),
++            },
++            Block::ToolResult {
++                tool_use_id: "t1".to_string(),
++                content: "result".to_string(),
++                is_error: false,
++            },
++        ]
++    );
++}
++
++#[test]
++fn test_AC_02_02_tool_result_array_content_joined_with_newline() {
++    let msg = json!({
++        "uuid": "m2", "sender": "assistant", "created_at": "2026-09-01T08:00:05Z",
++        "content": [
++            {"type": "tool_result", "tool_use_id": "t9", "is_error": true,
++             "content": [
++                {"type": "text", "text": "line one"},
++                {"type": "image", "source": {}},
++                {"type": "text", "text": "line two"}
++             ]}
++        ]
++    });
++    let sessions = parse(vec![conv("c1", "T", "a", "b", vec![msg])]);
++    assert_eq!(
++        sessions[0].messages[0].blocks,
++        vec![Block::ToolResult {
++            tool_use_id: "t9".to_string(),
++            content: "line one\nline two".to_string(),
++            is_error: true,
++        }]
++    );
++}
++
++#[test]
++fn test_AC_02_02_tool_result_string_content_kept_as_is() {
++    let msg = json!({
++        "uuid": "m2", "sender": "assistant", "created_at": "2026-09-01T08:00:05Z",
++        "content": [
++            {"type": "tool_result", "tool_use_id": "t2", "content": "  plain  string "}
++        ]
++    });
++    let sessions = parse(vec![conv("c1", "T", "a", "b", vec![msg])]);
++    assert_eq!(
++        sessions[0].messages[0].blocks,
++        vec![Block::ToolResult {
++            tool_use_id: "t2".to_string(),
++            content: "  plain  string ".to_string(),
++            is_error: false,
++        }]
++    );
++}
++
++#[test]
++fn test_AC_02_02_defaults_for_missing_tool_fields() {
++    let msg = json!({
++        "uuid": "m2", "sender": "assistant", "created_at": "2026-09-01T08:00:05Z",
++        "content": [
++            {"type": "tool_use", "name": "calc"},
++            {"type": "tool_result", "content": "ok"}
++        ]
++    });
++    let sessions = parse(vec![conv("c1", "T", "a", "b", vec![msg])]);
++    assert_eq!(
++        sessions[0].messages[0].blocks,
++        vec![
++            Block::ToolUse {
++                id: String::new(),
++                name: "calc".to_string(),
++                input: Value::Null,
++            },
++            Block::ToolResult {
++                tool_use_id: String::new(),
++                content: "ok".to_string(),
++                is_error: false,
++            },
++        ]
++    );
++}
++
++#[test]
++fn test_AC_02_02_empty_thinking_empty_text_and_unknown_types_dropped() {
++    let msg = json!({
++        "uuid": "m2", "sender": "assistant", "created_at": "2026-09-01T08:00:05Z",
++        "content": [
++            {"type": "thinking", "thinking": ""},
++            {"type": "text", "text": "   \n "},
++            {"type": "voice_note", "text": "dropped"},
++            {"type": "text", "text": "kept"}
++        ]
++    });
++    let sessions = parse(vec![conv("c1", "T", "a", "b", vec![msg])]);
++    assert_eq!(sessions[0].messages[0].blocks, vec![text("kept")]);
++}
++
++#[test]
++fn test_AC_02_02_message_with_no_blocks_is_dropped() {
++    let empty_msg = json!({
++        "uuid": "m2", "sender": "assistant", "created_at": "2026-09-01T08:00:05Z",
++        "content": [{"type": "thinking", "thinking": ""}, {"type": "mystery"}]
++    });
++    let sessions = parse(vec![conv(
++        "c1",
++        "T",
++        "a",
++        "b",
++        vec![human("m1", "hi", "2026-09-01T08:00:00Z"), empty_msg],
++    )]);
++    assert_eq!(sessions[0].messages.len(), 1);
++    assert_eq!(sessions[0].messages[0].role, Role::User);
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-02-03: text field fallback
++// ---------------------------------------------------------------------------------------------
++
++#[test]
++fn test_AC_02_03_message_without_content_uses_text_field() {
++    let msg = json!({"uuid": "m1", "sender": "human", "text": "plain question",
++                     "created_at": "2026-09-01T08:00:00Z"});
++    let sessions = parse(vec![conv("c1", "T", "a", "b", vec![msg])]);
++    assert_eq!(sessions[0].messages.len(), 1);
++    assert_eq!(sessions[0].messages[0].blocks, vec![text("plain question")]);
++    assert_eq!(
++        sessions[0].messages[0].timestamp.as_deref(),
++        Some("2026-09-01T08:00:00Z")
++    );
++}
++
++#[test]
++fn test_AC_02_03_empty_content_array_uses_text_field() {
++    let msg = json!({"uuid": "m1", "sender": "assistant", "text": "fallback answer",
++                     "created_at": "2026-09-01T08:00:00Z", "content": []});
++    let sessions = parse(vec![conv("c1", "T", "a", "b", vec![msg])]);
++    assert_eq!(sessions[0].messages[0].role, Role::Assistant);
++    assert_eq!(sessions[0].messages[0].blocks, vec![text("fallback answer")]);
++}
++
++#[test]
++fn test_AC_02_03_empty_text_and_no_content_drops_message() {
++    let msg = json!({"uuid": "m1", "sender": "human", "text": "",
++                     "created_at": "2026-09-01T08:00:00Z"});
++    let keep = assistant("m2", "kept", "2026-09-01T08:00:01Z");
++    let sessions = parse(vec![conv("c1", "T", "a", "b", vec![msg, keep])]);
++    assert_eq!(sessions[0].messages.len(), 1);
++    assert_eq!(sessions[0].messages[0].blocks, vec![text("kept")]);
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-02-04: titles and empty conversations
++// ---------------------------------------------------------------------------------------------
++
++#[test]
++fn test_AC_02_04_empty_name_uses_first_human_message() {
++    let sessions = parse(vec![conv(
++        "c1",
++        "",
++        "2026-09-01T08:00:00Z",
++        "2026-09-01T09:00:00Z",
++        vec![
++            assistant("m0", "assistant speaks first", "2026-09-01T07:59:00Z"),
++            human("m1", "what is   a\n monad?", "2026-09-01T08:00:00Z"),
++            human("m2", "second question", "2026-09-01T08:01:00Z"),
++        ],
++    )]);
++    assert_eq!(sessions[0].title, "what is a monad?");
++}
++
++#[test]
++fn test_AC_02_04_derived_title_truncated_to_80_chars() {
++    let long = "x".repeat(200);
++    let sessions = parse(vec![conv(
++        "c1",
++        "",
++        "a",
++        "b",
++        vec![human("m1", &long, "2026-09-01T08:00:00Z")],
++    )]);
++    assert_eq!(sessions[0].title, "x".repeat(80));
++    assert_eq!(sessions[0].title.chars().count(), 80);
++}
++
++#[test]
++fn test_AC_02_04_no_user_text_gives_untitled() {
++    let sessions = parse(vec![conv(
++        "c1",
++        "",
++        "a",
++        "b",
++        vec![assistant("m1", "only the assistant", "2026-09-01T08:00:00Z")],
++    )]);
++    assert_eq!(sessions[0].title, "Untitled");
++}
++
++#[test]
++fn test_AC_02_04_conversation_without_messages_is_skipped() {
++    let sessions = parse(vec![
++        conv("empty", "", "a", "b", vec![]),
++        conv("empty-named", "Has a name", "a", "b", vec![]),
++        conv(
++            "c2",
++            "Real",
++            "a",
++            "b",
++            vec![human("m1", "hi", "2026-09-01T08:00:00Z")],
++        ),
++    ]);
++    assert_eq!(sessions.len(), 1);
++    assert_eq!(sessions[0].id, "c2");
++}
++
++#[test]
++fn test_AC_02_04_conversation_whose_messages_all_drop_is_skipped() {
++    let sessions = parse(vec![conv(
++        "c1",
++        "Name",
++        "a",
++        "b",
++        vec![json!({"uuid": "m1", "sender": "tool", "text": "x",
++                    "created_at": "2026-09-01T08:00:00Z"})],
++    )]);
++    assert!(sessions.is_empty());
++}
++
++#[test]
++fn test_AC_02_04_timestamps_fall_back_to_message_timestamps() {
++    let conversation = json!({
++        "uuid": "c1", "name": "T",
++        "chat_messages": [
++            human("m1", "first", "2026-09-05T10:00:00Z"),
++            assistant("m2", "last", "2026-09-05T10:00:30Z"),
++        ]
++    });
++    let sessions =
++        parse_conversations_json(&to_text(vec![conversation])).expect("should parse");
++    assert_eq!(sessions[0].started_at.as_deref(), Some("2026-09-05T10:00:00Z"));
++    assert_eq!(sessions[0].ended_at.as_deref(), Some("2026-09-05T10:00:30Z"));
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-02-05: parse_export for folder / json / zip
++// ---------------------------------------------------------------------------------------------
++
++fn expected_sessions() -> Vec<Session> {
++    parse(two_conversations())
++}
++
++#[test]
++fn test_AC_02_05_folder_json_and_zip_give_same_result() {
++    let dir = tempfile::tempdir().unwrap();
++    let body = to_text(two_conversations());
++
++    let folder = dir.path().join("export");
++    fs::create_dir(&folder).unwrap();
++    fs::write(folder.join("conversations.json"), &body).unwrap();
++    fs::write(folder.join("users.json"), "[]").unwrap();
++
++    let json_file = dir.path().join("conversations.json");
++    fs::write(&json_file, &body).unwrap();
++
++    let zip_file = dir.path().join("export.zip");
++    fs::write(
++        &zip_file,
++        build_zip(&[("conversations.json", body.as_bytes())]),
++    )
++    .unwrap();
++
++    let expected = expected_sessions();
++    assert_eq!(expected.len(), 2);
++    assert_eq!(parse_export(&folder).unwrap(), expected);
++    assert_eq!(parse_export(&json_file).unwrap(), expected);
++    assert_eq!(parse_export(&zip_file).unwrap(), expected);
++}
++
++#[test]
++fn test_AC_02_05_zip_with_file_in_subfolder() {
++    let dir = tempfile::tempdir().unwrap();
++    let body = to_text(two_conversations());
++    let zip_file = dir.path().join("data-2026.zip");
++    fs::write(
++        &zip_file,
++        build_zip(&[
++            ("export/projects.json", b"[]"),
++            ("export/deep/er/conversations.json", body.as_bytes()),
++        ]),
++    )
++    .unwrap();
++    assert_eq!(parse_export(&zip_file).unwrap(), expected_sessions());
++}
++
++#[test]
++fn test_AC_02_05_zip_extension_is_case_insensitive() {
++    let dir = tempfile::tempdir().unwrap();
++    let body = to_text(two_conversations());
++    let zip_file = dir.path().join("EXPORT.ZIP");
++    fs::write(
++        &zip_file,
++        build_zip(&[("conversations.json", body.as_bytes())]),
++    )
++    .unwrap();
++    assert_eq!(parse_export(&zip_file).unwrap(), expected_sessions());
++}
++
++#[test]
++fn test_AC_02_05_zip_uses_first_matching_entry() {
++    let dir = tempfile::tempdir().unwrap();
++    let first = to_text(two_conversations());
++    let second = to_text(vec![conv(
++        "other",
++        "Other",
++        "a",
++        "b",
++        vec![human("m1", "different", "2026-09-09T00:00:00Z")],
++    )]);
++    let zip_file = dir.path().join("e.zip");
++    fs::write(
++        &zip_file,
++        build_zip(&[
++            ("conversations.json.bak", b"not json at all"),
++            ("a/conversations.json", first.as_bytes()),
++            ("b/conversations.json", second.as_bytes()),
++        ]),
++    )
++    .unwrap();
++    assert_eq!(parse_export(&zip_file).unwrap(), expected_sessions());
++}
++
++#[test]
++fn test_AC_02_05_any_other_file_is_read_as_conversations_json() {
++    let dir = tempfile::tempdir().unwrap();
++    let body = to_text(two_conversations());
++    let odd = dir.path().join("my-chats.txt");
++    fs::write(&odd, &body).unwrap();
++    assert_eq!(parse_export(&odd).unwrap(), expected_sessions());
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-02-06: errors
++// ---------------------------------------------------------------------------------------------
++
++#[test]
++fn test_AC_02_06_invalid_json_is_parse_error() {
++    assert_parse_err(parse_conversations_json("{not json"));
++    assert_parse_err(parse_conversations_json(""));
++}
++
++#[test]
++fn test_AC_02_06_non_array_top_level_is_parse_error() {
++    assert_parse_err(parse_conversations_json(r#"{"uuid":"c1"}"#));
++    assert_parse_err(parse_conversations_json(r#""a string""#));
++    assert_parse_err(parse_conversations_json("42"));
++}
++
++#[test]
++fn test_AC_02_06_missing_path_is_io_error() {
++    let dir = tempfile::tempdir().unwrap();
++    let missing: PathBuf = dir.path().join("nope.json");
++    assert_io_err(parse_export(&missing));
++    let missing_zip: PathBuf = dir.path().join("nope.zip");
++    assert_io_err(parse_export(&missing_zip));
++}
++
++#[test]
++fn test_AC_02_06_zip_without_conversations_json_is_parse_error() {
++    let dir = tempfile::tempdir().unwrap();
++    let zip_file = dir.path().join("e.zip");
++    fs::write(
++        &zip_file,
++        build_zip(&[("users.json", b"[]"), ("projects.json", b"[]")]),
++    )
++    .unwrap();
++    assert_parse_err(parse_export(&zip_file));
++}
++
++#[test]
++fn test_AC_02_06_folder_without_conversations_json_is_parse_error() {
++    let dir = tempfile::tempdir().unwrap();
++    fs::write(dir.path().join("users.json"), "[]").unwrap();
++    assert_parse_err(parse_export(dir.path()));
++}
++
++#[test]
++fn test_AC_02_06_corrupt_zip_is_parse_error() {
++    let dir = tempfile::tempdir().unwrap();
++    let zip_file = dir.path().join("broken.zip");
++    fs::write(&zip_file, b"this is definitely not a zip archive").unwrap();
++    assert_parse_err(parse_export(&zip_file));
++}
++
++#[test]
++fn test_AC_02_06_json_file_with_invalid_content_is_parse_error() {
++    let dir = tempfile::tempdir().unwrap();
++    let file: &Path = &dir.path().join("conversations.json");
++    fs::write(file, "{\"not\": \"an array\"}").unwrap();
++    assert_parse_err(parse_export(file));
++}

@@ -3,6 +3,10 @@
     "core/tests/phase01_claude_code.rs": {
       "sha256": "a48afd312caf9178a67eb7b2f0f376eba5048ef1bd8ec873f25e1490968e0cfc",
       "phase": "01"
+    },
+    "core/tests/phase02_claude_ai.rs": {
+      "sha256": "b18a840dfc6b2e34cf50743e917ddbc3590513e7d3aa561e8b507762698ce15c",
+      "phase": "02"
     }
   }
 }
