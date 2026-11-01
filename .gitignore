@@ -1,0 +1,9 @@
+node_modules/
+dist/
+target/
+.DS_Store
+# generated knowledge base output holds private conversations
+kb-data/
+.claude/settings.local.json
+.phased/pending/
+changes/*/kba/facts.json

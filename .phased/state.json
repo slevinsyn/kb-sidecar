@@ -1,0 +1,766 @@
+{
+  "initialized": true,
+  "self_test_passed": true,
+  "phase": "07",
+  "title": "3D explorer web app",
+  "stage": "done",
+  "history": [
+    {
+      "event": "self-test",
+      "passed": false,
+      "failed": 34
+    },
+    {
+      "event": "self-test",
+      "passed": true,
+      "failed": 0
+    },
+    {
+      "at": "2026-11-01T15:51:37+05:30",
+      "event": "plan",
+      "phase": null,
+      "change": "changes/2026-11-01-conversation-kb"
+    },
+    {
+      "at": "2026-11-01T15:59:21+05:30",
+      "event": "approve-plan",
+      "phase": null,
+      "phases": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07"
+      ]
+    },
+    {
+      "at": "2026-11-01T15:59:27+05:30",
+      "event": "prefetch",
+      "phase": null,
+      "phases": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07"
+      ]
+    },
+    {
+      "at": "2026-11-01T16:10:44+05:30",
+      "event": "prefetch-done",
+      "phase": null,
+      "ready": [],
+      "dropped": [
+        "01",
+        "02",
+        "03",
+        "04",
+        "05",
+        "06",
+        "07"
+      ]
+    },
+    {
+      "at": "2026-11-01T16:10:44+05:30",
+      "event": "start",
+      "phase": "01",
+      "title": "Session model + Claude Code transcript parser"
+    },
+    {
+      "at": "2026-11-01T16:10:44+05:30",
+      "event": "approve-spec",
+      "phase": "01",
+      "criteria": [
+        "AC-01-01",
+        "AC-01-02",
+        "AC-01-03",
+        "AC-01-04",
+        "AC-01-05",
+        "AC-01-06",
+        "AC-01-07",
+        "AC-01-08",
+        "AC-01-09",
+        "AC-01-10",
+        "AC-01-11",
+        "AC-01-12"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-01T16:15:54+05:30",
+      "event": "review",
+      "phase": "01",
+      "verdict": "NO VERDICT"
+    },
+    {
+      "at": "2026-11-01T17:24:50+05:30",
+      "event": "review",
+      "phase": "01",
+      "verdict": "NO VERDICT"
+    },
+    {
+      "at": "2026-11-01T17:28:16+05:30",
+      "event": "review",
+      "phase": "01",
+      "verdict": "NO VERDICT"
+    },
+    {
+      "at": "2026-11-01T17:29:36+05:30",
+      "event": "review",
+      "phase": "01",
+      "verdict": "PASS"
+    },
+    {
+      "event": "self-test",
+      "passed": false,
+      "failed": 34
+    },
+    {
+      "event": "self-test",
+      "passed": true,
+      "failed": 0
+    },
+    {
+      "at": "2026-11-01T18:19:02+05:30",
+      "event": "red",
+      "phase": "01",
+      "tests": 1
+    },
+    {
+      "at": "2026-11-01T18:20:30+05:30",
+      "event": "review-prep",
+      "phase": "01",
+      "round": 1
+    },
+    {
+      "at": "2026-11-01T18:21:49+05:30",
+      "event": "review",
+      "phase": "01",
+      "round": 1,
+      "verdict": "PASS",
+      "important": 0
+    },
+    {
+      "event": "relock",
+      "phase": "01",
+      "files": [
+        "core/tests/phase01_claude_code.rs"
+      ]
+    },
+    {
+      "at": "2026-11-01T18:26:14+05:30",
+      "event": "finish",
+      "phase": "01",
+      "commit": "60ffef42014f6f7837d9faf063eb6f5b54cfb80c"
+    },
+    {
+      "at": "2026-11-01T18:26:14+05:30",
+      "event": "start",
+      "phase": "02",
+      "title": "claude.ai export parser"
+    },
+    {
+      "at": "2026-11-01T18:26:14+05:30",
+      "event": "approve-spec",
+      "phase": "02",
+      "criteria": [
+        "AC-02-01",
+        "AC-02-02",
+        "AC-02-03",
+        "AC-02-04",
+        "AC-02-05",
+        "AC-02-06"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-01T18:27:57+05:30",
+      "event": "review",
+      "phase": "02",
+      "verdict": "NO VERDICT"
+    },
+    {
+      "at": "2026-11-01T18:37:00+05:30",
+      "event": "review",
+      "phase": "02",
+      "verdict": "PASS"
+    },
+    {
+      "at": "2026-11-01T18:37:52+05:30",
+      "event": "red",
+      "phase": "02",
+      "tests": 1
+    },
+    {
+      "at": "2026-11-01T18:38:27+05:30",
+      "event": "review-prep",
+      "phase": "02",
+      "round": 1
+    },
+    {
+      "at": "2026-11-01T18:39:00+05:30",
+      "event": "review",
+      "phase": "02",
+      "round": 1,
+      "verdict": "PASS",
+      "important": 0
+    },
+    {
+      "at": "2026-11-01T18:39:04+05:30",
+      "event": "finish",
+      "phase": "02",
+      "commit": "09e9496d9398d6286281af696901261c09b9a313"
+    },
+    {
+      "at": "2026-11-01T18:39:07+05:30",
+      "event": "start",
+      "phase": "03",
+      "title": "Topic keywords (TF-IDF) + Markdown session nodes"
+    },
+    {
+      "at": "2026-11-01T18:39:07+05:30",
+      "event": "approve-spec",
+      "phase": "03",
+      "criteria": [
+        "AC-03-01",
+        "AC-03-02",
+        "AC-03-03",
+        "AC-03-04",
+        "AC-03-05",
+        "AC-03-06",
+        "AC-03-07",
+        "AC-03-08",
+        "AC-03-09",
+        "AC-03-10"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-01T18:45:30+05:30",
+      "event": "review",
+      "phase": "03",
+      "verdict": "NO VERDICT"
+    },
+    {
+      "at": "2026-11-01T18:51:46+05:30",
+      "event": "review",
+      "phase": "03",
+      "verdict": "NO VERDICT"
+    },
+    {
+      "event": "self-test",
+      "passed": true,
+      "failed": 0
+    },
+    {
+      "at": "2026-11-01T20:23:15+05:30",
+      "event": "review",
+      "phase": "03",
+      "verdict": "NO VERDICT"
+    },
+    {
+      "at": "2026-11-01T20:28:02+05:30",
+      "event": "review",
+      "phase": "03",
+      "verdict": "PASS"
+    },
+    {
+      "at": "2026-11-01T20:28:41+05:30",
+      "event": "red",
+      "phase": "03",
+      "tests": 1
+    },
+    {
+      "at": "2026-11-01T20:29:30+05:30",
+      "event": "review-prep",
+      "phase": "03",
+      "round": 1
+    },
+    {
+      "at": "2026-11-01T20:30:15+05:30",
+      "event": "review",
+      "phase": "03",
+      "round": 1,
+      "verdict": "FAIL",
+      "important": 2
+    },
+    {
+      "at": "2026-11-01T20:30:46+05:30",
+      "event": "review-prep",
+      "phase": "03",
+      "round": 2
+    },
+    {
+      "at": "2026-11-01T20:32:01+05:30",
+      "event": "review",
+      "phase": "03",
+      "round": 2,
+      "verdict": "PASS",
+      "important": 0
+    },
+    {
+      "at": "2026-11-01T20:32:16+05:30",
+      "event": "finish",
+      "phase": "03",
+      "commit": "c38e8c0e4caee93f8f45dac85f8be13557c78fe3"
+    },
+    {
+      "at": "2026-11-01T20:32:21+05:30",
+      "event": "start",
+      "phase": "04",
+      "title": "Training dataset records + redaction"
+    },
+    {
+      "at": "2026-11-01T20:32:21+05:30",
+      "event": "approve-spec",
+      "phase": "04",
+      "criteria": [
+        "AC-04-01",
+        "AC-04-02",
+        "AC-04-03",
+        "AC-04-04",
+        "AC-04-05",
+        "AC-04-06",
+        "AC-04-07",
+        "AC-04-08",
+        "AC-04-09"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-01T20:35:47+05:30",
+      "event": "review",
+      "phase": "04",
+      "verdict": "PASS"
+    },
+    {
+      "at": "2026-11-01T20:37:09+05:30",
+      "event": "red",
+      "phase": "04",
+      "tests": 1
+    },
+    {
+      "at": "2026-11-01T20:38:07+05:30",
+      "event": "review-prep",
+      "phase": "04",
+      "round": 1
+    },
+    {
+      "at": "2026-11-01T20:40:57+05:30",
+      "event": "review",
+      "phase": "04",
+      "round": 1,
+      "verdict": "PASS",
+      "important": 0
+    },
+    {
+      "at": "2026-11-01T20:41:12+05:30",
+      "event": "finish",
+      "phase": "04",
+      "commit": "492606be3f7a3881d0dc3f01b5478b363b8bb0e9"
+    },
+    {
+      "at": "2026-11-01T20:41:14+05:30",
+      "event": "start",
+      "phase": "05",
+      "title": "Knowledge graph builder (graph.json)"
+    },
+    {
+      "at": "2026-11-01T20:41:14+05:30",
+      "event": "approve-spec",
+      "phase": "05",
+      "criteria": [
+        "AC-05-01",
+        "AC-05-02",
+        "AC-05-03",
+        "AC-05-04",
+        "AC-05-05",
+        "AC-05-06",
+        "AC-05-07"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-01T20:43:17+05:30",
+      "event": "review",
+      "phase": "05",
+      "verdict": "PASS"
+    },
+    {
+      "at": "2026-11-01T20:43:45+05:30",
+      "event": "red",
+      "phase": "05",
+      "tests": 1
+    },
+    {
+      "at": "2026-11-01T20:44:30+05:30",
+      "event": "review-prep",
+      "phase": "05",
+      "round": 1
+    },
+    {
+      "at": "2026-11-01T20:45:16+05:30",
+      "event": "review",
+      "phase": "05",
+      "round": 1,
+      "verdict": "PASS",
+      "important": 0
+    },
+    {
+      "at": "2026-11-01T20:45:21+05:30",
+      "event": "finish",
+      "phase": "05",
+      "commit": "4bb96b7e8acc5d00bd853360eeb8adc5b3ebbe88"
+    },
+    {
+      "at": "2026-11-01T20:45:21+05:30",
+      "event": "start",
+      "phase": "06",
+      "title": "`kb` command - incremental ingest, SessionEnd hook, hook installer"
+    },
+    {
+      "at": "2026-11-01T20:45:21+05:30",
+      "event": "approve-spec",
+      "phase": "06",
+      "criteria": [
+        "AC-06-01",
+        "AC-06-02",
+        "AC-06-03",
+        "AC-06-04",
+        "AC-06-05",
+        "AC-06-06",
+        "AC-06-07",
+        "AC-06-08",
+        "AC-06-09",
+        "AC-06-10",
+        "AC-06-11"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-01T20:51:42+05:30",
+      "event": "review",
+      "phase": "06",
+      "verdict": "PASS"
+    },
+    {
+      "at": "2026-11-01T20:52:27+05:30",
+      "event": "red",
+      "phase": "06",
+      "tests": 1
+    },
+    {
+      "at": "2026-11-01T20:55:01+05:30",
+      "event": "review-prep",
+      "phase": "06",
+      "round": 1
+    },
+    {
+      "at": "2026-11-01T20:57:23+05:30",
+      "event": "review",
+      "phase": "06",
+      "round": 1,
+      "verdict": "FAIL",
+      "important": 1
+    },
+    {
+      "at": "2026-11-01T20:58:07+05:30",
+      "event": "review-prep",
+      "phase": "06",
+      "round": 2
+    },
+    {
+      "at": "2026-11-01T20:59:25+05:30",
+      "event": "review",
+      "phase": "06",
+      "round": 2,
+      "verdict": "PASS",
+      "important": 0
+    },
+    {
+      "at": "2026-11-01T20:59:38+05:30",
+      "event": "finish",
+      "phase": "06",
+      "commit": "bcfb5f90812d31e4a8ab4d25d79c5f8a41881414"
+    },
+    {
+      "at": "2026-11-01T20:59:40+05:30",
+      "event": "start",
+      "phase": "07",
+      "title": "3D explorer web app"
+    },
+    {
+      "at": "2026-11-01T20:59:40+05:30",
+      "event": "approve-spec",
+      "phase": "07",
+      "criteria": [
+        "AC-07-01",
+        "AC-07-02",
+        "AC-07-03",
+        "AC-07-04",
+        "AC-07-05",
+        "AC-07-06",
+        "AC-07-07",
+        "AC-07-08"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-01T21:02:23+05:30",
+      "event": "review",
+      "phase": "07",
+      "verdict": "PASS"
+    },
+    {
+      "at": "2026-11-01T21:02:46+05:30",
+      "event": "red",
+      "phase": "07",
+      "tests": 2
+    },
+    {
+      "at": "2026-11-01T21:04:47+05:30",
+      "event": "review-prep",
+      "phase": "07",
+      "round": 1
+    },
+    {
+      "at": "2026-11-01T21:06:21+05:30",
+      "event": "review",
+      "phase": "07",
+      "round": 1,
+      "verdict": "FAIL",
+      "important": 1
+    },
+    {
+      "at": "2026-11-01T21:07:35+05:30",
+      "event": "review-prep",
+      "phase": "07",
+      "round": 2
+    },
+    {
+      "at": "2026-11-01T21:08:08+05:30",
+      "event": "review",
+      "phase": "07",
+      "round": 2,
+      "verdict": "PASS",
+      "important": 0
+    },
+    {
+      "at": "2026-11-01T21:08:23+05:30",
+      "event": "finish",
+      "phase": "07",
+      "commit": "b56b27d90058abb149b5f20ef5db849cd973a705"
+    },
+    {
+      "at": "2026-11-01T21:08:31+05:30",
+      "event": "report",
+      "phase": "07"
+    },
+    {
+      "at": "2026-11-01T21:08:33+05:30",
+      "event": "kba-facts",
+      "phase": "07"
+    }
+  ],
+  "change_dir": "changes/2026-11-01-conversation-kb",
+  "base_commit": "97877cff28daa93eb258682c5d2d65b7515d3da0",
+  "change_sha256": "27c5d0e065374a993582c882149be55d939befd7a7295153cfc78e4962ec768e",
+  "approved_specs": {
+    "01": "01527e477aa90e33e8bb613e55b1396690ec40feae5f8c7c307d20e0abc62f70",
+    "02": "d1083c8313f6c92a4b22916064d84005ca65389623c38fe5a37ac1b4ed1f8c47",
+    "03": "60c869a5083ce6a53331c7db59ffbb546281ba0f48421d17f415147a60c40d33",
+    "04": "ce2d94154e4b7303315fcb7edec70bd24fa11801558971629f71bac902e86649",
+    "05": "2dad2f850e17cdd7cfcc127aeadcabd65b0a8b27e2946daaf3ceb387a7b8d895",
+    "06": "d1982818f0df1140e6660f14262fa5720a0b7ed6ec7e2ce2793a2d404cf8b256",
+    "07": "74125299bb42ccb25b6197d0edba5144b952e46ef005f9f11f381f6c47063009"
+  },
+  "change_phases": [
+    "01",
+    "02",
+    "03",
+    "04",
+    "05",
+    "06",
+    "07"
+  ],
+  "pending_tests": {},
+  "review": {
+    "verdict": "PASS",
+    "lock_digest": "d3f7aa01d06336135d2d98218b74f6ed27f51c5b907babd93c96e4f680220841",
+    "at": "2026-11-01T21:02:23+05:30"
+  },
+  "red": {
+    "ok": true,
+    "lock_digest": "d3f7aa01d06336135d2d98218b74f6ed27f51c5b907babd93c96e4f680220841",
+    "evidence": ".phased/evidence/phase-07-red.log"
+  },
+  "spec_sha256": "74125299bb42ccb25b6197d0edba5144b952e46ef005f9f11f381f6c47063009",
+  "code_reviews": {
+    "01": {
+      "rounds": [
+        {
+          "tree": "e041115f22b541ff471fe574ca2334483efd2eae",
+          "at": "2026-11-01T18:20:30+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 5,
+          "preexisting": 1,
+          "classes": []
+        }
+      ]
+    },
+    "02": {
+      "rounds": [
+        {
+          "tree": "cd06be0fd4b8cd105e5a52f692350593f4cad9bf",
+          "at": "2026-11-01T18:38:27+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 4,
+          "preexisting": 0,
+          "classes": []
+        }
+      ]
+    },
+    "03": {
+      "rounds": [
+        {
+          "tree": "7a2ef690654b6866bbdd0bfc8afe79b2d8a4c0c8",
+          "at": "2026-11-01T20:29:30+05:30",
+          "verdict": "FAIL",
+          "important": 2,
+          "nits": 3,
+          "preexisting": 0,
+          "classes": [
+            "missing input normalisation (output not ending in exactly one newline)",
+            "path traversal via unvalidated date in file name"
+          ]
+        },
+        {
+          "tree": "b075f84e2f1c75ddc0033ad8bcb897bc1d1fda79",
+          "at": "2026-11-01T20:30:46+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 2,
+          "preexisting": 0,
+          "classes": []
+        }
+      ]
+    },
+    "04": {
+      "rounds": [
+        {
+          "tree": "88866d972d7876dd64a247bb8655efbc81c95fcd",
+          "at": "2026-11-01T20:38:07+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 4,
+          "preexisting": 0,
+          "classes": []
+        }
+      ]
+    },
+    "05": {
+      "rounds": [
+        {
+          "tree": "a48ccd93f957fd8fbfeb5e527ddef119aaf628dc",
+          "at": "2026-11-01T20:44:30+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 3,
+          "preexisting": 0,
+          "classes": []
+        }
+      ]
+    },
+    "06": {
+      "rounds": [
+        {
+          "tree": "a2446b10ba784b0cb0b081ac88aa41ef8c04d547",
+          "at": "2026-11-01T20:55:01+05:30",
+          "verdict": "FAIL",
+          "important": 1,
+          "nits": 5,
+          "preexisting": 0,
+          "classes": [
+            "missing panic guard on must-never-fail path"
+          ]
+        },
+        {
+          "tree": "0ed9048a03878afe303e657f421dd6560eaede5c",
+          "at": "2026-11-01T20:58:07+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 1,
+          "preexisting": 0,
+          "classes": []
+        }
+      ]
+    },
+    "07": {
+      "rounds": [
+        {
+          "tree": "7d35c5383fd6c17a811f6afef7b502a00fb07e91",
+          "at": "2026-11-01T21:04:47+05:30",
+          "verdict": "FAIL",
+          "important": 1,
+          "nits": 4,
+          "preexisting": 0,
+          "classes": [
+            "HTML injection (XSS) through unescaped untrusted text"
+          ]
+        },
+        {
+          "tree": "bc8b5d7e3b6b867b344ec579a25a1dabc1187839",
+          "at": "2026-11-01T21:07:35+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 0,
+          "preexisting": 0,
+          "classes": []
+        }
+      ]
+    }
+  },
+  "durations": [
+    {
+      "phase": "01",
+      "level": "M",
+      "minutes": 135.5
+    },
+    {
+      "phase": "02",
+      "level": "S",
+      "minutes": 12.8
+    },
+    {
+      "phase": "03",
+      "level": "M",
+      "minutes": 113.2
+    },
+    {
+      "phase": "04",
+      "level": "M",
+      "minutes": 8.9
+    },
+    {
+      "phase": "05",
+      "level": "S",
+      "minutes": 4.1
+    },
+    {
+      "phase": "06",
+      "level": "M",
+      "minutes": 14.3
+    },
+    {
+      "phase": "07",
+      "level": "M",
+      "minutes": 8.7
+    }
+  ]
+}

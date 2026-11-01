@@ -1,0 +1,82 @@
+== core-rust (run 1): cargo test --quiet -> exit 101
+
+warning: function `test_AC_04_07_keyword_without_separator_is_unchanged` should have a snake case name
+   --> tests/phase04_dataset.rs:673:4
+    |
+673 | fn test_AC_04_07_keyword_without_separator_is_unchanged() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_04_07_keyword_without_separator_is_unchanged`
+
+warning: function `test_AC_04_07_text_without_matches_is_unchanged` should have a snake case name
+   --> tests/phase04_dataset.rs:679:4
+    |
+679 | fn test_AC_04_07_text_without_matches_is_unchanged() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_04_07_text_without_matches_is_unchanged`
+
+warning: function `test_AC_04_07_redaction_order_keyword_before_email` should have a snake case name
+   --> tests/phase04_dataset.rs:686:4
+    |
+686 | fn test_AC_04_07_redaction_order_keyword_before_email() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_04_07_redaction_order_keyword_before_email`
+
+warning: function `test_AC_04_07_secret_inside_keyword_value_still_single_secret` should have a snake case name
+   --> tests/phase04_dataset.rs:696:4
+    |
+696 | fn test_AC_04_07_secret_inside_keyword_value_still_single_secret() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_04_07_secret_inside_keyword_value_still_single_secret`
+
+warning: function `test_AC_04_07_redact_is_idempotent_on_its_output` should have a snake case name
+   --> tests/phase04_dataset.rs:701:4
+    |
+701 | fn test_AC_04_07_redact_is_idempotent_on_its_output() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_04_07_redact_is_idempotent_on_its_output`
+
+warning: function `test_AC_04_08_default_options_redact_everything` should have a snake case name
+   --> tests/phase04_dataset.rs:727:4
+    |
+727 | fn test_AC_04_08_default_options_redact_everything() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_04_08_default_options_redact_everything`
+
+warning: function `test_AC_04_08_default_output_contains_no_original_secret` should have a snake case name
+   --> tests/phase04_dataset.rs:743:4
+    |
+743 | fn test_AC_04_08_default_output_contains_no_original_secret() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_04_08_default_output_contains_no_original_secret`
+
+warning: function `test_AC_04_08_redact_false_keeps_everything_verbatim` should have a snake case name
+   --> tests/phase04_dataset.rs:760:4
+    |
+760 | fn test_AC_04_08_redact_false_keeps_everything_verbatim() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_04_08_redact_false_keeps_everything_verbatim`
+
+warning: function `test_AC_04_09_empty_slice_gives_empty_string` should have a snake case name
+   --> tests/phase04_dataset.rs:783:4
+    |
+783 | fn test_AC_04_09_empty_slice_gives_empty_string() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_04_09_empty_slice_gives_empty_string`
+
+warning: function `test_AC_04_09_one_json_object_per_line_newline_terminated` should have a snake case name
+   --> tests/phase04_dataset.rs:788:4
+    |
+788 | fn test_AC_04_09_one_json_object_per_line_newline_terminated() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_04_09_one_json_object_per_line_newline_terminated`
+
+warning: function `test_AC_04_09_single_record_is_compact_json_plus_newline` should have a snake case name
+   --> tests/phase04_dataset.rs:801:4
+    |
+801 | fn test_AC_04_09_single_record_is_compact_json_plus_newline() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_04_09_single_record_is_compact_json_plus_newline`
+
+warning: function `test_AC_04_09_newlines_inside_strings_stay_escaped_on_one_line` should have a snake case name
+   --> tests/phase04_dataset.rs:807:4
+    |
+807 | fn test_AC_04_09_newlines_inside_strings_stay_escaped_on_one_line() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_04_09_newlines_inside_strings_stay_escaped_on_one_line`
+
+warning: function `test_AC_04_09_real_records_round_trip_through_jsonl` should have a snake case name
+   --> tests/phase04_dataset.rs:817:4
+    |
+817 | fn test_AC_04_09_real_records_round_trip_through_jsonl() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_04_09_real_records_round_trip_through_jsonl`
+
+error: test failed, to rerun pass `--test phase04_dataset`
+== explorer-javascript: no test files yet - skipped until its first test exists

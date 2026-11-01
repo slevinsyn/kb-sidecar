@@ -1,0 +1,36 @@
+{
+  "files": {
+    "core/tests/phase01_claude_code.rs": {
+      "sha256": "a48afd312caf9178a67eb7b2f0f376eba5048ef1bd8ec873f25e1490968e0cfc",
+      "phase": "01"
+    },
+    "core/tests/phase02_claude_ai.rs": {
+      "sha256": "b18a840dfc6b2e34cf50743e917ddbc3590513e7d3aa561e8b507762698ce15c",
+      "phase": "02"
+    },
+    "core/tests/phase03_nodes.rs": {
+      "sha256": "b6ef727e28fb72d1085b06af8275b2e264e6873fe8cba6bc8ccb17f7ccae4767",
+      "phase": "03"
+    },
+    "core/tests/phase04_dataset.rs": {
+      "sha256": "344042a4e653130d328d55de320e2ba317c27b6941cb8dd4e64f7ae46dec703e",
+      "phase": "04"
+    },
+    "core/tests/phase05_graph.rs": {
+      "sha256": "5fcd40b1713ee582e121c7bb8f7886a38d071159c53df3d038600e3b6f272c62",
+      "phase": "05"
+    },
+    "core/tests/phase06_cli.rs": {
+      "sha256": "19e1d6cdbd237897e38c2c0a9b543f9a33e5e7dfc553b5b30ebd8de8c9621796",
+      "phase": "06"
+    },
+    "explorer/tests/graph.test.ts": {
+      "sha256": "7083bb71f8cc2fe485944c7e7a1d47a33f42036427d09f723b916825043ddf63",
+      "phase": "07"
+    },
+    "explorer/tests/holdout/graph_hidden.test.ts": {
+      "sha256": "3893eb17ea43f01463c254d7a6eab1a704f097f4b3c25e131f832d4956ec0b33",
+      "phase": "07"
+    }
+  }
+}

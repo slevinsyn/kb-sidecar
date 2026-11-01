@@ -1,0 +1,150 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Read|Grep|Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.phased/bin/guard.py"
+            ],
+            "timeout": 30,
+            "onFailure": "block",
+            "statusMessage": "phased lock check"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "^((waddaya-dev|phased):)?test-writer$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.phased/bin/lock.py",
+              "autolock",
+              "--from-hook"
+            ],
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "^((waddaya-dev|phased):)?test-reviewer$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.phased/bin/phase.py",
+              "hook-review"
+            ],
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.phased/bin/ensure_hooks.py"
+            ],
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.phased/bin/phase.py",
+              "brief"
+            ],
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "ask": [
+      "Bash(python3 .phased/bin/phase.py approve-spec)",
+      "Bash(python3 .phased/bin/phase.py reopen *)",
+      "Bash(python3 .phased/bin/lock.py relock)",
+      "Bash(python3 .phased/bin/lock.py relock *)",
+      "Bash(python3 .phased/bin/phase.py approve-plan)"
+    ],
+    "allow": [
+      "Edit",
+      "Write",
+      "MultiEdit",
+      "NotebookEdit",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)",
+      "Bash(git switch -c *)",
+      "Bash(git checkout -b *)",
+      "Bash(git branch*)",
+      "Bash(git rev-parse*)",
+      "Bash(mkdir *)",
+      "Bash(ls*)",
+      "Bash(grep *)",
+      "Bash(rg *)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(wc *)",
+      "Bash(pwd)",
+      "Bash(which *)",
+      "Bash(git ls-files*)",
+      "Bash(git blame*)",
+      "Bash(cargo test)",
+      "Bash(cargo test *)",
+      "Bash(cargo clippy)",
+      "Bash(cargo clippy *)",
+      "Bash(npx vitest run)",
+      "Bash(npx vitest run *)",
+      "Bash(npx tsc)",
+      "Bash(npx tsc *)",
+      "Bash(python3 .phased/bin/*)"
+    ],
+    "deny": [
+      "Bash(git push)",
+      "Bash(git push *)",
+      "Bash(git commit --no-verify *)",
+      "Bash(git commit --amend *)",
+      "Bash(git rebase *)",
+      "Bash(git config core.hooksPath *)"
+    ]
+  },
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "extraKnownMarketplaces": {
+    "waddaya": {
+      "source": {
+        "source": "github",
+        "repo": "Waddaya-Repo/waddaya-claude-plugins"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "waddaya-dev@waddaya": true
+  }
+}

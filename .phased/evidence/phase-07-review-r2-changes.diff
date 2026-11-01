@@ -1,0 +1,86 @@
+diff --git a/explorer/src/main.ts b/explorer/src/main.ts
+index 99cf9f3..75ba117 100644
+--- a/explorer/src/main.ts
++++ b/explorer/src/main.ts
+@@ -20,6 +20,16 @@ function el<T extends HTMLElement>(id: string): T {
+   return found as T;
+ }
+ 
++// 3d-force-graph renders label accessors as HTML; labels are untrusted conversation text.
++function escapeHtml(text: string): string {
++  return String(text)
++    .replace(/&/g, '&amp;')
++    .replace(/</g, '&lt;')
++    .replace(/>/g, '&gt;')
++    .replace(/"/g, '&quot;')
++    .replace(/'/g, '&#39;');
++}
++
+ const container = el<HTMLDivElement>('graph');
+ const searchBox = el<HTMLInputElement>('search');
+ const resultsList = el<HTMLUListElement>('results');
+@@ -38,7 +48,9 @@ const activeTypes = new Set<NodeType>(NODE_TYPES);
+ const graph = new ForceGraph3D(container)
+   .backgroundColor('#0b0e14')
+   .nodeId('id')
+-  .nodeLabel((n) => (n as GraphNode).label)
++  .nodeLabel((n) => escapeHtml((n as GraphNode).label))
++  // The default link label reads link.name as HTML; links carry no label text, so show none.
++  .linkLabel(() => '')
+   .nodeVal((n) => (n as GraphNode).size)
+   .nodeColor((n) => {
+     const node = n as GraphNode;
+@@ -76,6 +88,7 @@ function setGraph(data: GraphData): void {
+   highlighted = new Set();
+   detailsBox.hidden = true;
+   applyFilters();
++  renderResults();
+ }
+ 
+ function applyFilters(): void {
+@@ -90,6 +103,7 @@ function applyFilters(): void {
+     nodes: visible.nodes.map((n) => ({ ...n })),
+     links: visible.links.map((l) => ({ ...l })),
+   });
++  if (selectedId !== null) select(selectedId, false);
+ }
+ 
+ function flyTo(id: string): void {
+@@ -97,7 +111,7 @@ function flyTo(id: string): void {
+     .find((n) => n.id === id);
+   if (!node || node.x === undefined || node.y === undefined || node.z === undefined) return;
+   const distance = 120;
+-  const ratio = 1 + distance / Math.hypot(node.x, node.y, node.z || 1);
++  const ratio = 1 + distance / (Math.hypot(node.x, node.y, node.z) || 1);
+   graph.cameraPosition(
+     { x: node.x * ratio, y: node.y * ratio, z: node.z * ratio },
+     { x: node.x, y: node.y, z: node.z },
+@@ -202,7 +216,9 @@ searchBox.addEventListener('input', renderResults);
+ filePicker.addEventListener('change', () => {
+   const file = filePicker.files?.[0];
+   if (!file) return;
+-  file.text().then(load, (e) => showError(`Could not read file: ${String(e)}`));
++  const read = file.text();
++  filePicker.value = '';
++  read.then(load, (e) => showError(`Could not read file: ${String(e)}`));
+ });
+ window.addEventListener('resize', () => graph.width(window.innerWidth).height(window.innerHeight));
+ 
+diff --git a/explorer/vite.config.ts b/explorer/vite.config.ts
+index 4cd0b49..0ddf083 100644
+--- a/explorer/vite.config.ts
++++ b/explorer/vite.config.ts
+@@ -27,9 +27,11 @@ function serveGraphJson(): Plugin {
+             res.end(text);
+           },
+           (err: NodeJS.ErrnoException) => {
+-            res.statusCode = err.code === 'ENOENT' ? 404 : 500;
++            const notFound = err.code === 'ENOENT';
++            console.error(`Cannot read ${graphJsonPath()}: ${err.message}`);
++            res.statusCode = notFound ? 404 : 500;
+             res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+-            res.end(`Cannot read ${graphJsonPath()}: ${err.message}`);
++            res.end(notFound ? 'graph.json not found' : 'could not read graph.json');
+           },
+         );
+       });
