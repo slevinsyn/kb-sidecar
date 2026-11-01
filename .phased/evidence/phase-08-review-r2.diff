@@ -1,0 +1,2125 @@
+diff --git a/changes/2026-11-01-conversation-kb/pr.md b/changes/2026-11-01-conversation-kb/pr.md
+new file mode 100644
+index 0000000..60d1aa9
+--- /dev/null
++++ b/changes/2026-11-01-conversation-kb/pr.md
+@@ -0,0 +1,56 @@
++## Conversation knowledge base (`kb`) with a 3D explorer
++
++## Why
++
++Keep every conversation with Claude in one searchable place. For each conversation, `kb ingest`:
++
++1. writes one Markdown node per session,
++2. appends a record to an LLM-trainable dataset (text, tool calls, thinking), redacted by default,
++3. adds the session to a knowledge graph that can be explored in 3D in the browser.
++
++Sources: Claude Code transcripts (`~/.claude/projects`) and claude.ai exports. Topics are offline TF-IDF keywords. An optional SessionEnd hook keeps the knowledge base current.
++
++## What changed
++
++| Phase | Title | Size | Review rounds | Bugs found and fixed |
++|---|---|---|---|---|
++| 01 | Session model + Claude Code transcript parser | medium | 1 | 0 |
++| 02 | claude.ai export parser | small | 1 | 0 |
++| 03 | Topic keywords (TF-IDF) + Markdown session nodes | medium | 2 | 2 |
++| 04 | Training dataset records + redaction | medium | 1 | 0 |
++| 05 | Knowledge graph builder (graph.json) | small | 1 | 0 |
++| 06 | `kb` command: incremental ingest, SessionEnd hook, hook installer | medium | 2 | 1 |
++| 07 | 3D explorer web app | medium | 2 | 1 |
++
++7 of 7 phases done, one commit per phase.
++
++## Risk and approvals
++
++High, because `core/src/install.rs` changed (it edits a Claude Code settings file). **2 approvals needed.**
++
++## How to run the checks
++
++```bash
++cd core && cargo test && cargo clippy -- -D warnings
++cd ../explorer && npm install && npx vitest run
++```
++
++Try it:
++
++```bash
++cd core && cargo run --bin kb -- ingest
++cd ../explorer && npm run dev
++```
++
++The explorer serves `$KB_HOME/graph/graph.json`, or `~/claude-kb/graph/graph.json`.
++
++## Notes for reviewers
++
++- The knowledge base holds private chat content. It lives outside the repo and must never be committed.
++- The ingest summary counts "new" per source file, so resumed or forked chats (duplicate session ids) can make it higher than the node count. The later session wins.
++- Known, not blocking: unbounded zip entry read; a BOM in `conversations.json` gives a parse error; JSON `"password"` keys are not redacted; an unterminated PEM block leaks its body.
++
++## Links
++
++- Report: `changes/2026-11-01-conversation-kb/report.md`
++- Knowledge base article: `changes/2026-11-01-conversation-kb/kba/kba.docx`
+diff --git a/changes/2026-11-01-graph-insights/change.md b/changes/2026-11-01-graph-insights/change.md
+new file mode 100644
+index 0000000..74414a6
+--- /dev/null
++++ b/changes/2026-11-01-graph-insights/change.md
+@@ -0,0 +1,64 @@
++# Change: Graph insights, part 1 - clean topics and `kb context`
++
++Date: 2026-11-01 · Requested by: Sarthak Bhatt · Status: draft
++Client: Internal
++Linked: changes/2026-11-01-conversation-kb/change.md (builds on it);
++changes/2026-11-01-graph-map/ (part 2: analysis, insights and the new map - planned after this one)
++
++## Why
++The explorer finds clusters, but the picture makes no sense: 2,571 nodes in a 3D hairball, most
++of them files and tools, and topics full of noise words (number, evening, goal, say). Sarthak
++wants to see the main themes versus one-off topics, the bridges and gaps, how interests changed
++over time, a short offline summary and roadmap, and a way for future assistants to pull past
++context from the graph instead of reading whole transcripts.
++
++The work is split in two. This first part fixes the data and adds the context command:
++1. Clean topics, which everything else depends on.
++2. `kb context` (GraphRAG).
++
++Part 2 builds the analysis, the insights and the readable 2D map on top of the cleaner topics.
++
++## Must work
++- Topics:
++  - A session about "proposals" and "proposal" PDFs gets one topic, `proposal`.
++  - Words like number, say, evening, morning, today and goal never become topics.
++  - Re-running `kb ingest` writes the cleaner topics to graph.json and to the session notes.
++- `kb context "proposal app"`:
++  - Prints a short Markdown block, at most 4,000 characters by default. It lists the
++    best-matching sessions (date, title, project, topics, note file) and their related topics,
++    files and projects.
++  - No match prints `No sessions match "proposal app".` and exits 0.
++  - A missing graph.json gives a clear error and exits 1.
++  - No query prints the usage and exits 2.
++
++## Steps
++| Phase | What it delivers | Size |
++|---|---|---|
++| 08 | Clean topics: more stop words, plurals merged, technology terms preferred, generic words dropped; ingest uses them | M |
++| 09 | `kb context <query>` command: a short Markdown context block built from graph.json | M |
++
++## Risk: High
++This reads private conversation data (titles, topics, file paths) and changes what the knowledge
++base writes. Everything stays on this computer; nothing is sent anywhere.
++
++## Undo
++Revert the phase commits, then re-run `kb ingest` to regenerate graph.json and the notes with
++the old topics.
++
++## Not in this change
++- Part 2 (changes/2026-11-01-graph-map/):
++  - Communities (Louvain), PageRank, bridges, one-off topics, loose ends and the timeline.
++  - The executive summary and roadmap.
++  - The 2D map and the insights panel.
++- Calling any AI model or online service.
++- An MCP server or HTTP API for GraphRAG (only the `kb context` command).
++
++## Assumptions
++- The existing topic functions stay as they are, because their tests are locked. New "clean"
++  functions are added next to them, and ingest switches to the new ones.
++- Generic words are also dropped automatically: with 10 or more sessions, a term that appears in
++  more than 40% of them is not a topic.
++- `kb context` reads `<out>/graph/graph.json`, with the same `--out` / `KB_HOME` default as
++  ingest.
++
++## Still open
+diff --git a/changes/2026-11-01-graph-map/README.md b/changes/2026-11-01-graph-map/README.md
+new file mode 100644
+index 0000000..d1747ed
+--- /dev/null
++++ b/changes/2026-11-01-graph-map/README.md
+@@ -0,0 +1,4 @@
++# Part 2 (not started): analysis, insights and the new 2D map
++
++The draft specs for phases 10-12 are in `draft-specs/`. Plan them with /build after
++changes/2026-11-01-graph-insights (clean topics and `kb context`) is finished.
+diff --git a/changes/2026-11-01-graph-map/draft-specs/phase-10.md b/changes/2026-11-01-graph-map/draft-specs/phase-10.md
+new file mode 100644
+index 0000000..96b5428
+--- /dev/null
++++ b/changes/2026-11-01-graph-map/draft-specs/phase-10.md
+@@ -0,0 +1,94 @@
++# Phase 10: Explorer analysis - communities, rank, bridges, gaps, timeline
++
++## Intent
++Turn the raw graph into structure a person can read: themes (communities found with Louvain),
++the most central sessions and topics (PageRank), bridges between themes, one-off topics, loose
++ends (small themes left untouched) and a month-by-month timeline. Pure TypeScript in the
++browser, no network.
++
++## Complexity
++L - Louvain community detection and PageRank must be correct and deterministic, with many
++edge cases.
++
++## Scope
++- In scope: `explorer/src/analysis.ts` (pure functions, unit-tested).
++- Out of scope: UI (phase 12), text summaries (phase 11), files and tools in communities.
++
++## Interface contract
++Visible tests `explorer/tests/analysis.test.ts`, hidden tests in `explorer/tests/holdout/`.
++Tests import from `../src/analysis` and build graphs with `parseGraph` from `../src/graph`
++(phase 07 types: `GraphData`, `GraphNode`, `NodeType`). No DOM.
++
++| Item | Location | Signature or shape | Errors |
++|---|---|---|---|
++| `WeightedEdge` | `explorer/src/analysis.ts` | `export interface WeightedEdge { a: string; b: string; w: number }` | - |
++| `sessionTopicGraph` | same | `export function sessionTopicGraph(g: GraphData): { nodes: string[]; edges: WeightedEdge[] }` | - |
++| `louvain` | same | `export function louvain(nodes: string[], edges: WeightedEdge[]): Map<string, number>` | - |
++| `pageRank` | same | `export function pageRank(nodes: string[], edges: WeightedEdge[], opts?: { damping?: number; iterations?: number }): Map<string, number>` | - |
++| `Community` | same | `export interface Community { id: number; label: string; topics: string[]; sessions: string[]; size: number; projects: string[]; firstAt: string \| null; lastAt: string \| null }` | - |
++| `Bridge` | same | `export interface Bridge { id: string; label: string; type: NodeType; communities: number[] }` | - |
++| `TimelineBucket` | same | `export interface TimelineBucket { month: string; sessions: number; topTopics: string[] }` | - |
++| `Analysis` | same | `export interface Analysis { communityOf: Map<string, number>; communities: Community[]; rank: Map<string, number>; bridges: Bridge[]; oneOffTopics: GraphNode[]; looseEnds: Community[]; timeline: TimelineBucket[]; latestAt: string \| null }` | - |
++| `LOOSE_END_DAYS` | same | `export const LOOSE_END_DAYS = 30` | - |
++| `analyzeGraph` | same | `export function analyzeGraph(g: GraphData): Analysis` | never throws for a parsed graph |
++
++## Behaviour
++1. `sessionTopicGraph(g)`: `nodes` = ids of all `session` and `topic` nodes, sorted ascending;
++   `edges` = one edge per distinct session-topic pair joined by any link (either direction),
++   `a` = session id, `b` = topic id, `w = 1`, sorted by `a` then `b`.
++2. `louvain(nodes, edges)`: undirected weighted modularity optimisation (resolution 1).
++   Edges whose endpoints are not in `nodes`, self-loops and zero/negative weights are ignored;
++   parallel edges add up. Phase 1: visit nodes in the given order, move each to the
++   neighbouring community with the largest positive modularity gain (ties: lower community
++   index), repeat passes until no node moves. Phase 2: aggregate communities into nodes and
++   repeat until nothing changes. Every input node gets exactly one community; nodes with no
++   edges are alone. Final ids are renumbered 0..k-1 by member count descending, then by the
++   smallest member id ascending. Same input -> same output. Empty input -> empty map.
++3. `pageRank(nodes, edges, opts)`: undirected weighted, `damping` default 0.85, `iterations`
++   default 50, start uniform; a node with no edges spreads its rank evenly over all nodes. Values
++   sum to 1 (within 1e-6). Empty input -> empty map.
++4. `analyzeGraph(g)` uses `sessionTopicGraph`, `louvain` and `pageRank` on it (`rank` has
++   session and topic ids only).
++   - Communities = louvain groups that contain at least one session, re-ordered by session
++     count descending, then member count descending, then smallest member id; `id` is the new
++     index 0..; `communityOf` maps every session and topic id in those groups to that id.
++   - `sessions` = session ids, sorted ascending; `size` = number of sessions.
++   - `topics` = labels of the community's topic nodes ordered by the number of the community's
++     sessions linked to them, descending, then label ascending.
++   - `label` = first up to 3 `topics` joined with `" · "`; when there are none, the first
++     `projects` entry; else `"Community <id + 1>"`.
++   - `projects` = distinct string `meta.project` values of its sessions, by count descending
++     then name ascending.
++   - `firstAt` / `lastAt` = smallest / largest `meta.started_at` string of its sessions that
++     `Date.parse` accepts; `null` if none.
++   - `latestAt` = largest valid `started_at` of all sessions, `null` if none.
++5. `bridges`: topic and project nodes whose linked sessions belong to 2 or more communities;
++   `communities` = those ids ascending; ordered by number of communities descending, then
++   `rank` descending (projects count as 0), then id ascending; at most 20.
++6. `oneOffTopics`: topic nodes linked to exactly one session, sorted by label then id.
++7. `looseEnds`: communities with `size <= 3`, `lastAt` not null, and
++   `Date.parse(latestAt) - Date.parse(lastAt) > LOOSE_END_DAYS * 86400000`; ordered by
++   `lastAt` descending, then id.
++8. `timeline`: sessions with a valid `started_at` grouped by its first 7 characters (`YYYY-MM`),
++   months ascending, only months that have sessions; `sessions` = count; `topTopics` = up to 3
++   topic labels linked to the most sessions that month, ties by label.
++9. Inputs are not mutated; link endpoints may be strings or `{id}` objects (use `linkEnd`).
++
++## Acceptance criteria
++- AC-10-01: `sessionTopicGraph` keeps only session-topic pairs, deduplicated and sorted, ignoring files, tools and projects.
++- AC-10-02: `louvain` splits two 4-node cliques joined by one edge into two communities, puts every node in exactly one community, isolates nodes without edges, and returns an empty map for empty input.
++- AC-10-03: `louvain` is deterministic and numbers communities by size descending, then smallest member id.
++- AC-10-04: `pageRank` values sum to 1, the centre of a star ranks highest, and an empty graph gives an empty map.
++- AC-10-05: `analyzeGraph` builds communities with the label rule (top 3 topics, else project, else `Community N`), sorted topics, projects, `firstAt`/`lastAt` and ids ordered by session count.
++- AC-10-06: A topic shared by sessions of two communities is a bridge listing both community ids; a topic in one community is not.
++- AC-10-07: A topic used by exactly one session is in `oneOffTopics`; one used by two is not.
++- AC-10-08: A community of at most 3 sessions last active more than 30 days before `latestAt` is a loose end; one active within 30 days, or larger than 3 sessions, is not.
++- AC-10-09: `timeline` groups by month in ascending order with counts and top 3 topics, skipping undated sessions.
++- AC-10-10: An empty graph gives empty communities, bridges, timeline and `latestAt === null`; the input graph is not mutated and `{id}` link endpoints work.
++
++## External systems to mock
++- None (pure functions, no DOM, no WebGL, no clock - "now" is `latestAt`).
++
++## Dependencies on earlier phases
++- Phase 07: `explorer/src/graph.ts` types, `parseGraph`, `linkEnd`.
++- Phase 05: graph.json shape (session `meta.started_at`, `meta.project`).
+diff --git a/changes/2026-11-01-graph-map/draft-specs/phase-11.md b/changes/2026-11-01-graph-map/draft-specs/phase-11.md
+new file mode 100644
+index 0000000..a7a26bf
+--- /dev/null
++++ b/changes/2026-11-01-graph-map/draft-specs/phase-11.md
+@@ -0,0 +1,96 @@
++# Phase 11: Offline insights - executive summary, roadmap, Markdown export
++
++## Intent
++Turn the analysis into plain words Sarthak can act on: a headline, a short executive summary,
++main themes with their share, bridges, loose ends and roadmap milestones (continue active
++themes, decide on idle ones), exportable as Markdown. Computed from the graph only - no AI
++call, nothing leaves the computer.
++
++## Complexity
++M - deterministic text assembly with several omission and pluralisation rules.
++
++## Scope
++- In scope: `explorer/src/insights.ts` (pure, unit-tested).
++- Out of scope: UI (phase 12), any network or model call.
++
++## Interface contract
++Visible tests `explorer/tests/insights.test.ts`, hidden tests in `explorer/tests/holdout/`.
++Tests import `buildInsights`, `insightsMarkdown` from `../src/insights`, and may build input
++with `parseGraph` (`../src/graph`) and `analyzeGraph` (`../src/analysis`), or hand-build an
++`Analysis` object.
++
++| Item | Location | Signature or shape | Errors |
++|---|---|---|---|
++| `Theme` | `explorer/src/insights.ts` | `export interface Theme { label: string; sessions: number; share: number; lastAt: string \| null }` | - |
++| `Milestone` | same | `export interface Milestone { title: string; detail: string; community: number }` | - |
++| `Insights` | same | `export interface Insights { headline: string; summary: string[]; themes: Theme[]; bridges: string[]; looseEnds: string[]; oneOffCount: number; roadmap: Milestone[] }` | - |
++| `buildInsights` | same | `export function buildInsights(g: GraphData, a: Analysis): Insights` | - |
++| `insightsMarkdown` | same | `export function insightsMarkdown(ins: Insights): string` | - |
++
++## Behaviour
++Let S = number of session nodes in `g`, C = `a.communities.length`, "recent" = a date whose
++`Date.parse` is within `LOOSE_END_DAYS` (30) days at or before `a.latestAt`.
++1. `headline`: S = 0 -> `"No sessions yet"`. Otherwise
++   `"<S> sessions across <C> themes, <first month> to <last month>"` using the first and last
++   `a.timeline` months; without a timeline `"<S> sessions across <C> themes"`. Use `session` /
++   `theme` (singular) when the number is 1.
++2. `themes`: the first 5 communities (in `a.communities` order): `label`, `sessions` = size,
++   `share` = `Math.round(size / S * 100)`, `lastAt`.
++3. `summary`, in this order, each line omitted when its data is empty:
++   - `Main themes: <label> (<size>), ...` - up to 3 communities, joined with `", "`, ends with `.`
++   - `Most active month: <YYYY-MM> (<n> sessions).` - timeline bucket with most sessions,
++     earliest month on a tie; `session` when n = 1.
++   - `Recent focus: <label>.` - community with the most sessions whose `started_at` is recent
++     (ties: lower id).
++   - `Bridges: <l1>, <l2>, <l3> link separate themes.` - up to 3 bridge labels.
++   - `Loose ends: <n> small themes not touched for over 30 days.` (`theme` when n = 1).
++   - `One-off topics: <n>.`
++4. `bridges` = labels of `a.bridges` in order, at most 10. `oneOffCount` = `a.oneOffTopics.length`.
++5. `looseEnds`: per loose end `"<label> - last touched <lastAt first 10 chars>, <size> session(s)"`
++   with `session` when size = 1, else `sessions`.
++6. `roadmap`: first, for each of the first 5 communities whose `lastAt` is recent:
++   `{ title: "Continue: <label>", detail: "<size> sessions, last <lastAt first 10>", community: id }`
++   (`session` when size = 1); then for each of the first 5 loose ends:
++   `{ title: "Decide: <label>", detail: "Finish or drop - idle since <lastAt first 10>", community: id }`.
++7. `insightsMarkdown(ins)`:
++   ```
++   # Knowledge graph insights
++
++   <headline>
++
++   ## Summary
++   - <line>
++
++   ## Main themes
++   | Theme | Sessions | Share | Last active |
++   |---|---|---|---|
++   | <label> | <sessions> | <share>% | <lastAt first 10 or -> |
++
++   ## Bridges
++   - <label>
++
++   ## Loose ends
++   - <line>
++
++   ## Roadmap
++   1. **<title>** - <detail>
++   ```
++   Sections (and their blank line) are omitted when their list is empty; roadmap items are
++   numbered from 1. `|` inside table cells is written `\|`. Output ends with exactly one `\n`.
++8. Pure: same input -> same output; inputs not mutated; no clock.
++
++## Acceptance criteria
++- AC-11-01: `headline` covers zero sessions, singular/plural, and the month range from the timeline.
++- AC-11-02: `themes` lists up to 5 communities with integer percentage shares and `lastAt`.
++- AC-11-03: `summary` lines appear in the stated order with the exact wording and are omitted when their data is empty.
++- AC-11-04: "Most active month" picks the earliest month on a tie; "Recent focus" counts only sessions within 30 days of `latestAt`.
++- AC-11-05: `looseEnds` lines use the exact wording with singular/plural `session`.
++- AC-11-06: `roadmap` lists "Continue:" milestones for recently active themes before "Decide:" milestones for loose ends, at most 5 of each.
++- AC-11-07: `insightsMarkdown` matches the layout exactly, omits empty sections, escapes `|` in table cells and ends with one newline.
++- AC-11-08: An empty graph produces `headline` "No sessions yet", empty lists and Markdown with only the title and headline.
++
++## External systems to mock
++- None (pure functions; no clock - "now" is `a.latestAt`).
++
++## Dependencies on earlier phases
++- Phase 07: `GraphData`, `parseGraph`. Phase 10: `Analysis`, `analyzeGraph`, `LOOSE_END_DAYS`.
+diff --git a/changes/2026-11-01-graph-map/draft-specs/phase-12.md b/changes/2026-11-01-graph-map/draft-specs/phase-12.md
+new file mode 100644
+index 0000000..1c0f315
+--- /dev/null
++++ b/changes/2026-11-01-graph-map/draft-specs/phase-12.md
+@@ -0,0 +1,79 @@
++# Phase 12: Explorer UI - 2D labelled community map, insights panel, month filter
++
++## Intent
++Replace the 3D hairball with a flat, readable map: sessions, projects and topics coloured by
++theme, theme labels on the map, files and tools hidden until switched on, a panel with the
++summary, themes, bridges, loose ends, roadmap and timeline, a month range filter, Markdown
++export, and a toggle back to 3D.
++
++## Complexity
++M - small pure view helpers plus wiring two rendering libraries and panels.
++
++## Scope
++- In scope: `explorer/src/view.ts` (pure, unit-tested); `explorer/src/main.ts`,
++  `explorer/index.html` (app shell, not unit-tested); add dependency `force-graph` to
++  `explorer/package.json`.
++- Out of scope: changing `graph.ts`, `analysis.ts`, `insights.ts` behaviour; saving layouts.
++
++## Interface contract
++Visible tests `explorer/tests/view.test.ts`, hidden tests in `explorer/tests/holdout/`. Tests
++import from `../src/view` and may use `parseGraph` (`../src/graph`) and `analyzeGraph`
++(`../src/analysis`). No DOM, do not import `force-graph` or `3d-force-graph` in tests.
++
++| Item | Location | Signature or shape | Errors |
++|---|---|---|---|
++| `COMMUNITY_PALETTE` | `explorer/src/view.ts` | `export const COMMUNITY_PALETTE: readonly string[]` - 12 distinct `#rrggbb` colours | - |
++| `UNASSIGNED_COLOR` | same | `export const UNASSIGNED_COLOR = '#8a8f98'` | - |
++| `communityColor` | same | `export function communityColor(id: number \| undefined): string` | - |
++| `DEFAULT_VIEW_TYPES` | same | `export const DEFAULT_VIEW_TYPES: readonly NodeType[] = ['session', 'project', 'topic']` | - |
++| `ViewOptions` | same | `export interface ViewOptions { types: Iterable<NodeType>; fromMonth?: string \| null; toMonth?: string \| null }` | - |
++| `viewGraph` | same | `export function viewGraph(g: GraphData, opts: ViewOptions): GraphData` | - |
++| `ClusterLabel` | same | `export interface ClusterLabel { community: number; label: string; nodeId: string }` | - |
++| `clusterLabels` | same | `export function clusterLabels(a: Analysis, limit?: number): ClusterLabel[]` (default 12) | - |
++| `monthRange` | same | `export function monthRange(a: Analysis): string[]` | - |
++
++## Behaviour
++1. `communityColor(id)`: `COMMUNITY_PALETTE[id % 12]` for an integer `id >= 0`; otherwise
++   (undefined, negative, not an integer) `UNASSIGNED_COLOR`.
++2. `viewGraph(g, opts)`: start from `filterByTypes(g, opts.types)`. A month range is set when
++   `fromMonth` or `toMonth` is a non-empty string (`YYYY-MM`). With a range, drop session nodes
++   whose `meta.started_at` is missing/invalid or whose first 7 characters are before
++   `fromMonth` or after `toMonth` (string comparison, open ends allowed). Then, if `'session'`
++   is among the types, drop every non-session node left with no link to a remaining session,
++   and every link whose endpoints are not both kept. Link endpoints are returned as strings;
++   input not mutated; node order kept.
++3. `clusterLabels(a, limit)`: for the first `limit` communities in `a.communities` order:
++   `community` = id, `label` = community label, `nodeId` = its session with the highest
++   `a.rank` (ties: smallest id). Communities with no sessions are skipped.
++4. `monthRange(a)`: `a.timeline` months in order (empty for no timeline).
++5. App shell (not unit-tested):
++   - Default view is 2D (`force-graph`), showing `DEFAULT_VIEW_TYPES`; a "3D" toggle switches to
++     the existing `3d-force-graph` view with the same filtered data, and back.
++   - Nodes coloured by `communityColor(analysis.communityOf.get(id))`, sized by `size`;
++     `clusterLabels` drawn as text at their anchor node in 2D; node labels shown on hover and
++     for the top 30 nodes by rank when zoomed in.
++   - Type checkboxes default to `DEFAULT_VIEW_TYPES` checked, file and tool unchecked.
++   - Month filter: two selects (from / to) filled from `monthRange`, applied with `viewGraph`.
++   - Insights panel with tabs: Summary (headline and summary lines), Themes (click focuses the
++     theme's anchor node), Bridges, Loose ends, Roadmap, Timeline (sessions per month as
++     bars with top topics); a "Copy Markdown" and a "Download insights.md" button using
++     `insightsMarkdown`.
++   - Search, details panel, error panel and file picker keep working as in phase 07.
++     Labels and text are escaped before they go into HTML.
++   - Analysis and insights are computed once per loaded graph, in the browser only.
++
++## Acceptance criteria
++- AC-12-01: `COMMUNITY_PALETTE` has 12 distinct hex colours; `communityColor` wraps around after 12 and returns `UNASSIGNED_COLOR` for undefined, negative or fractional ids.
++- AC-12-02: `viewGraph` with `DEFAULT_VIEW_TYPES` removes file and tool nodes and every link touching them.
++- AC-12-03: `viewGraph` with a month range keeps only sessions inside the range (inclusive, open ends allowed), drops undated sessions, and removes topics/projects no longer linked to a kept session.
++- AC-12-04: `viewGraph` without a range keeps undated sessions; without `'session'` in the types no orphan pruning happens; the input is not mutated and `{id}` endpoints work.
++- AC-12-05: `clusterLabels` returns one label per community up to `limit`, anchored at the community's highest-ranked session.
++- AC-12-06: `monthRange` returns the timeline months in order and `[]` for an empty analysis.
++- AC-12-07: `npm run build` succeeds with `force-graph` in `package.json` dependencies and `npx tsc --noEmit` passes.
++
++## External systems to mock
++- None for unit tests (pure functions, no DOM or WebGL).
++
++## Dependencies on earlier phases
++- Phase 07: `graph.ts` (`filterByTypes`, `linkEnd`, types), the app shell.
++- Phase 10: `Analysis`, `analyzeGraph`. Phase 11: `buildInsights`, `insightsMarkdown`.
+diff --git a/core/src/store.rs b/core/src/store.rs
+index a03e9a3..4d2d76a 100644
+--- a/core/src/store.rs
++++ b/core/src/store.rs
+@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
+ use kb_core::dataset::{to_jsonl, to_record, DatasetOptions};
+ use kb_core::graph::build_graph;
+ use kb_core::node::{node_file_name, render_node};
+-use kb_core::topics::{extract_topics, session_text};
++use kb_core::topics::{extract_topics_clean, session_text};
+ use kb_core::Session;
+ use serde::{Deserialize, Serialize};
+ 
+@@ -134,7 +134,7 @@ fn all_sessions(cache: &Cache) -> Vec<Session> {
+ pub fn publish(out: &Path, cache: &Cache, redact: bool) -> Result<(), String> {
+     let sessions = all_sessions(cache);
+     let docs: Vec<String> = sessions.iter().map(session_text).collect();
+-    let topics = extract_topics(&docs, TOPIC_COUNT);
++    let topics = extract_topics_clean(&docs, TOPIC_COUNT);
+ 
+     let nodes_dir = out.join("nodes");
+     let dataset_dir = out.join("dataset");
+diff --git a/core/src/topics.rs b/core/src/topics.rs
+index 377b651..eb31140 100644
+--- a/core/src/topics.rs
++++ b/core/src/topics.rs
+@@ -28,6 +28,119 @@ pub fn tokenize(text: &str) -> Vec<String> {
+         .collect()
+ }
+ 
++/// Extra noise words dropped by the clean pipeline (lowercase).
++pub const EXTRA_STOP_WORDS: &[&str] = &[
++    "number", "say", "said", "evening", "morning", "afternoon", "night", "today", "tomorrow",
++    "yesterday", "week", "month", "year", "time", "goal", "focus", "active", "primary", "pending",
++    "recap", "home", "date", "index", "ins", "candidate", "thing", "something", "think", "know",
++    "look", "sure", "right", "good", "great", "well", "really", "still", "going", "work", "using",
++    "used", "new", "first", "last", "next", "back", "start", "give", "take", "keep", "try", "show",
++    "tell", "ask", "help", "run", "set", "check", "add", "change", "update",
++];
++
++/// Technology terms (lowercase, normalised singular form) that get a score boost.
++pub const TECH_TERMS: &[&str] = &[
++    "rust", "cargo", "typescript", "javascript", "python", "react", "vite", "node", "npm",
++    "docker", "kubernetes", "aws", "lambda", "sap", "abap", "hana", "fiori", "sql", "postgres",
++    "sqlite", "redis", "graphql", "api", "json", "yaml", "git", "github", "mcp", "claude", "llm",
++    "pdf", "html", "css", "vitest", "terraform", "cdk",
++];
++
++/// Reduce a lowercase token to its singular form (plurals only).
++pub fn normalize_term(t: &str) -> String {
++    if t.len() <= 4 {
++        return t.to_string();
++    }
++    if ["ss", "us", "is", "os"].iter().any(|e| t.ends_with(e)) {
++        return t.to_string();
++    }
++    if let Some(stem) = t.strip_suffix("ies") {
++        return format!("{stem}y");
++    }
++    if t.ends_with("sses") || ["ches", "shes", "xes"].iter().any(|e| t.ends_with(e)) {
++        return t[..t.len() - 2].to_string();
++    }
++    if let Some(stem) = t.strip_suffix('s') {
++        return stem.to_string();
++    }
++    t.to_string()
++}
++
++fn is_noise(t: &str) -> bool {
++    STOP_WORDS.contains(&t) || EXTRA_STOP_WORDS.contains(&t)
++}
++
++/// Clean tokenizer: `tokenize`, plurals merged, stop words (also in plural form) dropped.
++pub fn tokenize_clean(text: &str) -> Vec<String> {
++    tokenize(text)
++        .into_iter()
++        .filter_map(|tok| {
++            if is_noise(&tok) {
++                return None;
++            }
++            // Technology terms are kept verbatim (normalising would misspell e.g. "kubernetes").
++            if TECH_TERMS.contains(&tok.as_str()) {
++                return Some(tok);
++            }
++            let norm = normalize_term(&tok);
++            if is_noise(&norm) || norm.len() < 3 {
++                None
++            } else {
++                Some(norm)
++            }
++        })
++        .collect()
++}
++
++/// Clean TF-IDF topics per document: merged plurals, extra stop words, generic terms dropped,
++/// technology terms boosted.
++pub fn extract_topics_clean(docs: &[String], k: usize) -> Vec<Vec<String>> {
++    let tokenized: Vec<Vec<String>> = docs.iter().map(|d| tokenize_clean(d)).collect();
++    let n_docs = docs.len();
++    let n = n_docs as f64;
++
++    let mut df: BTreeMap<&str, usize> = BTreeMap::new();
++    for tokens in &tokenized {
++        let unique: BTreeSet<&str> = tokens.iter().map(String::as_str).collect();
++        for t in unique {
++            *df.entry(t).or_insert(0) += 1;
++        }
++    }
++
++    tokenized
++        .iter()
++        .map(|tokens| {
++            if tokens.is_empty() || k == 0 {
++                return Vec::new();
++            }
++            let total = tokens.len() as f64;
++            let mut counts: BTreeMap<&str, usize> = BTreeMap::new();
++            for t in tokens {
++                *counts.entry(t.as_str()).or_insert(0) += 1;
++            }
++            let mut scored: Vec<(&str, f64)> = counts
++                .into_iter()
++                .filter_map(|(term, count)| {
++                    let d = df.get(term).copied().unwrap_or(0);
++                    if n_docs >= 10 && d as f64 / n > 0.4 {
++                        return None;
++                    }
++                    let tf = count as f64 / total;
++                    let idf = ((1.0 + n) / (1.0 + d as f64)).ln() + 1.0;
++                    let boost = if TECH_TERMS.contains(&term) { 1.5 } else { 1.0 };
++                    Some((term, tf * idf * boost))
++                })
++                .collect();
++            scored.sort_by(|a, b| b.1.total_cmp(&a.1).then_with(|| a.0.cmp(b.0)));
++            scored
++                .into_iter()
++                .take(k)
++                .map(|(t, _)| t.to_string())
++                .collect()
++        })
++        .collect()
++}
++
+ /// Top `k` TF-IDF terms for each document.
+ pub fn extract_topics(docs: &[String], k: usize) -> Vec<Vec<String>> {
+     let tokenized: Vec<Vec<String>> = docs.iter().map(|d| tokenize(d)).collect();
+diff --git a/core/tests/holdout/main.rs b/core/tests/holdout/main.rs
+new file mode 100644
+index 0000000..49a9572
+--- /dev/null
++++ b/core/tests/holdout/main.rs
+@@ -0,0 +1,4 @@
++//! Hidden (holdout) test target. Cargo discovers `tests/holdout/main.rs` as the test target
++//! `holdout`; each phase adds its own module below.
++
++mod phase08_hidden;
+diff --git a/core/tests/holdout/phase08_hidden.rs b/core/tests/holdout/phase08_hidden.rs
+new file mode 100644
+index 0000000..9a2d51b
+--- /dev/null
++++ b/core/tests/holdout/phase08_hidden.rs
+@@ -0,0 +1,308 @@
++//! Phase 08 hidden tests: clean topics. Self-contained; inputs differ from the visible tests.
++
++use std::fs;
++use std::path::{Path, PathBuf};
++use std::process::{Command, Output, Stdio};
++
++use kb_core::topics::*;
++use serde_json::{json, Value};
++use tempfile::TempDir;
++
++const KB: &str = env!("CARGO_BIN_EXE_kb");
++
++fn v(items: &[&str]) -> Vec<String> {
++    items.iter().map(|x| x.to_string()).collect()
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-08-01 / AC-08-02
++// ---------------------------------------------------------------------------------------------
++
++#[test]
++fn hidden_AC_08_01_normalize_term_on_other_words() {
++    let cases = [
++        ("invoices", "invoice"),
++        ("ledgers", "ledger"),
++        ("wires", "wire"),
++        ("pipes", "pipe"),
++        ("companies", "company"),
++        ("agencies", "agency"),
++        ("batteries", "battery"),
++        ("glasses", "glass"),
++        ("watches", "watch"),
++        ("bushes", "bush"),
++        ("mixes", "mix"),
++        ("foxes", "fox"),
++        ("virus", "virus"),
++        ("oasis", "oasis"),
++        ("logos", "logos"),
++        ("pods", "pods"),
++        ("apis", "apis"),
++        ("lens", "lens"),
++        ("sql", "sql"),
++        ("ledger", "ledger"),
++        ("quarterly", "quarterly"),
++    ];
++    for (input, expected) in cases {
++        assert_eq!(normalize_term(input), expected, "normalize_term({input:?})");
++    }
++}
++
++#[test]
++fn hidden_AC_08_02_tokenize_clean_on_other_sentences() {
++    assert_eq!(
++        tokenize_clean("Invoices, INVOICE; ledgers (quarterly) tomorrow goals"),
++        v(&["invoice", "invoice", "ledger", "quarterly"])
++    );
++    assert_eq!(
++        tokenize_clean("Today we said that the yesterday's morning meetings"),
++        v(&["meeting"])
++    );
++    assert_eq!(
++        tokenize_clean("update the deployments and check queries"),
++        v(&["deployment", "query"])
++    );
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-08-03
++// ---------------------------------------------------------------------------------------------
++
++#[test]
++fn hidden_AC_08_03_capitalised_plurals_and_lists() {
++    assert!(tokenize_clean("Goals MONTHS Evenings Candidates Weeks Numbers").is_empty());
++    for w in ["recap", "candidate", "primary", "pending", "afternoon", "update", "change"] {
++        assert!(EXTRA_STOP_WORDS.contains(&w), "missing {w}");
++        assert!(tokenize_clean(&w.to_uppercase()).is_empty());
++    }
++    for w in ["rust", "terraform", "vitest", "mcp", "llm", "fiori", "abap", "hana", "cdk"] {
++        assert!(TECH_TERMS.contains(&w), "TECH_TERMS missing {w}");
++    }
++    let all: Vec<&str> = EXTRA_STOP_WORDS
++        .iter()
++        .chain(STOP_WORDS.iter())
++        .copied()
++        .filter(|w| w.chars().all(|c| c.is_ascii_alphanumeric()))
++        .collect();
++    let text = format!("zebra {} giraffe", all.join(", "));
++    assert_eq!(tokenize_clean(&text), v(&["zebra", "giraffe"]));
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-08-04 / AC-08-07
++// ---------------------------------------------------------------------------------------------
++
++#[test]
++fn hidden_AC_08_04_AC_08_07_merge_limit_and_empty_docs() {
++    let docs = v(&["ledgers ledger ledgers audit audit", "", "pasta"]);
++    assert_eq!(
++        extract_topics_clean(&docs, 2),
++        vec![v(&["ledger", "audit"]), vec![], v(&["pasta"])]
++    );
++    assert_eq!(
++        extract_topics_clean(&docs, 1),
++        vec![v(&["ledger"]), vec![], v(&["pasta"])]
++    );
++    assert_eq!(extract_topics_clean(&docs, 0), vec![Vec::<String>::new(); 3]);
++    assert_eq!(extract_topics_clean(&docs, 2), extract_topics_clean(&docs, 2));
++    // Ties: the three singles are equal, alphabetical order decides.
++    assert_eq!(
++        extract_topics_clean(&v(&["warden quiver mantle"]), 2),
++        vec![v(&["mantle", "quiver"])]
++    );
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-08-05
++// ---------------------------------------------------------------------------------------------
++
++#[test]
++fn hidden_AC_08_05_frequency_cut_with_twelve_docs_and_not_with_nine() {
++    // N = 12: gadget in 5 docs (41.7% > 40%) is dropped, sprocket in 4 docs (33%) is kept.
++    let mut docs = Vec::new();
++    for i in 0..4 {
++        if i % 2 == 0 {
++            docs.push(format!("gadget sprocket sprocket zork{i}"));
++        } else {
++            docs.push(format!("gadget sprockets sprocket zork{i}"));
++        }
++    }
++    docs.push("gadget gadget zork4".to_string());
++    for i in 5..12 {
++        docs.push(format!("zork{i}"));
++    }
++    let topics = extract_topics_clean(&docs, 5);
++    assert_eq!(topics.len(), 12);
++    for i in 0..4 {
++        assert_eq!(topics[i], vec!["sprocket".to_string(), format!("zork{i}")], "doc {i}");
++    }
++    for i in 4..12 {
++        assert_eq!(topics[i], vec![format!("zork{i}")], "doc {i}");
++    }
++
++    // N = 9: no frequency cut at all, even for a term in every doc.
++    let small: Vec<String> = (0..9).map(|i| format!("gadget gadget zork{i}")).collect();
++    for (i, t) in extract_topics_clean(&small, 2).iter().enumerate() {
++        assert_eq!(t, &vec![format!("zork{i}"), "gadget".to_string()], "doc {i}");
++    }
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-08-06
++// ---------------------------------------------------------------------------------------------
++
++#[test]
++fn hidden_AC_08_06_tech_boost_on_other_terms() {
++    assert_eq!(
++        extract_topics_clean(&v(&["bagel cdk"]), 2),
++        vec![v(&["cdk", "bagel"])]
++    );
++    assert_eq!(
++        extract_topics_clean(&v(&["bagel lambdas"]), 2),
++        vec![v(&["lambda", "bagel"])]
++    );
++    assert_eq!(
++        extract_topics_clean(&v(&["avocado github", "avocado github"]), 2),
++        vec![v(&["github", "avocado"]), v(&["github", "avocado"])]
++    );
++    // The boost is bounded: bagel tf 2/3 beats graphql tf 1/3 * 1.5.
++    assert_eq!(
++        extract_topics_clean(&v(&["bagel bagel graphql"]), 2),
++        vec![v(&["bagel", "graphql"])]
++    );
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-08-09
++// ---------------------------------------------------------------------------------------------
++
++#[test]
++fn hidden_AC_08_09_phase_03_functions_unchanged() {
++    assert_eq!(
++        tokenize("Invoices, queries; morning"),
++        v(&["invoices", "queries", "morning"])
++    );
++    // Old pipeline: ledgers 2/4, audit 1/4, ledger 1/4 (tie -> alphabetical).
++    assert_eq!(
++        extract_topics(&v(&["ledger ledgers ledgers audit"]), 4),
++        vec![v(&["ledgers", "audit", "ledger"])]
++    );
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-08-08
++// ---------------------------------------------------------------------------------------------
++
++fn user_line(sid: &str, cwd: &str, ts: &str, text: &str) -> String {
++    json!({
++        "type": "user", "sessionId": sid, "cwd": cwd, "gitBranch": "main",
++        "timestamp": ts, "isSidechain": false,
++        "message": {"role": "user", "content": text}
++    })
++    .to_string()
++}
++
++fn assistant_line(sid: &str, ts: &str, msg_id: &str, text: &str) -> String {
++    json!({
++        "type": "assistant", "sessionId": sid, "timestamp": ts,
++        "message": {"id": msg_id, "model": "claude-opus-5-5", "role": "assistant",
++                    "content": [{"type": "text", "text": text}]}
++    })
++    .to_string()
++}
++
++fn write_session(dir: &Path, sid: &str, cwd: &str, prompt: &str, reply: &str, day: &str) {
++    fs::create_dir_all(dir).expect("create dir");
++    let lines = [
++        user_line(sid, cwd, &format!("{day}T10:00:00.000Z"), prompt),
++        assistant_line(sid, &format!("{day}T10:00:05.000Z"), &format!("msg_{sid}"), reply),
++    ];
++    let mut body = lines.join("\n");
++    body.push('\n');
++    fs::write(dir.join(format!("{sid}.jsonl")), body).expect("write transcript");
++}
++
++fn run_kb(root: &Path, args: &[String]) -> Output {
++    let mut cmd = Command::new(KB);
++    cmd.args(args)
++        .env("HOME", root.join("home"))
++        .env_remove("KB_HOME")
++        .current_dir(root)
++        .stdin(Stdio::null())
++        .stdout(Stdio::piped())
++        .stderr(Stdio::piped());
++    cmd.output().expect("run kb")
++}
++
++#[test]
++fn hidden_AC_08_08_ingest_publishes_clean_topics_for_other_words() {
++    let tmp = TempDir::new().expect("tempdir");
++    let root: PathBuf = tmp.path().to_path_buf();
++    fs::create_dir_all(root.join("home")).unwrap();
++    let claude = root.join("projects");
++    write_session(
++        &claude.join("p1"),
++        "11111111-aaaa",
++        "/home/a/ledgerapp",
++        "Invoices invoices ready every morning",
++        "Invoices sent this morning",
++        "2026-09-10",
++    );
++    write_session(
++        &claude.join("p2"),
++        "22222222-bbbb",
++        "/home/a/dbtools",
++        "Optimise slow queries",
++        "Queries now run quickly",
++        "2026-09-11",
++    );
++    write_session(
++        &claude.join("p3"),
++        "33333333-cccc",
++        "/home/a/ledgerapp",
++        "Invoice export",
++        "The invoice export finished",
++        "2026-09-12",
++    );
++    let out = root.join("out");
++    let o = run_kb(
++        &root,
++        &[
++            "ingest".to_string(),
++            "--claude-dir".to_string(),
++            claude.to_string_lossy().into_owned(),
++            "--out".to_string(),
++            out.to_string_lossy().into_owned(),
++        ],
++    );
++    assert_eq!(o.status.code(), Some(0), "stderr: {}", String::from_utf8_lossy(&o.stderr));
++
++    let text = fs::read_to_string(out.join("graph").join("graph.json")).expect("graph.json");
++    let graph: Value = serde_json::from_str(&text).expect("valid json");
++    let nodes = graph["nodes"].as_array().expect("nodes");
++    let ids: Vec<&str> = nodes.iter().map(|n| n["id"].as_str().unwrap()).collect();
++    for want in ["topic:invoice", "topic:query"] {
++        assert!(ids.contains(&want), "missing {want} in {ids:?}");
++    }
++    for banned in ["topic:invoices", "topic:queries", "topic:morning"] {
++        assert!(!ids.contains(&banned), "unexpected {banned} in {ids:?}");
++    }
++    let invoice = nodes.iter().find(|n| n["id"] == "topic:invoice").unwrap();
++    assert_eq!(invoice["size"], 2);
++
++    let sess = nodes.iter().find(|n| n["id"] == "session:11111111-aaaa").unwrap();
++    let topics: Vec<&str> = sess["meta"]["topics"]
++        .as_array()
++        .unwrap()
++        .iter()
++        .map(|t| t.as_str().unwrap())
++        .collect();
++    assert!(topics.contains(&"invoice"), "{topics:?}");
++    assert!(!topics.contains(&"invoices") && !topics.contains(&"morning"), "{topics:?}");
++
++    let node_file = sess["meta"]["node_file"].as_str().unwrap();
++    let note = fs::read_to_string(out.join("nodes").join(node_file)).expect("note");
++    let line = note.lines().find(|l| l.starts_with("topics: ")).expect("topics line");
++    let note_topics: Vec<String> = serde_json::from_str(line.trim_start_matches("topics: ")).unwrap();
++    assert_eq!(note_topics, topics.iter().map(|t| t.to_string()).collect::<Vec<_>>());
++}
+diff --git a/core/tests/phase08_topics.rs b/core/tests/phase08_topics.rs
+new file mode 100644
+index 0000000..d298534
+--- /dev/null
++++ b/core/tests/phase08_topics.rs
+@@ -0,0 +1,1041 @@
++//! Phase 08 tests: clean topic pipeline (`normalize_term`, `tokenize_clean`,
++//! `extract_topics_clean`, `EXTRA_STOP_WORDS`, `TECH_TERMS`) and its wiring into `kb ingest`.
++//!
++//! The unit tests are pure functions. The ingest tests run the `kb` binary on a temporary
++//! `--claude-dir` fixture with HOME pointing at a temp dir, KB_HOME removed and `--out <tmp>`,
++//! so the real ~/.claude and ~/claude-kb are never touched.
++
++use std::fs;
++use std::io::Write;
++use std::path::{Path, PathBuf};
++use std::process::{Command, Output, Stdio};
++
++use kb_core::topics::*;
++use serde_json::{json, Value};
++use tempfile::TempDir;
++
++const KB: &str = env!("CARGO_BIN_EXE_kb");
++
++// ---------------------------------------------------------------------------------------------
++// Unit-test helpers
++// ---------------------------------------------------------------------------------------------
++
++fn v(items: &[&str]) -> Vec<String> {
++    items.iter().map(|x| x.to_string()).collect()
++}
++
++fn docs_of(items: &[&str]) -> Vec<String> {
++    v(items)
++}
++
++fn assert_normalizes(cases: &[(&str, &str)]) {
++    for (input, expected) in cases {
++        assert_eq!(
++            normalize_term(input),
++            *expected,
++            "normalize_term({input:?})"
++        );
++    }
++}
++
++/// Words whose plural `<word>s` is reduced back to `<word>` by the normalisation rules:
++/// at least 4 letters (so the plural is longer than 4), and the plural must not end in
++/// ss/us/is/os, ies, sses, ches, shes or xes.
++fn plural_round_trips_by_rules(w: &str) -> bool {
++    w.len() >= 4
++        && w.chars().all(|c| c.is_ascii_alphabetic())
++        && !w.ends_with(['s', 'u', 'i', 'o'])
++        && !w.ends_with("ie")
++        && !w.ends_with("xe")
++        && !w.ends_with("she")
++        && !w.ends_with("che")
++        && !w.ends_with("sse")
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-08-01: normalize_term
++// ---------------------------------------------------------------------------------------------
++
++#[test]
++fn test_AC_08_01_words_of_four_chars_or_fewer_are_unchanged() {
++    assert_normalizes(&[
++        ("aws", "aws"),
++        ("data", "data"),
++        ("bus", "bus"),
++        ("ios", "ios"),
++        ("tips", "tips"),
++        ("ties", "ties"),
++        ("uses", "uses"),
++        ("news", "news"),
++        ("axes", "axes"),
++        ("ab", "ab"),
++        ("a", "a"),
++        ("", ""),
++    ]);
++}
++
++#[test]
++fn test_AC_08_01_words_ending_ss_us_is_os_are_unchanged() {
++    assert_normalizes(&[
++        ("class", "class"),
++        ("status", "status"),
++        ("analysis", "analysis"),
++        ("macos", "macos"),
++        ("address", "address"),
++        ("bonus", "bonus"),
++        ("basis", "basis"),
++        ("photos", "photos"),
++        ("chassis", "chassis"),
++        ("walrus", "walrus"),
++        ("chaos", "chaos"),
++    ]);
++}
++
++#[test]
++fn test_AC_08_01_ies_becomes_y() {
++    assert_normalizes(&[
++        ("queries", "query"),
++        ("entries", "entry"),
++        ("libraries", "library"),
++        ("policies", "policy"),
++        ("tries", "try"),
++        ("cries", "cry"),
++    ]);
++}
++
++#[test]
++fn test_AC_08_01_sses_drops_the_final_es() {
++    assert_normalizes(&[
++        ("classes", "class"),
++        ("addresses", "address"),
++        ("processes", "process"),
++        ("bosses", "boss"),
++        ("glasses", "glass"),
++    ]);
++}
++
++#[test]
++fn test_AC_08_01_ches_shes_xes_drop_es() {
++    assert_normalizes(&[
++        ("patches", "patch"),
++        ("boxes", "box"),
++        ("branches", "branch"),
++        ("hashes", "hash"),
++        ("indexes", "index"),
++        ("matches", "match"),
++        ("fixes", "fix"),
++        ("wishes", "wish"),
++        ("taxes", "tax"),
++    ]);
++}
++
++#[test]
++fn test_AC_08_01_plain_trailing_s_is_dropped() {
++    assert_normalizes(&[
++        ("proposals", "proposal"),
++        ("notes", "note"),
++        ("files", "file"),
++        ("servers", "server"),
++        ("databases", "database"),
++        ("images", "image"),
++        ("reviewers", "reviewer"),
++        ("releases", "release"),
++        ("cases", "case"),
++    ]);
++}
++
++#[test]
++fn test_AC_08_01_other_words_are_unchanged() {
++    assert_normalizes(&[
++        ("proposal", "proposal"),
++        ("deployment", "deployment"),
++        ("parser", "parser"),
++        ("typescript", "typescript"),
++        ("lambda", "lambda"),
++        ("python", "python"),
++        ("abc123", "abc123"),
++    ]);
++}
++
++#[test]
++fn test_AC_08_01_first_matching_rule_wins() {
++    // Length rule beats the plural rules.
++    assert_eq!(normalize_term("dies"), "dies");
++    // ss/us/is/os beats the plain-s rule.
++    assert_eq!(normalize_term("canvass"), "canvass");
++    // sses beats ches/s: "classes" -> "class", not "classe".
++    assert_eq!(normalize_term("classes"), "class");
++    // ches beats the plain-s rule: "patches" -> "patch", not "patche".
++    assert_eq!(normalize_term("patches"), "patch");
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-08-02: tokenize_clean example
++// ---------------------------------------------------------------------------------------------
++
++#[test]
++fn test_AC_08_02_spec_example() {
++    assert_eq!(
++        tokenize_clean("Proposals and PROPOSAL notes this evening"),
++        v(&["proposal", "proposal", "note"])
++    );
++}
++
++#[test]
++fn test_AC_08_02_order_preserved_duplicates_kept_and_lowercased() {
++    assert_eq!(
++        tokenize_clean("Rust Docker docker RUST"),
++        v(&["rust", "docker", "docker", "rust"])
++    );
++}
++
++#[test]
++fn test_AC_08_02_plural_forms_are_normalised_in_place() {
++    assert_eq!(
++        tokenize_clean("Queries, entries; patches & boxes"),
++        v(&["query", "entry", "patch", "box"])
++    );
++}
++
++#[test]
++fn test_AC_08_02_phase_03_tokenisation_rules_still_apply() {
++    // Underscores and punctuation split, pure numbers and over-long tokens are dropped.
++    assert_eq!(
++        tokenize_clean("redis_cache-latency 2026 12345"),
++        v(&["redis", "cache", "latency"])
++    );
++    let long = "k".repeat(31);
++    assert_eq!(tokenize_clean(&format!("{long} redis")), v(&["redis"]));
++    assert!(tokenize_clean("").is_empty());
++    assert!(tokenize_clean("   \n\t ").is_empty());
++    assert!(tokenize_clean("!!! --- ___").is_empty());
++}
++
++#[test]
++fn test_AC_08_02_extra_stop_words_and_their_plurals_are_dropped_in_a_sentence() {
++    assert_eq!(
++        tokenize_clean("Yesterday the reviewers said that tomorrow deployments focus"),
++        v(&["reviewer", "deployment"])
++    );
++    assert!(tokenize_clean("number numbers evening evenings goal goals").is_empty());
++}
++
++#[test]
++fn test_AC_08_02_original_token_in_stop_words_is_dropped() {
++    assert_eq!(tokenize_clean("this redis the cache"), v(&["redis", "cache"]));
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-08-03: stop word lists
++// ---------------------------------------------------------------------------------------------
++
++const REQUIRED_EXTRA: &[&str] = &[
++    "number", "say", "said", "evening", "morning", "afternoon", "night", "today", "tomorrow",
++    "yesterday", "week", "month", "year", "time", "goal", "focus", "active", "primary", "pending",
++    "recap", "home", "date", "index", "ins", "candidate", "thing", "something", "think", "know",
++    "look", "sure", "right", "good", "great", "well", "really", "still", "going", "work", "using",
++    "used", "new", "first", "last", "next", "back", "start", "give", "take", "keep", "try", "show",
++    "tell", "ask", "help", "run", "set", "check", "add", "change", "update",
++];
++
++const REQUIRED_TECH: &[&str] = &[
++    "rust", "cargo", "typescript", "javascript", "python", "react", "vite", "node", "npm", "docker",
++    "kubernetes", "aws", "lambda", "sap", "abap", "hana", "fiori", "sql", "postgres", "sqlite",
++    "redis", "graphql", "api", "json", "yaml", "git", "github", "mcp", "claude", "llm", "pdf",
++    "html", "css", "vitest", "terraform", "cdk",
++];
++
++#[test]
++fn test_AC_08_03_extra_stop_words_contains_every_required_word_and_is_lowercase() {
++    for w in REQUIRED_EXTRA {
++        assert!(EXTRA_STOP_WORDS.contains(w), "EXTRA_STOP_WORDS is missing {w:?}");
++    }
++    for w in EXTRA_STOP_WORDS {
++        assert_eq!(*w, w.to_lowercase(), "extra stop word {w:?} must be lowercase");
++    }
++    for w in STOP_WORDS {
++        assert_eq!(*w, w.to_lowercase(), "stop word {w:?} must be lowercase");
++    }
++}
++
++#[test]
++fn test_AC_08_03_tech_terms_contains_every_required_term_and_is_lowercase() {
++    for w in REQUIRED_TECH {
++        assert!(TECH_TERMS.contains(w), "TECH_TERMS is missing {w:?}");
++    }
++    for w in TECH_TERMS {
++        assert_eq!(*w, w.to_lowercase(), "tech term {w:?} must be lowercase");
++    }
++}
++
++#[test]
++fn test_AC_08_03_every_listed_stop_word_is_dropped() {
++    for w in EXTRA_STOP_WORDS.iter().chain(STOP_WORDS.iter()) {
++        if !w.chars().all(|c| c.is_ascii_alphanumeric()) {
++            continue; // not a possible token
++        }
++        assert!(tokenize_clean(w).is_empty(), "{w:?} should be dropped");
++        assert!(
++            tokenize_clean(&w.to_uppercase()).is_empty(),
++            "{w:?} in capitals should be dropped"
++        );
++    }
++}
++
++#[test]
++fn test_AC_08_03_plural_of_every_listed_stop_word_is_dropped() {
++    let mut checked = 0;
++    for w in EXTRA_STOP_WORDS.iter().chain(STOP_WORDS.iter()) {
++        if !plural_round_trips_by_rules(w) {
++            continue;
++        }
++        let plural = format!("{w}s");
++        assert!(
++            tokenize_clean(&plural).is_empty(),
++            "plural {plural:?} of stop word {w:?} should be dropped"
++        );
++        checked += 1;
++    }
++    assert!(checked >= 20, "expected many testable plurals, got {checked}");
++}
++
++#[test]
++fn test_AC_08_03_named_plurals_of_extra_stop_words_are_dropped() {
++    let plurals = [
++        "numbers", "evenings", "mornings", "afternoons", "nights", "weeks", "months", "years",
++        "times", "goals", "things", "candidates", "dates", "recaps", "homes", "starts", "gives",
++        "takes", "tries", "checks", "changes", "updates", "helps", "shows", "looks", "thinks",
++        "knows", "keeps", "tells", "indexes",
++    ];
++    for p in plurals {
++        assert!(tokenize_clean(p).is_empty(), "{p:?} should be dropped");
++    }
++}
++
++#[test]
++fn test_AC_08_03_all_stop_words_in_one_text_leave_only_the_real_word() {
++    let words: Vec<&str> = EXTRA_STOP_WORDS
++        .iter()
++        .chain(STOP_WORDS.iter())
++        .copied()
++        .filter(|w| w.chars().all(|c| c.is_ascii_alphanumeric()))
++        .collect();
++    let text = format!("{} zebra {}", words.join(" "), words.join(" "));
++    assert_eq!(tokenize_clean(&text), v(&["zebra"]));
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-08-04: plural and singular counts merge
++// ---------------------------------------------------------------------------------------------
++
++#[test]
++fn test_AC_08_04_proposal_is_first_topic_when_plural_and_singular_merge() {
++    let docs = docs_of(&["proposal proposals proposals invoice"]);
++    let topics = extract_topics_clean(&docs, 5);
++    assert_eq!(topics.len(), 1);
++    assert_eq!(topics[0][0], "proposal");
++    assert_eq!(topics[0], v(&["proposal", "invoice"]));
++    assert!(!topics[0].contains(&"proposals".to_string()));
++}
++
++#[test]
++fn test_AC_08_04_merged_counts_tie_with_other_terms_alphabetically() {
++    // sprocket (1 + 1) merges to 2 and ties with gadget (2): alphabetical order decides.
++    // Unmerged, gadget (2) would lead and sprocket / sprockets would each have 1.
++    let docs = docs_of(&["sprocket sprockets gadget gadget"]);
++    assert_eq!(extract_topics_clean(&docs, 5), vec![v(&["gadget", "sprocket"])]);
++}
++
++#[test]
++fn test_AC_08_04_merging_happens_across_documents_for_document_frequency() {
++    // "ledger" and "ledgers" are in different docs; after merging df(ledger) = 2.
++    // N = 3: ledger tf 1/2, idf ln(4/3)+1 = 1.288 -> 0.644; the unique terms: tf 1/2, idf ln(4/2)+1 = 1.693 -> 0.847.
++    let docs = docs_of(&["ledger audit", "ledgers invoice", "pasta"]);
++    let topics = extract_topics_clean(&docs, 5);
++    assert_eq!(topics[0], v(&["audit", "ledger"]));
++    assert_eq!(topics[1], v(&["invoice", "ledger"]));
++    assert_eq!(topics[2], v(&["pasta"]));
++}
++
++#[test]
++fn test_AC_08_04_exact_ranking_with_idf_over_three_documents() {
++    // N = 3.
++    // doc0: proposal 2/3 * (ln(4/2)+1) = 1.129, invoice 1/3 * (ln(4/3)+1) = 0.429.
++    // doc1: invoice and ledger both tf 1/2, df 2 -> tie -> alphabetical.
++    // doc2: ledger 2/3 * 1.288 = 0.858, audit 1/3 * 1.693 = 0.564.
++    let docs = docs_of(&[
++        "proposal proposals invoice",
++        "invoice ledger",
++        "ledger ledgers audit",
++    ]);
++    let topics = extract_topics_clean(&docs, 5);
++    assert_eq!(topics.len(), 3);
++    assert_eq!(topics[0], v(&["proposal", "invoice"]));
++    assert_eq!(topics[1], v(&["invoice", "ledger"]));
++    assert_eq!(topics[2], v(&["ledger", "audit"]));
++}
++
++#[test]
++fn test_AC_08_04_idf_is_smoothed_with_plus_one() {
++    // N = 2. gizmo: tf 0.4 * (ln(3/2)+1) = 0.562; widget: tf 0.6 * (ln(3/3)+1) = 0.600.
++    let docs = docs_of(&["gizmo gizmo widget widget widget", "widget"]);
++    let topics = extract_topics_clean(&docs, 2);
++    assert_eq!(topics[0], v(&["widget", "gizmo"]));
++    assert_eq!(topics[1], v(&["widget"]));
++}
++
++#[test]
++fn test_AC_08_04_stop_words_never_become_topics() {
++    let docs = docs_of(&["number evening goal say proposals proposals", "evenings goals numbers"]);
++    let topics = extract_topics_clean(&docs, 10);
++    assert_eq!(topics[0], v(&["proposal"]));
++    assert!(topics[1].is_empty());
++    for per_doc in &topics {
++        for t in per_doc {
++            assert!(!EXTRA_STOP_WORDS.contains(&t.as_str()), "{t:?} is an extra stop word");
++            assert!(!STOP_WORDS.contains(&t.as_str()), "{t:?} is a stop word");
++        }
++    }
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-08-05: generic terms (document frequency above 40 percent with 10 or more docs)
++// ---------------------------------------------------------------------------------------------
++
++#[test]
++fn test_AC_08_05_term_in_half_of_ten_docs_is_never_a_topic() {
++    // N = 10, "gizmo" in docs 0..=4 (50% > 40%). Without the rule it would lead doc 0
++    // (tf 0.75, idf ln(11/6)+1 = 1.606 -> 1.2 vs zork0 0.25 * 2.705 = 0.68).
++    let mut docs = vec!["gizmo gizmo gizmo zork0".to_string()];
++    for i in 1..5 {
++        docs.push(format!("gizmo zork{i}"));
++    }
++    for i in 5..10 {
++        docs.push(format!("zork{i}"));
++    }
++    let topics = extract_topics_clean(&docs, 1);
++    assert_eq!(topics.len(), 10);
++    for (i, t) in topics.iter().enumerate() {
++        assert_eq!(t, &vec![format!("zork{i}")], "doc {i}");
++    }
++    // With a large k the generic term is still absent.
++    for t in extract_topics_clean(&docs, 50) {
++        assert!(!t.contains(&"gizmo".to_string()), "gizmo leaked into {t:?}");
++    }
++}
++
++#[test]
++fn test_AC_08_05_term_at_exactly_forty_percent_is_still_allowed() {
++    // N = 10, "gadget" in 4 docs = 40%, not more than 40%.
++    let mut docs = vec!["gadget gadget gadget zork0".to_string()];
++    for i in 1..4 {
++        docs.push(format!("gadget zork{i}"));
++    }
++    for i in 4..10 {
++        docs.push(format!("zork{i}"));
++    }
++    let topics = extract_topics_clean(&docs, 1);
++    // gadget: 0.75 * (ln(11/5)+1) = 1.34 beats zork0: 0.25 * (ln(11/2)+1) = 0.68.
++    assert_eq!(topics[0], v(&["gadget"]));
++    // Docs 1..=3: gadget 0.5 * 1.788 = 0.894 vs zork 0.5 * 2.705 = 1.35.
++    assert_eq!(topics[1], v(&["zork1"]));
++    let top_all = extract_topics_clean(&docs, 5);
++    assert_eq!(top_all[1], v(&["zork1", "gadget"]));
++}
++
++#[test]
++fn test_AC_08_05_threshold_uses_the_plural_merged_document_frequency() {
++    // 10 docs; "sprocket" appears in 3 docs and "sprockets" in 3 other docs: merged df = 6 (60%).
++    let mut docs = Vec::new();
++    for i in 0..3 {
++        docs.push(format!("sprocket zork{i}"));
++    }
++    for i in 3..6 {
++        docs.push(format!("sprockets zork{i}"));
++    }
++    for i in 6..10 {
++        docs.push(format!("zork{i}"));
++    }
++    for (i, t) in extract_topics_clean(&docs, 5).iter().enumerate() {
++        assert_eq!(t, &vec![format!("zork{i}")], "doc {i}");
++    }
++}
++
++#[test]
++fn test_AC_08_05_with_nine_docs_nothing_is_excluded_for_frequency() {
++    // N = 9, "gizmo" in all 9 docs (100%): allowed because N < 10.
++    // gizmo: tf 0.5 * (ln(10/10)+1) = 0.5; zork: 0.5 * (ln(10/2)+1) = 1.30.
++    let docs: Vec<String> = (0..9).map(|i| format!("gizmo zork{i}")).collect();
++    let topics = extract_topics_clean(&docs, 2);
++    assert_eq!(topics.len(), 9);
++    for (i, t) in topics.iter().enumerate() {
++        assert_eq!(t, &vec![format!("zork{i}"), "gizmo".to_string()], "doc {i}");
++    }
++}
++
++#[test]
++fn test_AC_08_05_a_doc_of_only_generic_terms_has_no_topics() {
++    let mut docs = vec!["gizmo gizmo".to_string()];
++    for i in 1..10 {
++        docs.push(format!("gizmo zork{i}"));
++    }
++    let topics = extract_topics_clean(&docs, 5);
++    assert_eq!(topics.len(), 10);
++    assert!(topics[0].is_empty());
++    assert_eq!(topics[1], v(&["zork1"]));
++}
++
++#[test]
++fn test_AC_08_05_eleven_docs_forty_percent_is_4_4_docs() {
++    // N = 11: df 4 (36%) allowed, df 5 (45%) excluded.
++    let mut docs = Vec::new();
++    for i in 0..11 {
++        let mut d = format!("zork{i}");
++        if i < 5 {
++            d.push_str(" gizmo");
++        }
++        if i < 4 {
++            d.push_str(" gadget gadget");
++        }
++        docs.push(d);
++    }
++    let topics = extract_topics_clean(&docs, 10);
++    for (i, t) in topics.iter().enumerate() {
++        assert!(!t.contains(&"gizmo".to_string()), "doc {i} has gizmo: {t:?}");
++        assert_eq!(
++            t.contains(&"gadget".to_string()),
++            i < 4,
++            "doc {i}: gadget presence in {t:?}"
++        );
++    }
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-08-06: technology boost
++// ---------------------------------------------------------------------------------------------
++
++#[test]
++fn test_AC_08_06_tech_term_outranks_non_tech_term_at_equal_frequency() {
++    // "abacus" sorts before "rust", so only the boost can put "rust" first.
++    assert_eq!(
++        extract_topics_clean(&docs_of(&["abacus rust"]), 2),
++        vec![v(&["rust", "abacus"])]
++    );
++}
++
++#[test]
++fn test_AC_08_06_boost_works_with_equal_document_frequency_across_docs() {
++    let docs = docs_of(&["abacus python", "abacus python"]);
++    let topics = extract_topics_clean(&docs, 2);
++    assert_eq!(topics[0], v(&["python", "abacus"]));
++    assert_eq!(topics[1], v(&["python", "abacus"]));
++}
++
++#[test]
++fn test_AC_08_06_boost_applies_to_the_normalised_form() {
++    // "dockers" -> "docker" (tech); upper case input is lowercased first.
++    assert_eq!(
++        extract_topics_clean(&docs_of(&["abacus Dockers"]), 2),
++        vec![v(&["docker", "abacus"])]
++    );
++}
++
++#[test]
++fn test_AC_08_06_boost_is_only_one_and_a_half_not_unbounded() {
++    // abacus tf 2/3 = 0.667 beats rust tf 1/3 * 1.5 = 0.5.
++    assert_eq!(
++        extract_topics_clean(&docs_of(&["abacus abacus rust"]), 2),
++        vec![v(&["abacus", "rust"])]
++    );
++    // docker 3/5 * 1.5 = 0.9 beats abacus 2/5 = 0.4.
++    assert_eq!(
++        extract_topics_clean(&docs_of(&["abacus abacus docker docker docker"]), 2),
++        vec![v(&["docker", "abacus"])]
++    );
++}
++
++#[test]
++fn test_AC_08_06_boost_multiplies_the_tf_idf_score() {
++    // N = 2. rust: tf 0.5, df 2, idf 1 -> 0.5 * 1 * 1.5 = 0.75.
++    //        abacus: tf 0.5, df 1, idf ln(3/2)+1 = 1.405 -> 0.703.
++    // Unboosted, abacus would win; the boost lets rust win.
++    let docs = docs_of(&["abacus rust", "rust"]);
++    let topics = extract_topics_clean(&docs, 2);
++    assert_eq!(topics[0], v(&["rust", "abacus"]));
++    assert_eq!(topics[1], v(&["rust"]));
++}
++
++#[test]
++fn test_AC_08_06_non_tech_pair_without_boost_is_ordered_alphabetically() {
++    // Control: the boost, not the spelling, decides in the tech tests above.
++    assert_eq!(
++        extract_topics_clean(&docs_of(&["zebra abacus"]), 2),
++        vec![v(&["abacus", "zebra"])]
++    );
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-08-07: k, empty docs, ties, determinism
++// ---------------------------------------------------------------------------------------------
++
++#[test]
++fn test_AC_08_07_returns_at_most_k_terms_per_doc() {
++    let docs = docs_of(&[
++        "alpha1 bravo2 charlie3 delta4 echo5 foxtrot6",
++        "golf7 hotel8",
++    ]);
++    let top3 = extract_topics_clean(&docs, 3);
++    assert_eq!(top3.len(), 2);
++    assert_eq!(top3[0], v(&["alpha1", "bravo2", "charlie3"]));
++    assert_eq!(top3[1].len(), 2);
++    let top1 = extract_topics_clean(&docs, 1);
++    assert_eq!(top1[0].len(), 1);
++    assert_eq!(top1[1].len(), 1);
++    let top100 = extract_topics_clean(&docs, 100);
++    assert_eq!(top100[0].len(), 6);
++    assert_eq!(top100[1].len(), 2);
++}
++
++#[test]
++fn test_AC_08_07_k_zero_gives_empty_vectors() {
++    let docs = docs_of(&["ingress rollout", "pasta recipe"]);
++    assert_eq!(extract_topics_clean(&docs, 0), vec![Vec::<String>::new(); 2]);
++}
++
++#[test]
++fn test_AC_08_07_empty_docs_get_empty_vectors_in_place() {
++    let docs = docs_of(&[
++        "",
++        "the and for",
++        "ingress rollout",
++        "   ",
++        "12 34 5",
++        "number evening goal",
++    ]);
++    let topics = extract_topics_clean(&docs, 5);
++    assert_eq!(topics.len(), 6);
++    assert!(topics[0].is_empty());
++    assert!(topics[1].is_empty());
++    assert_eq!(topics[2], v(&["ingress", "rollout"]));
++    assert!(topics[3].is_empty());
++    assert!(topics[4].is_empty());
++    assert!(topics[5].is_empty());
++}
++
++#[test]
++fn test_AC_08_07_no_docs_gives_no_vectors() {
++    assert!(extract_topics_clean(&[], 5).is_empty());
++}
++
++#[test]
++fn test_AC_08_07_ties_are_ordered_alphabetically() {
++    let docs = docs_of(&["zulu yankee xray whiskey victor"]);
++    assert_eq!(
++        extract_topics_clean(&docs, 3),
++        vec![v(&["victor", "whiskey", "xray"])]
++    );
++    let docs = docs_of(&["mango apple cherry", "peach banana"]);
++    let topics = extract_topics_clean(&docs, 2);
++    assert_eq!(topics[0], v(&["apple", "cherry"]));
++    assert_eq!(topics[1], v(&["banana", "peach"]));
++}
++
++#[test]
++fn test_AC_08_07_many_tied_terms_come_out_in_sorted_order_every_time() {
++    // 30 terms, one occurrence each, listed in reverse order: all scores are equal.
++    let words: Vec<String> = (0..30).rev().map(|i| format!("tkn{i:02}")).collect();
++    let docs = vec![words.join(" ")];
++    let expected: Vec<String> = (0..10).map(|i| format!("tkn{i:02}")).collect();
++    for _ in 0..20 {
++        assert_eq!(extract_topics_clean(&docs, 10), vec![expected.clone()]);
++    }
++}
++
++#[test]
++fn test_AC_08_07_is_deterministic() {
++    let docs = docs_of(&[
++        "ingress rollout service mesh ingress",
++        "pasta recipe boil rollout sauce tomato basil",
++        "guitar chords strum rollout capo tuning",
++        "",
++        "docker rust proposals proposal",
++    ]);
++    let first = extract_topics_clean(&docs, 4);
++    assert_eq!(first.len(), 5);
++    for _ in 0..20 {
++        assert_eq!(extract_topics_clean(&docs, 4), first);
++    }
++}
++
++#[test]
++fn test_AC_08_07_one_result_per_doc_in_the_same_order() {
++    let docs = docs_of(&["pasta pasta", "ingress ingress", "guitar guitar"]);
++    let topics = extract_topics_clean(&docs, 1);
++    assert_eq!(topics, vec![v(&["pasta"]), v(&["ingress"]), v(&["guitar"])]);
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-08-09: phase 03 functions keep their behaviour
++// ---------------------------------------------------------------------------------------------
++
++#[test]
++fn test_AC_08_09_tokenize_still_keeps_plurals_and_the_new_noise_words() {
++    assert_eq!(
++        tokenize("Proposals evening number goal"),
++        v(&["proposals", "evening", "number", "goal"])
++    );
++    assert_eq!(
++        tokenize("Redis_Cache-Latency.p99/Throughput"),
++        v(&["redis", "cache", "latency", "p99", "throughput"])
++    );
++    assert_eq!(tokenize("The redis AND the cache, please"), v(&["redis", "cache"]));
++    assert_eq!(tokenize("ab xyz q z9 pqr"), v(&["xyz", "pqr"]));
++}
++
++#[test]
++fn test_AC_08_09_extract_topics_still_splits_plural_and_singular() {
++    // Old behaviour: proposals 2/4, invoice 1/4 and proposal 1/4 (tie -> alphabetical).
++    let docs = docs_of(&["proposal proposals proposals invoice"]);
++    assert_eq!(extract_topics(&docs, 5), vec![v(&["proposals", "invoice", "proposal"])]);
++}
++
++#[test]
++fn test_AC_08_09_extract_topics_still_has_phase_03_ranking_and_ties() {
++    let docs = docs_of(&[
++        "kubernetes ingress kubernetes ingress rollout",
++        "pasta recipe boil rollout",
++        "guitar chords strum",
++    ]);
++    assert_eq!(extract_topics(&docs, 3)[0], v(&["ingress", "kubernetes", "rollout"]));
++    let docs = docs_of(&["abacus zephyr", "abacus yodel", "abacus quartz"]);
++    assert_eq!(extract_topics(&docs, 2)[0], v(&["zephyr", "abacus"]));
++    // The old pipeline does not drop the generic term at 10+ docs.
++    let mut many = vec!["gizmo gizmo gizmo zork0".to_string()];
++    for i in 1..5 {
++        many.push(format!("gizmo zork{i}"));
++    }
++    for i in 5..10 {
++        many.push(format!("zork{i}"));
++    }
++    assert_eq!(extract_topics(&many, 1)[0], v(&["gizmo"]));
++}
++
++#[test]
++fn test_AC_08_09_stop_words_list_is_unchanged_for_required_words() {
++    for w in [
++        "the", "and", "for", "that", "this", "with", "you", "are", "was", "but", "not", "have",
++        "can", "will", "just", "what", "from", "use", "file", "code", "make", "need", "want",
++        "like", "yes", "okay", "please", "thanks", "let", "now", "here", "there", "also", "would",
++        "should", "could",
++    ] {
++        assert!(STOP_WORDS.contains(&w), "STOP_WORDS lost {w:?}");
++        assert!(tokenize(w).is_empty());
++    }
++}
++
++// ---------------------------------------------------------------------------------------------
++// AC-08-08: kb ingest / kb hook publish clean topics
++// ---------------------------------------------------------------------------------------------
++
++const A_ID: &str = "aaaaaaaa-1111";
++const B_ID: &str = "bbbbbbbb-2222";
++const C_ID: &str = "cccccccc-3333";
++const H_ID: &str = "dddddddd-4444";
++
++struct Sandbox {
++    root: TempDir,
++}
++
++impl Sandbox {
++    fn new() -> Sandbox {
++        let root = TempDir::new().expect("tempdir");
++        fs::create_dir_all(root.path().join("home")).expect("home dir");
++        fs::create_dir_all(root.path().join("projects")).expect("projects dir");
++        Sandbox { root }
++    }
++
++    fn p(&self, rel: &str) -> PathBuf {
++        self.root.path().join(rel)
++    }
++
++    fn claude(&self) -> PathBuf {
++        self.p("projects")
++    }
++
++    fn run(&self, args: &[String], stdin: Option<&str>) -> Output {
++        let mut cmd = Command::new(KB);
++        cmd.args(args)
++            .env("HOME", self.p("home"))
++            .env_remove("KB_HOME")
++            .current_dir(self.root.path())
++            .stdout(Stdio::piped())
++            .stderr(Stdio::piped());
++        if stdin.is_some() {
++            cmd.stdin(Stdio::piped());
++        } else {
++            cmd.stdin(Stdio::null());
++        }
++        let mut child = cmd.spawn().expect("spawn kb");
++        if let Some(text) = stdin {
++            let mut pipe = child.stdin.take().expect("stdin pipe");
++            let _ = pipe.write_all(text.as_bytes());
++            drop(pipe);
++        }
++        child.wait_with_output().expect("wait for kb")
++    }
++
++    fn ingest(&self, out: &Path) -> Output {
++        let args = vec![
++            "ingest".to_string(),
++            "--claude-dir".to_string(),
++            path_str(&self.claude()),
++            "--out".to_string(),
++            path_str(out),
++        ];
++        self.run(&args, None)
++    }
++
++    fn hook(&self, out: &Path, stdin: &str) -> Output {
++        let args = vec!["hook".to_string(), "--out".to_string(), path_str(out)];
++        self.run(&args, Some(stdin))
++    }
++}
++
++fn path_str(p: &Path) -> String {
++    p.to_string_lossy().into_owned()
++}
++
++fn stderr_of(o: &Output) -> String {
++    String::from_utf8_lossy(&o.stderr).into_owned()
++}
++
++fn user_line(sid: &str, cwd: &str, ts: &str, text: &str) -> String {
++    json!({
++        "type": "user",
++        "sessionId": sid,
++        "cwd": cwd,
++        "gitBranch": "main",
++        "timestamp": ts,
++        "isSidechain": false,
++        "message": {"role": "user", "content": text}
++    })
++    .to_string()
++}
++
++fn assistant_line(sid: &str, ts: &str, msg_id: &str, text: &str) -> String {
++    json!({
++        "type": "assistant",
++        "sessionId": sid,
++        "timestamp": ts,
++        "message": {
++            "id": msg_id,
++            "model": "claude-opus-5-5",
++            "role": "assistant",
++            "content": [{"type": "text", "text": text}]
++        }
++    })
++    .to_string()
++}
++
++fn write_session(dir: &Path, sid: &str, cwd: &str, prompt: &str, reply: &str, day: &str) -> PathBuf {
++    let path = dir.join(format!("{sid}.jsonl"));
++    fs::create_dir_all(dir).expect("create dir");
++    let lines = [
++        user_line(sid, cwd, &format!("{day}T10:00:00.000Z"), prompt),
++        assistant_line(sid, &format!("{day}T10:00:05.000Z"), &format!("msg_{sid}"), reply),
++    ];
++    let mut body = lines.join("\n");
++    body.push('\n');
++    fs::write(&path, body).expect("write transcript");
++    path
++}
++
++fn seed_fixture(sb: &Sandbox) {
++    write_session(
++        &sb.claude().join("proj-a"),
++        A_ID,
++        "/home/a/alpha",
++        "Proposals proposals proposals ready this evening",
++        "Proposals reviewed in the evening",
++        "2026-10-01",
++    );
++    write_session(
++        &sb.claude().join("proj-b"),
++        B_ID,
++        "/home/a/beta",
++        "Draft the proposal for the invoice",
++        "Proposal drafted, invoice attached",
++        "2026-10-02",
++    );
++    write_session(
++        &sb.claude().join("proj-c"),
++        C_ID,
++        "/home/a/gamma",
++        "Tune the kafka partitions",
++        "Partitions rebalanced overnight",
++        "2026-10-03",
++    );
++}
++
++fn read_graph(out: &Path) -> Value {
++    let text = fs::read_to_string(out.join("graph").join("graph.json")).expect("graph file");
++    serde_json::from_str(&text).expect("graph.json is JSON")
++}
++
++fn graph_ids(graph: &Value) -> Vec<String> {
++    graph["nodes"]
++        .as_array()
++        .expect("nodes array")
++        .iter()
++        .map(|n| n["id"].as_str().expect("node id").to_string())
++        .collect()
++}
++
++fn graph_node<'a>(graph: &'a Value, id: &str) -> &'a Value {
++    graph["nodes"]
++        .as_array()
++        .expect("nodes array")
++        .iter()
++        .find(|n| n["id"] == id)
++        .unwrap_or_else(|| panic!("graph lacks node {id}"))
++}
++
++fn meta_topics(graph: &Value, session_id: &str) -> Vec<String> {
++    graph_node(graph, &format!("session:{session_id}"))["meta"]["topics"]
++        .as_array()
++        .expect("meta.topics array")
++        .iter()
++        .map(|t| t.as_str().expect("topic string").to_string())
++        .collect()
++}
++
++fn note_text(out: &Path, graph: &Value, session_id: &str) -> String {
++    let node_file = graph_node(graph, &format!("session:{session_id}"))["meta"]["node_file"]
++        .as_str()
++        .expect("meta.node_file")
++        .to_string();
++    fs::read_to_string(out.join("nodes").join(node_file)).expect("session note")
++}
++
++fn note_topics_line(note: &str) -> Vec<String> {
++    let line = note
++        .lines()
++        .find(|l| l.starts_with("topics: "))
++        .expect("note has a `topics:` line");
++    serde_json::from_str(line.trim_start_matches("topics: ")).expect("topics line is a JSON array")
++}
++
++#[test]
++fn test_AC_08_08_ingest_graph_has_clean_topic_nodes() {
++    let sb = Sandbox::new();
++    seed_fixture(&sb);
++    let out = sb.p("out");
++
++    let o = sb.ingest(&out);
++    assert_eq!(o.status.code(), Some(0), "stderr: {}", stderr_of(&o));
++
++    let graph = read_graph(&out);
++    let ids = graph_ids(&graph);
++    assert!(ids.contains(&"topic:proposal".to_string()), "ids: {ids:?}");
++    assert!(!ids.contains(&"topic:proposals".to_string()), "ids: {ids:?}");
++    assert!(!ids.contains(&"topic:evening".to_string()), "ids: {ids:?}");
++    assert!(ids.contains(&"topic:partition".to_string()), "ids: {ids:?}");
++    assert!(!ids.contains(&"topic:partitions".to_string()), "ids: {ids:?}");
++
++    // Plural and singular merged into one topic shared by sessions A and B.
++    let proposal = graph_node(&graph, "topic:proposal");
++    assert_eq!(proposal["label"], "proposal");
++    assert_eq!(proposal["size"], 2);
++
++    // No topic node is a (plural of a) stop word.
++    for id in &ids {
++        if let Some(term) = id.strip_prefix("topic:") {
++            assert!(!STOP_WORDS.contains(&term), "{id} is a stop word");
++            assert!(!EXTRA_STOP_WORDS.contains(&term), "{id} is an extra stop word");
++        }
++    }
++}
++
++#[test]
++fn test_AC_08_08_session_meta_and_note_carry_the_same_clean_topics() {
++    let sb = Sandbox::new();
++    seed_fixture(&sb);
++    let out = sb.p("out");
++    let o = sb.ingest(&out);
++    assert_eq!(o.status.code(), Some(0), "stderr: {}", stderr_of(&o));
++
++    let graph = read_graph(&out);
++    let topics_a = meta_topics(&graph, A_ID);
++    assert!(topics_a.contains(&"proposal".to_string()), "{topics_a:?}");
++    assert!(!topics_a.contains(&"proposals".to_string()), "{topics_a:?}");
++    assert!(!topics_a.contains(&"evening".to_string()), "{topics_a:?}");
++    assert!(topics_a.len() <= 8);
++
++    let note = note_text(&out, &graph, A_ID);
++    assert_eq!(note_topics_line(&note), topics_a);
++    assert!(note.contains("[[topic/proposal]]"), "note:\n{note}");
++    assert!(!note.contains("[[topic/proposals]]"));
++    assert!(!note.contains("[[topic/evening]]"));
++
++    let topics_b = meta_topics(&graph, B_ID);
++    assert!(topics_b.contains(&"proposal".to_string()), "{topics_b:?}");
++    assert!(topics_b.contains(&"invoice".to_string()), "{topics_b:?}");
++    assert_eq!(note_topics_line(&note_text(&out, &graph, B_ID)), topics_b);
++
++    let topics_c = meta_topics(&graph, C_ID);
++    assert!(topics_c.contains(&"partition".to_string()), "{topics_c:?}");
++    assert!(!topics_c.contains(&"partitions".to_string()), "{topics_c:?}");
++    assert!(!topics_c.contains(&"proposal".to_string()));
++}
++
++#[test]
++fn test_AC_08_08_rerunning_ingest_keeps_the_clean_topics() {
++    let sb = Sandbox::new();
++    seed_fixture(&sb);
++    let out = sb.p("out");
++    assert_eq!(sb.ingest(&out).status.code(), Some(0));
++    let first = fs::read(out.join("graph").join("graph.json")).unwrap();
++
++    assert_eq!(sb.ingest(&out).status.code(), Some(0));
++    let second = fs::read(out.join("graph").join("graph.json")).unwrap();
++    assert_eq!(first, second);
++
++    let ids = graph_ids(&read_graph(&out));
++    assert!(ids.contains(&"topic:proposal".to_string()));
++    assert!(!ids.contains(&"topic:proposals".to_string()));
++    assert!(!ids.contains(&"topic:evening".to_string()));
++}
++
++#[test]
++fn test_AC_08_08_hook_publishes_clean_topics_too() {
++    let sb = Sandbox::new();
++    let transcript = write_session(
++        &sb.p("elsewhere"),
++        H_ID,
++        "/home/a/delta",
++        "Proposals proposals needed this evening",
++        "Proposals drafted for the evening review",
++        "2026-10-04",
++    );
++    let stdin = json!({
++        "session_id": H_ID,
++        "transcript_path": path_str(&transcript),
++        "cwd": "/home/a/delta",
++        "hook_event_name": "SessionEnd",
++        "reason": "exit"
++    })
++    .to_string();
++    let out = sb.p("out");
++
++    let o = sb.hook(&out, &stdin);
++    assert_eq!(o.status.code(), Some(0), "stderr: {}", stderr_of(&o));
++
++    let graph = read_graph(&out);
++    let ids = graph_ids(&graph);
++    assert!(ids.contains(&"topic:proposal".to_string()), "ids: {ids:?}");
++    assert!(!ids.contains(&"topic:proposals".to_string()), "ids: {ids:?}");
++    assert!(!ids.contains(&"topic:evening".to_string()), "ids: {ids:?}");
++    let topics = meta_topics(&graph, H_ID);
++    assert!(topics.contains(&"proposal".to_string()), "{topics:?}");
++    assert_eq!(note_topics_line(&note_text(&out, &graph, H_ID)), topics);
++}
+diff --git a/specs/phase-08.md b/specs/phase-08.md
+new file mode 100644
+index 0000000..d7eee97
+--- /dev/null
++++ b/specs/phase-08.md
+@@ -0,0 +1,74 @@
++# Phase 08: Clean topics
++
++## Intent
++Topics today are full of noise words (number, evening, goal, say) and split plurals
++(proposal / proposals). Add a cleaner topic pipeline next to the existing one and make ingest
++use it, so graph.json and the session notes carry meaningful topics: merged plurals, more stop
++words, technology terms preferred and words that appear in almost every session dropped.
++
++## Complexity
++M - text normalisation rules with edge cases plus wiring into ingest; the TF-IDF maths exists.
++
++## Scope
++- In scope: new items in `core/src/topics.rs` (`EXTRA_STOP_WORDS`, `TECH_TERMS`,
++  `normalize_term`, `tokenize_clean`, `extract_topics_clean`); `core/src/store.rs` `publish`
++  calls `extract_topics_clean` instead of `extract_topics`.
++- Out of scope: changing `STOP_WORDS`, `tokenize` or `extract_topics` (they keep their current
++  behaviour and tests); stemming beyond plurals; any LLM.
++
++## Interface contract
++Tests in `core/tests/phase08_topics.rs` (unit, `use kb_core::topics::*`) and, for the ingest
++check, by running the `kb` binary (`env!("CARGO_BIN_EXE_kb")`) on a temporary `--claude-dir`
++fixture built the same way as `core/tests/phase06_cli.rs` does, with `--out <tmp>`.
++
++| Item | Location (file / module) | Signature or shape | Errors |
++|---|---|---|---|
++| `EXTRA_STOP_WORDS` | `kb_core::topics` | `pub const EXTRA_STOP_WORDS: &[&str]` - lowercase; must include at least: number, say, said, evening, morning, afternoon, night, today, tomorrow, yesterday, week, month, year, time, goal, focus, active, primary, pending, recap, home, date, index, ins, candidate, thing, something, think, know, look, sure, right, good, great, well, really, still, going, work, using, used, new, first, last, next, back, start, give, take, keep, try, show, tell, ask, help, run, set, check, add, change, update | - |
++| `TECH_TERMS` | `kb_core::topics` | `pub const TECH_TERMS: &[&str]` - lowercase, already in normalised (singular) form; must include at least: rust, cargo, typescript, javascript, python, react, vite, node, npm, docker, kubernetes, aws, lambda, sap, abap, hana, fiori, sql, postgres, sqlite, redis, graphql, api, json, yaml, git, github, mcp, claude, llm, pdf, html, css, vitest, terraform, cdk | - |
++| `normalize_term` | `kb_core::topics` | `pub fn normalize_term(t: &str) -> String` | - |
++| `tokenize_clean` | `kb_core::topics` | `pub fn tokenize_clean(text: &str) -> Vec<String>` | - |
++| `extract_topics_clean` | `kb_core::topics` | `pub fn extract_topics_clean(docs: &[String], k: usize) -> Vec<Vec<String>>` | - |
++
++## Behaviour
++1. `normalize_term(t)` (input is a lowercase token), first matching rule wins:
++   - length <= 4 -> unchanged (`aws`, `data`, `bus`, `ios`);
++   - ends with `ss`, `us`, `is` or `os` -> unchanged (`class`, `status`, `analysis`, `macos`);
++   - ends with `ies` -> drop `ies`, add `y` (`queries` -> `query`, `entries` -> `entry`);
++   - ends with `sses` -> drop the final `es` (`classes` -> `class`);
++   - ends with `ches`, `shes` or `xes` -> drop `es` (`patches` -> `patch`, `boxes` -> `box`);
++   - ends with `s` -> drop `s` (`proposals` -> `proposal`, `notes` -> `note`, `files` -> `file`);
++   - otherwise unchanged.
++2. `tokenize_clean(text)`: take `tokenize(text)` (phase 03 rules), map each token through
++   `normalize_term`, and drop a token when the original token or its normalised form is in
++   `STOP_WORDS` or `EXTRA_STOP_WORDS`, or when the normalised form is shorter than 3
++   characters. Order preserved, duplicates kept. Result is lowercase normalised terms.
++3. `extract_topics_clean(docs, k)`: one vector per doc, same order. Tokens come from
++   `tokenize_clean`. `N` = number of docs, `df(t)` = number of docs containing t.
++   - When `N >= 10`, a term with `df(t) / N > 0.4` is never a topic (too generic).
++   - Score = `tf * idf * boost`, with `tf = count(t,d) / tokens(d)`,
++     `idf = ln((1 + N) / (1 + df(t))) + 1`, `boost = 1.5` when t is in `TECH_TERMS`, else 1.
++     (`tokens(d)` counts all clean tokens of d, including too-generic ones.)
++   - Top `k` terms by score descending, ties by term ascending. Empty doc or `k == 0` -> empty
++     vector. Same input -> same output.
++4. `publish` (ingest and hook) uses `extract_topics_clean(&docs, 8)`; graph.json topic nodes
++   (`topic:<term>`), session `meta.topics` and the session note `topics:` line all carry the
++   clean terms.
++5. `STOP_WORDS`, `tokenize` and `extract_topics` are unchanged.
++
++## Acceptance criteria
++- AC-08-01: `normalize_term` follows every rule in Behaviour 1, including the short-word and `ss/us/is/os` exceptions.
++- AC-08-02: `tokenize_clean("Proposals and PROPOSAL notes this evening")` returns `["proposal", "proposal", "note"]`.
++- AC-08-03: Every word in `EXTRA_STOP_WORDS` and `STOP_WORDS` (and its plural `<word>s`) is dropped by `tokenize_clean`; both lists are lowercase.
++- AC-08-04: `extract_topics_clean` merges plural and singular counts into one topic: a doc with "proposal proposals proposals invoice" has `proposal` as its first topic.
++- AC-08-05: With 10 or more docs, a term present in more than 40% of them never appears as a topic; with fewer than 10 docs no term is excluded for frequency.
++- AC-08-06: At equal frequency in a doc, a `TECH_TERMS` term ranks above a non-tech term with the same document frequency.
++- AC-08-07: `extract_topics_clean` returns at most k terms per doc, an empty vector for an empty doc or k = 0, ties alphabetical, deterministic.
++- AC-08-08: `kb ingest` on a fixture whose sessions say "proposals" and "evening" writes graph.json with a `topic:proposal` node and no `topic:proposals` or `topic:evening` node.
++- AC-08-09: The phase 03 functions keep their behaviour (existing phase 03 tests stay green).
++
++## External systems to mock
++- None (pure functions; the CLI test uses a temporary folder fixture).
++
++## Dependencies on earlier phases
++- Phase 03: `tokenize`, `STOP_WORDS`, TF-IDF definition.
++- Phase 06: `kb ingest`, `--claude-dir`, `--out`, output layout `<out>/graph/graph.json`.
+diff --git a/specs/phase-09.md b/specs/phase-09.md
+new file mode 100644
+index 0000000..626f76f
+--- /dev/null
++++ b/specs/phase-09.md
+@@ -0,0 +1,93 @@
++# Phase 09: `kb context` - token-light context for assistants (GraphRAG)
++
++## Intent
++Let a future assistant (or Sarthak) ask "what do I already know about X?" and get a short
++Markdown block built from the knowledge graph - matching sessions, related topics, files and
++projects - instead of reading whole transcripts. Offline, read-only.
++
++## Complexity
++M - scoring, ranking and exact rendering with truncation, plus a new CLI command.
++
++## Scope
++- In scope: library module `kb_core::context` (pure) and the `kb context` command in
++  `core/src/main.rs` (plus a usage line).
++- Out of scope: embeddings, MCP/HTTP servers, writing anything to disk.
++
++## Interface contract
++Tests in `core/tests/phase09_context.rs`: unit tests on `kb_core::context` with graph JSON
++strings built in the test, and CLI tests running `env!("CARGO_BIN_EXE_kb")` with `--out <tmp>`
++where the test writes `<tmp>/graph/graph.json` itself.
++
++| Item | Location (file / module) | Signature or shape | Errors |
++|---|---|---|---|
++| `ContextOptions` | `kb_core::context` | `pub struct ContextOptions { pub limit: usize, pub max_chars: usize }`, `impl Default` = `{ limit: 8, max_chars: 4000 }` | - |
++| `build_context` | `kb_core::context` | `pub fn build_context(graph_json: &str, query: &str, opts: &ContextOptions) -> Result<String, kb_core::KbError>` | `KbError::Parse(_)` when the text is not JSON or has no `nodes`/`links` arrays |
++| CLI | `kb` binary | `kb context <query words...> [--out <dir>] [--limit <n>] [--max-chars <n>]` | exit 2 usage errors, exit 1 runtime errors |
++
++Graph shape (phase 05): `{"nodes":[{"id","type","label","size","meta"}],"links":[{"source","target","type"}]}`.
++Session nodes: `id` `session:<id>`, `label` = title, `meta.started_at` (string or null),
++`meta.project` (string or null), `meta.topics` (array of strings), `meta.node_file` (string).
++Links from a session: `has_topic` -> `topic:<t>`, `touched_file` -> `file:<path>` (label = path),
++`in_project` -> `project:<name>`.
++
++## Behaviour
++1. Query terms = `tokenize_clean(query)` (phase 08), duplicates removed, first-seen order. No
++   terms -> `No sessions match "<query>".\n` (query shown trimmed).
++2. Score of a session = sum over query terms t of:
++   3 if t equals `normalize_term` of one of its `meta.topics`;
++   2 if t is in `tokenize_clean(label)`;
++   2 if t is in `tokenize_clean(meta.project)` (when project is a string);
++   1 if the lowercase label of any file node it links to via `touched_file` contains t.
++   Sessions with score 0 are not matches.
++3. Order: score descending, then `started_at` descending (missing/null last), then id
++   ascending. Show the first `opts.limit` matches.
++4. Output (sections with no items are omitted, items separated by `\n`, sections by a blank line):
++   ```
++   # Context: <query trimmed>
++
++   Matched <M> of <N> sessions (showing <S>).
++
++   ## Sessions
++   - <first 10 chars of started_at or "undated"> · <label> · project: <project or "-"> · topics: <meta.topics joined ", " or "-"> · note: <meta.node_file>
++
++   ## Related topics
++   - <topic> (<count>)
++
++   ## Files
++   - <path> (<count>)
++
++   ## Projects
++   - <name> (<count>)
++   ```
++   N = number of session nodes, M = matches, S = shown. Related topics: across shown sessions,
++   count of sessions per `meta.topics` value, excluding values whose normalised form is a
++   query term; count descending then name ascending; at most 10. Files: `touched_file` labels
++   of shown sessions, count of sessions, same order, at most 10. Projects: `meta.project` of
++   shown sessions, same order, at most 5. No matches -> exactly `No sessions match "<query>".\n`.
++5. Output ends with exactly one `\n`. When longer than `max_chars` characters, keep whole lines
++   from the top while the kept text plus `… [truncated]\n` fits in `max_chars`, then append
++   `… [truncated]\n`. Same input -> byte-identical output.
++6. CLI: arguments that are not flags (or flag values) are query words, joined with one space;
++   flags may come before or after them. `--out` as for ingest (default `$KB_HOME`, else
++   `~/claude-kb`); reads `<out>/graph/graph.json`; prints the result to stdout, exit 0
++   (also for no matches). No query words, unknown flag, missing flag value, or a `--limit` /
++   `--max-chars` that is not a positive integer -> message on stderr, exit 2. Missing or
++   unreadable graph.json -> stderr message containing `graph.json`, exit 1. Invalid graph ->
++   stderr message, exit 1. `kb help` usage text gains a `kb context` line.
++
++## Acceptance criteria
++- AC-09-01: Topic matches outweigh title matches, which outweigh file-path matches (3/2/1 scoring), and a project-name match counts 2.
++- AC-09-02: Ties are ordered by newest `started_at` first, undated last, then id.
++- AC-09-03: The output follows the exact layout, including `Matched M of N sessions (showing S).` and the session line format with `undated`, `-` project and `-` topics.
++- AC-09-04: Related topics exclude the query terms (also their plural forms), are counted per session and capped at 10; files capped at 10, projects at 5; empty sections are omitted.
++- AC-09-05: `limit` caps the shown sessions; `max_chars` truncation keeps whole lines and ends with `… [truncated]\n` within the limit.
++- AC-09-06: No match (or a query of only stop words) gives exactly `No sessions match "<query>".\n`.
++- AC-09-07: `build_context` returns `KbError::Parse` for non-JSON and for JSON without `nodes`/`links`.
++- AC-09-08: `kb context proposal app --out <dir>` prints the context and exits 0; flags after the query work.
++- AC-09-09: `kb context` with no query, an unknown flag or `--limit 0` exits 2; a missing graph.json exits 1 with a message mentioning `graph.json`.
++
++## External systems to mock
++- None (graph.json written by the test into a temporary folder).
++
++## Dependencies on earlier phases
++- Phase 05: graph.json shape. Phase 06: `--out` / `KB_HOME` default. Phase 08: `tokenize_clean`, `normalize_term`.

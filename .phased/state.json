@@ -1,8 +1,8 @@
 {
   "initialized": true,
   "self_test_passed": true,
-  "phase": "07",
-  "title": "3D explorer web app",
+  "phase": "09",
+  "title": "`kb context` - token-light context for assistants (GraphRAG)",
   "stage": "done",
   "history": [
     {
@@ -564,11 +564,193 @@
       "at": "2026-11-01T21:08:33+05:30",
       "event": "kba-facts",
       "phase": "07"
+    },
+    {
+      "at": "2026-11-01T23:41:45+05:30",
+      "event": "plan",
+      "phase": "07",
+      "change": "changes/2026-11-01-graph-insights"
+    },
+    {
+      "at": "2026-11-01T23:49:59+05:30",
+      "event": "approve-plan",
+      "phase": "07",
+      "phases": [
+        "08",
+        "09"
+      ]
+    },
+    {
+      "at": "2026-11-01T23:50:46+05:30",
+      "event": "prefetch",
+      "phase": "07",
+      "phases": [
+        "08",
+        "09"
+      ]
+    },
+    {
+      "at": "2026-11-01T23:59:48+05:30",
+      "event": "prefetch-done",
+      "phase": "07",
+      "ready": [
+        "08",
+        "09"
+      ],
+      "dropped": []
+    },
+    {
+      "at": "2026-11-01T23:59:50+05:30",
+      "event": "start",
+      "phase": "08",
+      "title": "Clean topics"
+    },
+    {
+      "at": "2026-11-01T23:59:50+05:30",
+      "event": "approve-spec",
+      "phase": "08",
+      "criteria": [
+        "AC-08-01",
+        "AC-08-02",
+        "AC-08-03",
+        "AC-08-04",
+        "AC-08-05",
+        "AC-08-06",
+        "AC-08-07",
+        "AC-08-08",
+        "AC-08-09"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-01T23:59:50+05:30",
+      "event": "tests-moved-in",
+      "phase": "08",
+      "files": 3
+    },
+    {
+      "at": "2026-11-02T00:00:15+05:30",
+      "event": "red",
+      "phase": "08",
+      "tests": 3
+    },
+    {
+      "at": "2026-11-02T00:01:15+05:30",
+      "event": "review-prep",
+      "phase": "08",
+      "round": 1
+    },
+    {
+      "at": "2026-11-02T00:02:50+05:30",
+      "event": "review",
+      "phase": "08",
+      "round": 1,
+      "verdict": "FAIL",
+      "important": 1
+    },
+    {
+      "at": "2026-11-02T00:03:27+05:30",
+      "event": "review-prep",
+      "phase": "08",
+      "round": 2
+    },
+    {
+      "at": "2026-11-02T00:03:56+05:30",
+      "event": "review",
+      "phase": "08",
+      "round": 2,
+      "verdict": "PASS",
+      "important": 0
+    },
+    {
+      "at": "2026-11-02T00:04:05+05:30",
+      "event": "finish",
+      "phase": "08",
+      "commit": "e0c156e613bced67dc30048db36ba68d001dd4fb"
+    },
+    {
+      "at": "2026-11-02T00:04:07+05:30",
+      "event": "start",
+      "phase": "09",
+      "title": "`kb context` - token-light context for assistants (GraphRAG)"
+    },
+    {
+      "at": "2026-11-02T00:04:07+05:30",
+      "event": "approve-spec",
+      "phase": "09",
+      "criteria": [
+        "AC-09-01",
+        "AC-09-02",
+        "AC-09-03",
+        "AC-09-04",
+        "AC-09-05",
+        "AC-09-06",
+        "AC-09-07",
+        "AC-09-08",
+        "AC-09-09"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-02T00:04:07+05:30",
+      "event": "tests-moved-in",
+      "phase": "09",
+      "files": 2
+    },
+    {
+      "at": "2026-11-02T00:04:48+05:30",
+      "event": "red",
+      "phase": "09",
+      "tests": 2
+    },
+    {
+      "at": "2026-11-02T00:05:44+05:30",
+      "event": "review-prep",
+      "phase": "09",
+      "round": 1
+    },
+    {
+      "at": "2026-11-02T00:06:49+05:30",
+      "event": "review",
+      "phase": "09",
+      "round": 1,
+      "verdict": "FAIL",
+      "important": 1
+    },
+    {
+      "at": "2026-11-02T00:07:35+05:30",
+      "event": "review-prep",
+      "phase": "09",
+      "round": 2
+    },
+    {
+      "at": "2026-11-02T00:08:17+05:30",
+      "event": "review",
+      "phase": "09",
+      "round": 2,
+      "verdict": "PASS",
+      "important": 0
+    },
+    {
+      "at": "2026-11-02T00:08:26+05:30",
+      "event": "finish",
+      "phase": "09",
+      "commit": "9ea9520b0be76699b249752a9b8b31a93329d9e6"
+    },
+    {
+      "at": "2026-11-02T00:08:34+05:30",
+      "event": "report",
+      "phase": "09"
+    },
+    {
+      "at": "2026-11-02T00:08:34+05:30",
+      "event": "kba-facts",
+      "phase": "09"
     }
   ],
-  "change_dir": "changes/2026-11-01-conversation-kb",
-  "base_commit": "97877cff28daa93eb258682c5d2d65b7515d3da0",
-  "change_sha256": "27c5d0e065374a993582c882149be55d939befd7a7295153cfc78e4962ec768e",
+  "change_dir": "changes/2026-11-01-graph-insights",
+  "base_commit": "d687f1c2c143563c04de522b4c1b469e4ea73925",
+  "change_sha256": "edf8a1539bf36e0d50148f33a22ce666a314323b2641c72d53bad4be47d42755",
   "approved_specs": {
     "01": "01527e477aa90e33e8bb613e55b1396690ec40feae5f8c7c307d20e0abc62f70",
     "02": "d1083c8313f6c92a4b22916064d84005ca65389623c38fe5a37ac1b4ed1f8c47",
@@ -576,29 +758,27 @@
     "04": "ce2d94154e4b7303315fcb7edec70bd24fa11801558971629f71bac902e86649",
     "05": "2dad2f850e17cdd7cfcc127aeadcabd65b0a8b27e2946daaf3ceb387a7b8d895",
     "06": "d1982818f0df1140e6660f14262fa5720a0b7ed6ec7e2ce2793a2d404cf8b256",
-    "07": "74125299bb42ccb25b6197d0edba5144b952e46ef005f9f11f381f6c47063009"
+    "07": "74125299bb42ccb25b6197d0edba5144b952e46ef005f9f11f381f6c47063009",
+    "08": "34062d84b3b93f6e62a9b4a0c17754dc949d3fc4cc6bbd7704fcf9e369881f10",
+    "09": "ee26e597b1a04a07840b9384d34393490f9cc8e94be8c8b84bd9aeca0bc9a117"
   },
   "change_phases": [
-    "01",
-    "02",
-    "03",
-    "04",
-    "05",
-    "06",
-    "07"
+    "08",
+    "09"
   ],
   "pending_tests": {},
   "review": {
     "verdict": "PASS",
-    "lock_digest": "d3f7aa01d06336135d2d98218b74f6ed27f51c5b907babd93c96e4f680220841",
-    "at": "2026-11-01T21:02:23+05:30"
+    "lock_digest": "474c9d89d7089761cd69dbfb78ce26dba64eceafb50e667748f6ceea938ac296",
+    "at": "2026-11-02T00:04:07+05:30",
+    "prefetched": true
   },
   "red": {
     "ok": true,
-    "lock_digest": "d3f7aa01d06336135d2d98218b74f6ed27f51c5b907babd93c96e4f680220841",
-    "evidence": ".phased/evidence/phase-07-red.log"
+    "lock_digest": "474c9d89d7089761cd69dbfb78ce26dba64eceafb50e667748f6ceea938ac296",
+    "evidence": ".phased/evidence/phase-09-red.log"
   },
-  "spec_sha256": "74125299bb42ccb25b6197d0edba5144b952e46ef005f9f11f381f6c47063009",
+  "spec_sha256": "ee26e597b1a04a07840b9384d34393490f9cc8e94be8c8b84bd9aeca0bc9a117",
   "code_reviews": {
     "01": {
       "rounds": [
@@ -724,6 +904,54 @@
           "classes": []
         }
       ]
+    },
+    "08": {
+      "rounds": [
+        {
+          "tree": "6551fc0d1b13c3ed65407c6da8ec8a4ac801295e",
+          "at": "2026-11-02T00:01:15+05:30",
+          "verdict": "FAIL",
+          "important": 1,
+          "nits": 3,
+          "preexisting": 1,
+          "classes": [
+            "TECH_TERMS entries mangled by normalize_term"
+          ]
+        },
+        {
+          "tree": "fa17ba3db402276bde7c442409073f5176de17f5",
+          "at": "2026-11-02T00:03:27+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 2,
+          "preexisting": 0,
+          "classes": []
+        }
+      ]
+    },
+    "09": {
+      "rounds": [
+        {
+          "tree": "3b27090c845bd042f91e367af88923abe0726811",
+          "at": "2026-11-02T00:05:44+05:30",
+          "verdict": "FAIL",
+          "important": 1,
+          "nits": 4,
+          "preexisting": 0,
+          "classes": [
+            "term and topic compared in different normalised forms for tech terms"
+          ]
+        },
+        {
+          "tree": "ce6b7bbc66bad5e73779a66c575d39baae557d1e",
+          "at": "2026-11-02T00:07:35+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 1,
+          "preexisting": 0,
+          "classes": []
+        }
+      ]
     }
   },
   "durations": [
@@ -761,6 +989,16 @@
       "phase": "07",
       "level": "M",
       "minutes": 8.7
+    },
+    {
+      "phase": "08",
+      "level": "M",
+      "minutes": 4.3
+    },
+    {
+      "phase": "09",
+      "level": "M",
+      "minutes": 4.3
     }
   ]
 }

@@ -10,6 +10,7 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+use kb_core::context::{build_context, ContextOptions};
 use kb_core::{claude_ai, claude_code, KbError, Session};
 
 use crate::install::{install_hook, Installed};
@@ -18,7 +19,8 @@ use crate::store::{cache_key, fingerprint, load_cache, publish, Cache, Counts, E
 const USAGE: &str = "usage:
   kb ingest [--claude-dir <dir>] [--claude-ai <path>]... [--out <dir>] [--no-redact]
   kb hook [--out <dir>] [--no-redact]
-  kb install-hook --settings <file> [--command <cmd>]";
+  kb install-hook --settings <file> [--command <cmd>]
+  kb context <query words...> [--out <dir>] [--limit <n>] [--max-chars <n>]";
 
 /// Exit code for bad command line arguments.
 const EXIT_USAGE: u8 = 2;
@@ -295,6 +297,58 @@ fn run_install(args: &[String]) -> Result<(), (u8, String)> {
 }
 
 // ---------------------------------------------------------------------------------------------
+// context
+// ---------------------------------------------------------------------------------------------
+
+/// A positive integer flag value.
+fn positive(flag: &str, value: &str) -> Result<usize, String> {
+    match value.parse::<usize>() {
+        Ok(n) if n > 0 => Ok(n),
+        _ => Err(format!("{flag} needs a positive integer, got: {value}")),
+    }
+}
+
+fn run_context(args: &[String]) -> Result<(), (u8, String)> {
+    let mut words: Vec<&str> = Vec::new();
+    let mut opts = Opts::default();
+    let mut ctx = ContextOptions::default();
+    let mut it = args.iter();
+    while let Some(arg) = it.next() {
+        if !arg.starts_with('-') || arg == "-" {
+            words.push(arg);
+            continue;
+        }
+        let value = match arg.as_str() {
+            "--out" | "--limit" | "--max-chars" => it
+                .next()
+                .ok_or_else(|| (EXIT_USAGE, format!("missing value for {arg}")))?,
+            _ => return Err((EXIT_USAGE, format!("unknown argument: {arg}"))),
+        };
+        match arg.as_str() {
+            "--out" => opts.out = Some(PathBuf::from(value)),
+            "--limit" => ctx.limit = positive(arg, value).map_err(|e| (EXIT_USAGE, e))?,
+            _ => ctx.max_chars = positive(arg, value).map_err(|e| (EXIT_USAGE, e))?,
+        }
+    }
+    if words.is_empty() {
+        return Err((EXIT_USAGE, "missing query".to_string()));
+    }
+    let query = words.join(" ");
+    let out = out_dir(&opts).map_err(|e| (EXIT_FAILURE, e))?;
+    let path = out.join("graph").join("graph.json");
+    let text = std::fs::read_to_string(&path).map_err(|e| {
+        (
+            EXIT_FAILURE,
+            format!("cannot read {}: {e}", path.display()),
+        )
+    })?;
+    let result = build_context(&text, &query, &ctx)
+        .map_err(|e| (EXIT_FAILURE, format!("{}: {e}", path.display())))?;
+    print!("{result}");
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------------------------
 
 fn fail(code: u8, msg: &str) -> ExitCode {
     eprintln!("kb: {msg}");
@@ -338,6 +392,10 @@ fn main() -> ExitCode {
             Err((code, msg)) => fail(code, &msg),
         },
         "install-hook" => match run_install(rest) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err((code, msg)) => fail(code, &msg),
+        },
+        "context" => match run_context(rest) {
             Ok(()) => ExitCode::SUCCESS,
             Err((code, msg)) => fail(code, &msg),
         },

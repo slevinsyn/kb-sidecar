@@ -1,0 +1,43 @@
+diff --git a/core/src/context.rs b/core/src/context.rs
+index 4344989..f695fa3 100644
+--- a/core/src/context.rs
++++ b/core/src/context.rs
+@@ -124,12 +124,15 @@ fn parse_sessions(root: &Value) -> Result<Vec<SessionInfo>, KbError> {
+     Ok(sessions)
+ }
+ 
++/// True if a stored topic equals a query term. Query terms come from
++/// `tokenize_clean`, which keeps tech terms verbatim and normalizes the rest,
++/// so both the lowercased topic and its normalized form are compared.
++fn topic_matches_term(topic: &str, term: &str) -> bool {
++    let lower = topic.to_ascii_lowercase();
++    term == lower || term == normalize_term(&lower)
++}
++
+ fn score(s: &SessionInfo, terms: &[String]) -> usize {
+-    let topics: BTreeSet<String> = s
+-        .topics
+-        .iter()
+-        .map(|t| normalize_term(&t.to_ascii_lowercase()))
+-        .collect();
+     let title: BTreeSet<String> = tokenize_clean(&s.label).into_iter().collect();
+     let project: BTreeSet<String> = s
+         .project
+@@ -142,7 +145,7 @@ fn score(s: &SessionInfo, terms: &[String]) -> usize {
+         .iter()
+         .map(|t| {
+             let mut sc = 0;
+-            if topics.contains(t) {
++            if s.topics.iter().any(|topic| topic_matches_term(topic, t)) {
+                 sc += 3;
+             }
+             if title.contains(t) {
+@@ -260,7 +263,7 @@ pub fn build_context(
+ 
+         let distinct: BTreeSet<&String> = s.topics.iter().collect();
+         for t in distinct {
+-            if !terms.contains(&normalize_term(&t.to_ascii_lowercase())) {
++            if !terms.iter().any(|term| topic_matches_term(t, term)) {
+                 *topic_counts.entry(t.clone()).or_insert(0) += 1;
+             }
+         }

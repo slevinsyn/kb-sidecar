@@ -1,0 +1,21 @@
+diff --git a/core/src/topics.rs b/core/src/topics.rs
+index 0caa452..eb31140 100644
+--- a/core/src/topics.rs
++++ b/core/src/topics.rs
+@@ -75,8 +75,15 @@ pub fn tokenize_clean(text: &str) -> Vec<String> {
+     tokenize(text)
+         .into_iter()
+         .filter_map(|tok| {
++            if is_noise(&tok) {
++                return None;
++            }
++            // Technology terms are kept verbatim (normalising would misspell e.g. "kubernetes").
++            if TECH_TERMS.contains(&tok.as_str()) {
++                return Some(tok);
++            }
+             let norm = normalize_term(&tok);
+-            if is_noise(&tok) || is_noise(&norm) || norm.len() < 3 {
++            if is_noise(&norm) || norm.len() < 3 {
+                 None
+             } else {
+                 Some(norm)

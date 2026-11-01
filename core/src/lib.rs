@@ -2,6 +2,7 @@
 
 pub mod claude_ai;
 pub mod claude_code;
+pub mod context;
 pub mod dataset;
 pub mod error;
 pub mod graph;
