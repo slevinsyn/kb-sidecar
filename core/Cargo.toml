@@ -1,0 +1,15 @@
+[package]
+name = "kb-core"
+version = "0.1.0"
+edition = "2021"
+description = "Conversation knowledge base: session nodes, training dataset and graph data"
+
+[lib]
+name = "kb_core"
+path = "src/lib.rs"
+
+[[bin]]
+name = "kb"
+path = "src/main.rs"
+
+[dependencies]

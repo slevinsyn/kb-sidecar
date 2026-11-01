@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# phased: block AI attribution and enforce 'Phase NN: title'. Installed by /phased-init.
+ROOT="$(git rev-parse --show-toplevel)" || exit 1
+PY="$(command -v python3 || command -v python)" || { echo "phased: python3 not found" >&2; exit 1; }
+exec "$PY" "$ROOT/.phased/bin/msgcheck.py" "$1"

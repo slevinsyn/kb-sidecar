@@ -1,0 +1,151 @@
+{
+  "version": 1,
+  "ci_provider": "unknown",
+  "runs_per_gate": 2,
+  "enforce_phase_messages": true,
+  "test_writer_agents": [
+    "phased:test-writer",
+    "test-writer",
+    "waddaya-dev:test-writer"
+  ],
+  "test_reviewer_agents": [
+    "phased:test-reviewer",
+    "test-reviewer",
+    "waddaya-dev:test-reviewer"
+  ],
+  "context_budget_tokens": null,
+  "auto_retest_limit": 1,
+  "max_parallel_agents": 4,
+  "review_rounds": 3,
+  "company_name": "Waddaya Solutions Private Limited",
+  "components": [
+    {
+      "name": "core-rust",
+      "ecosystem": "rust",
+      "label": "Rust",
+      "root": "core",
+      "source_globs": [
+        "core/src/**"
+      ],
+      "test_globs": [
+        "core/tests/**",
+        "core/benches/**"
+      ],
+      "test_config_globs": [],
+      "manifest_files": [],
+      "skip_patterns": [
+        "#\\[ignore",
+        "#\\[cfg\\(not\\(test\\)\\)\\]"
+      ],
+      "config_skip_patterns": [],
+      "suppression_patterns": [
+        "#!?\\[allow\\("
+      ],
+      "wrong_reason_patterns": [
+        "error\\[E\\d+\\]",
+        "could not compile"
+      ],
+      "no_tests_patterns": [
+        "running 0 tests"
+      ],
+      "no_tests_exit_codes": [],
+      "test_command": "cargo test --quiet",
+      "lint_command": "cargo clippy --quiet -- -D warnings",
+      "typecheck_command": "",
+      "setup_command": "",
+      "holdout_dir": "",
+      "holdout_command": "",
+      "ci_setup": [
+        {
+          "uses": "dtolnay/rust-toolchain@stable"
+        }
+      ]
+    },
+    {
+      "name": "explorer-javascript",
+      "ecosystem": "javascript",
+      "label": "JavaScript / TypeScript",
+      "root": "explorer",
+      "source_globs": [
+        "explorer/**/*.js",
+        "explorer/**/*.jsx",
+        "explorer/**/*.ts",
+        "explorer/**/*.tsx",
+        "explorer/**/*.mjs",
+        "explorer/**/*.cjs"
+      ],
+      "test_globs": [
+        "explorer/**/*.test.*",
+        "explorer/**/*.spec.*",
+        "explorer/**/__tests__/**",
+        "explorer/tests/**",
+        "explorer/test/**",
+        "explorer/e2e/**"
+      ],
+      "test_config_globs": [
+        "explorer/jest.config.*",
+        "explorer/vitest.config.*",
+        "explorer/vitest.workspace.*",
+        "explorer/playwright.config.*",
+        "explorer/karma.conf.*",
+        "explorer/.mocharc*"
+      ],
+      "manifest_files": [
+        "package.json"
+      ],
+      "skip_patterns": [
+        "\\b(it|test|describe|context)\\.skip\\b",
+        "\\b(it|test|describe)\\.only\\b",
+        "\\b(it|test)\\.todo\\b",
+        "\\bx(it|test|describe)\\s*\\(",
+        "\\bf(it|describe)\\s*\\("
+      ],
+      "config_skip_patterns": [
+        "passWithNoTests",
+        "testPathIgnorePatterns",
+        "modulePathIgnorePatterns",
+        "--bail=0",
+        "\\bexclude\\s*:"
+      ],
+      "suppression_patterns": [
+        "eslint-disable",
+        "@ts-ignore",
+        "@ts-nocheck",
+        "@ts-expect-error",
+        "istanbul ignore",
+        "c8 ignore",
+        "biome-ignore"
+      ],
+      "wrong_reason_patterns": [
+        "Cannot find module",
+        "Module not found",
+        "SyntaxError",
+        "Test suite failed to run",
+        "TS2307",
+        "Failed to load url",
+        "ERR_MODULE_NOT_FOUND"
+      ],
+      "no_tests_patterns": [
+        "No tests found",
+        "No test files found",
+        "0 passing"
+      ],
+      "no_tests_exit_codes": [],
+      "test_command": "npx vitest run --exclude 'tests/holdout/**'",
+      "lint_command": "",
+      "typecheck_command": "npx tsc --noEmit",
+      "setup_command": "npm ci",
+      "holdout_dir": "explorer/tests/holdout",
+      "holdout_command": "cd explorer && npx vitest run tests/holdout --reporter=dot",
+      "ci_setup": [
+        {
+          "uses": "actions/setup-node@v4",
+          "with": {
+            "node-version": "20"
+          }
+        }
+      ],
+      "framework": "vitest"
+    }
+  ]
+}

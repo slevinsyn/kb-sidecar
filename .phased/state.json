@@ -1,0 +1,19 @@
+{
+  "initialized": true,
+  "self_test_passed": true,
+  "phase": null,
+  "title": null,
+  "stage": null,
+  "history": [
+    {
+      "event": "self-test",
+      "passed": false,
+      "failed": 34
+    },
+    {
+      "event": "self-test",
+      "passed": true,
+      "failed": 0
+    }
+  ]
+}
