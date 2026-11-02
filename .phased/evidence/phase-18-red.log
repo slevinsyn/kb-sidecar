@@ -1,0 +1,163 @@
+== core-rust (run 1): cargo test --quiet -> exit 0
+
+warning: function `test_AC_02_06_corrupt_zip_is_parse_error` should have a snake case name
+   --> tests/phase02_claude_ai.rs:652:4
+    |
+652 | fn test_AC_02_06_corrupt_zip_is_parse_error() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_02_06_corrupt_zip_is_parse_error`
+
+warning: function `test_AC_02_06_json_file_with_invalid_content_is_parse_error` should have a snake case name
+   --> tests/phase02_claude_ai.rs:660:4
+    |
+660 | fn test_AC_02_06_json_file_with_invalid_content_is_parse_error() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_02_06_json_file_with_invalid_content_is_parse_error`
+
+warning: function `test_AC_05_01_shared_project_topic_and_tool_have_size_two` should have a snake case name
+   --> tests/phase05_graph.rs:128:4
+    |
+128 | fn test_AC_05_01_shared_project_topic_and_tool_have_size_two() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_05_01_shared_project_topic_and_tool_have_size_two`
+    |
+    = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+warning: function `test_AC_05_02_ids_kinds_labels_and_file_meta` should have a snake case name
+   --> tests/phase05_graph.rs:172:4
+    |
+172 | fn test_AC_05_02_ids_kinds_labels_and_file_meta() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_05_02_ids_kinds_labels_and_file_meta`
+
+warning: function `test_AC_05_02_session_size_is_at_least_one_and_file_size_counts_sessions` should have a snake case name
+   --> tests/phase05_graph.rs:233:4
+    |
+233 | fn test_AC_05_02_session_size_is_at_least_one_and_file_size_counts_sessions() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_05_02_session_size_is_at_least_one_and_file_size_counts_sessions`
+
+warning: function `test_AC_05_03_session_meta_contains_all_fields` should have a snake case name
+   --> tests/phase05_graph.rs:262:4
+    |
+262 | fn test_AC_05_03_session_meta_contains_all_fields() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_05_03_session_meta_contains_all_fields`
+
+warning: function `test_AC_05_04_claude_ai_session_has_topic_links_only` should have a snake case name
+   --> tests/phase05_graph.rs:297:4
+    |
+297 | fn test_AC_05_04_claude_ai_session_has_topic_links_only() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_05_04_claude_ai_session_has_topic_links_only`
+
+warning: function `test_AC_05_05_no_duplicate_nodes_or_links` should have a snake case name
+   --> tests/phase05_graph.rs:320:4
+    |
+320 | fn test_AC_05_05_no_duplicate_nodes_or_links() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_05_05_no_duplicate_nodes_or_links`
+
+warning: function `test_AC_05_05_duplicate_session_id_keeps_later_session` should have a snake case name
+   --> tests/phase05_graph.rs:352:4
+    |
+352 | fn test_AC_05_05_duplicate_session_id_keeps_later_session() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_05_05_duplicate_session_id_keeps_later_session`
+
+warning: function `test_AC_05_06_nodes_and_links_are_sorted` should have a snake case name
+   --> tests/phase05_graph.rs:389:4
+    |
+389 | fn test_AC_05_06_nodes_and_links_are_sorted() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_05_06_nodes_and_links_are_sorted`
+
+warning: function `test_AC_05_06_to_json_is_deterministic_and_uses_type_key` should have a snake case name
+   --> tests/phase05_graph.rs:438:4
+    |
+438 | fn test_AC_05_06_to_json_is_deterministic_and_uses_type_key() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_05_06_to_json_is_deterministic_and_uses_type_key`
+
+warning: function `test_AC_05_06_link_json_shape` should have a snake case name
+   --> tests/phase05_graph.rs:483:4
+    |
+483 | fn test_AC_05_06_link_json_shape() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_05_06_link_json_shape`
+
+warning: function `test_AC_05_07_empty_input_gives_empty_graph` should have a snake case name
+   --> tests/phase05_graph.rs:496:4
+    |
+496 | fn test_AC_05_07_empty_input_gives_empty_graph() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_05_07_empty_input_gives_empty_graph`
+== explorer-javascript (run 1): npx vitest run --exclude 'tests/holdout/**' -> exit 1
+    698|     const size = Number((m as RegExpExecArray)[1]);
+    699|     expect(size).toBeGreaterThanOrEqual(12);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/24]⎯
+
+ FAIL  tests/glare_shell.test.ts > AC-18-04 .scene-tooltip panel in index.html > AC-18-04 the panel has padding
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/glare_shell.test.ts:706:40
+    704|     const values = [...css.entries()].filter(([k]) => k.startsWith('pa…
+    705|     const numbers = values.flatMap((v) => v.match(/\d+(?:\.\d+)?/g) ??…
+    706|     expect(numbers.some((x) => x > 0)).toBe(true);
+       |                                        ^
+    707|   });
+    708|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/24]⎯
+
+ FAIL  tests/glare_shell.test.ts > AC-18-04 .scene-tooltip panel in index.html > AC-18-04 the panel has a border radius
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/glare_shell.test.ts:712:40
+    710|     const raw = css.get('border-radius') ?? '';
+    711|     const numbers = (raw.match(/\d+(?:\.\d+)?/g) ?? []).map(Number);
+    712|     expect(numbers.some((x) => x > 0)).toBe(true);
+       |                                        ^
+    713|   });
+    714|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22/24]⎯
+
+ FAIL  tests/glare_shell.test.ts > AC-18-04 .scene-tooltip panel in index.html > AC-18-04 short names do not wrap: white-space is nowrap
+AssertionError: expected undefined to be 'nowrap' // Object.is equality
+
+- Expected:
+"nowrap"
+
++ Received:
+undefined
+
+ ❯ tests/glare_shell.test.ts:716:71
+    714|
+    715|   it('AC-18-04 short names do not wrap: white-space is nowrap', () => {
+    716|     expect(css.get('white-space')?.replace(/!important/i, '').trim()).…
+       |                                                                       ^
+    717|   });
+    718|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[23/24]⎯
+
+ FAIL  tests/glare_shell.test.ts > AC-18-04 .scene-tooltip panel in index.html > AC-18-04 the panel does not catch the mouse: pointer-events is none
+AssertionError: expected undefined to be 'none' // Object.is equality
+
+- Expected:
+"none"
+
++ Received:
+undefined
+
+ ❯ tests/glare_shell.test.ts:720:74
+    718|
+    719|   it('AC-18-04 the panel does not catch the mouse: pointer-events is n…
+    720|     expect(css.get('pointer-events')?.replace(/!important/i, '').trim(…
+       |                                                                          ^
+    721|   });
+    722| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[24/24]⎯
+== explorer-javascript hidden tests -> exit 1:       Tests  19 failed | 81 passed (100) (details hidden)

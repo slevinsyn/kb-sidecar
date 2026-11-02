@@ -1,0 +1,163 @@
+== core-rust (run 1): cargo test --quiet -> exit 0
+
+warning: function `test_AC_06_10_default_command_is_running_executable_plus_hook` should have a snake case name
+    --> tests/phase06_cli.rs:1123:4
+     |
+1123 | fn test_AC_06_10_default_command_is_running_executable_plus_hook() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_06_10_default_command_is_running_executable_plus_hook`
+
+warning: function `test_AC_06_11_missing_settings_file_is_created_with_only_the_hook` should have a snake case name
+    --> tests/phase06_cli.rs:1154:4
+     |
+1154 | fn test_AC_06_11_missing_settings_file_is_created_with_only_the_hook() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_06_11_missing_settings_file_is_created_with_only_the_hook`
+
+warning: function `test_AC_06_11_invalid_json_exits_1_and_leaves_file_unchanged` should have a snake case name
+    --> tests/phase06_cli.rs:1173:4
+     |
+1173 | fn test_AC_06_11_invalid_json_exits_1_and_leaves_file_unchanged() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_06_11_invalid_json_exits_1_and_leaves_file_unchanged`
+
+warning: function `test_AC_06_11_wrong_json_types_exit_1_and_leave_file_unchanged` should have a snake case name
+    --> tests/phase06_cli.rs:1186:4
+     |
+1186 | fn test_AC_06_11_wrong_json_types_exit_1_and_leave_file_unchanged() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_06_11_wrong_json_types_exit_1_and_leave_file_unchanged`
+
+warning: function `test_AC_06_11_install_hook_without_settings_argument_exits_2` should have a snake case name
+    --> tests/phase06_cli.rs:1207:4
+     |
+1207 | fn test_AC_06_11_install_hook_without_settings_argument_exits_2() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_06_11_install_hook_without_settings_argument_exits_2`
+
+warning: function `hidden_AC_08_01_normalize_term_on_other_words` should have a snake case name
+  --> tests/holdout/phase08_hidden.rs:22:4
+   |
+22 | fn hidden_AC_08_01_normalize_term_on_other_words() {
+   |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `hidden_ac_08_01_normalize_term_on_other_words`
+   |
+   = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+warning: function `hidden_AC_08_02_tokenize_clean_on_other_sentences` should have a snake case name
+  --> tests/holdout/phase08_hidden.rs:52:4
+   |
+52 | fn hidden_AC_08_02_tokenize_clean_on_other_sentences() {
+   |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `hidden_ac_08_02_tokenize_clean_on_other_sentences`
+
+warning: function `hidden_AC_08_03_capitalised_plurals_and_lists` should have a snake case name
+  --> tests/holdout/phase08_hidden.rs:72:4
+   |
+72 | fn hidden_AC_08_03_capitalised_plurals_and_lists() {
+   |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `hidden_ac_08_03_capitalised_plurals_and_lists`
+
+warning: function `hidden_AC_08_04_AC_08_07_merge_limit_and_empty_docs` should have a snake case name
+  --> tests/holdout/phase08_hidden.rs:96:4
+   |
+96 | fn hidden_AC_08_04_AC_08_07_merge_limit_and_empty_docs() {
+   |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `hidden_ac_08_04_ac_08_07_merge_limit_and_empty_docs`
+
+warning: function `hidden_AC_08_05_frequency_cut_with_twelve_docs_and_not_with_nine` should have a snake case name
+   --> tests/holdout/phase08_hidden.rs:120:4
+    |
+120 | fn hidden_AC_08_05_frequency_cut_with_twelve_docs_and_not_with_nine() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `hidden_ac_08_05_frequency_cut_with_twelve_docs_and_not_with_nine`
+
+warning: function `hidden_AC_08_06_tech_boost_on_other_terms` should have a snake case name
+   --> tests/holdout/phase08_hidden.rs:155:4
+    |
+155 | fn hidden_AC_08_06_tech_boost_on_other_terms() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `hidden_ac_08_06_tech_boost_on_other_terms`
+
+warning: function `hidden_AC_08_09_phase_03_functions_unchanged` should have a snake case name
+   --> tests/holdout/phase08_hidden.rs:180:4
+    |
+180 | fn hidden_AC_08_09_phase_03_functions_unchanged() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `hidden_ac_08_09_phase_03_functions_unchanged`
+
+warning: function `hidden_AC_08_08_ingest_publishes_clean_topics_for_other_words` should have a snake case name
+   --> tests/holdout/phase08_hidden.rs:238:4
+    |
+238 | fn hidden_AC_08_08_ingest_publishes_clean_topics_for_other_words() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `hidden_ac_08_08_ingest_publishes_clean_topics_for_other_words`
+== explorer-javascript (run 1): npx vitest run --exclude 'tests/holdout/**' -> exit 1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[43/49]⎯
+
+ FAIL  tests/scene3d.test.ts > brightnessMap > AC-13-08 an empty graph gives an empty map and nothing is mutated
+Error: not implemented
+ ❯ brightnessMap src/scene3d.ts:35:9
+     33|
+     34| export function brightnessMap(_g: GraphData, _a: Analysis): Map<string…
+     35|   throw new Error('not implemented');
+       |         ^
+     36| }
+     37|
+ ❯ tests/scene3d.test.ts:620:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[44/49]⎯
+
+ FAIL  tests/scene3d.test.ts > brightnessMap > AC-13-08 with no dated session at all, every node is 0.5
+Error: not implemented
+ ❯ brightnessMap src/scene3d.ts:35:9
+     33|
+     34| export function brightnessMap(_g: GraphData, _a: Analysis): Map<string…
+     35|   throw new Error('not implemented');
+       |         ^
+     36| }
+     37|
+ ❯ tests/scene3d.test.ts:633:15
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[45/49]⎯
+
+ FAIL  tests/scene3d.test.ts > bridgeIds > AC-13-09 returns exactly the ids of a.bridges
+Error: not implemented
+ ❯ bridgeIds src/scene3d.ts:39:9
+     37|
+     38| export function bridgeIds(_a: Analysis): Set<string> {
+     39|   throw new Error('not implemented');
+       |         ^
+     40| }
+     41|
+ ❯ tests/scene3d.test.ts:651:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[46/49]⎯
+
+ FAIL  tests/scene3d.test.ts > bridgeIds > AC-13-09 an empty analysis gives an empty set
+Error: not implemented
+ ❯ bridgeIds src/scene3d.ts:39:9
+     37|
+     38| export function bridgeIds(_a: Analysis): Set<string> {
+     39|   throw new Error('not implemented');
+       |         ^
+     40| }
+     41|
+ ❯ tests/scene3d.test.ts:659:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[47/49]⎯
+
+ FAIL  tests/scene3d.test.ts > bridgeIds > AC-13-09 matches the bridges of a real analysis and excludes non-bridges
+Error: not implemented
+ ❯ bridgeIds src/scene3d.ts:39:9
+     37|
+     38| export function bridgeIds(_a: Analysis): Set<string> {
+     39|   throw new Error('not implemented');
+       |         ^
+     40| }
+     41|
+ ❯ tests/scene3d.test.ts:681:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[48/49]⎯
+
+ FAIL  tests/scene3d.test.ts > bridgeIds > AC-13-09 an empty parsed graph has no bridge ids
+Error: not implemented
+ ❯ bridgeIds src/scene3d.ts:39:9
+     37|
+     38| export function bridgeIds(_a: Analysis): Set<string> {
+     39|   throw new Error('not implemented');
+       |         ^
+     40| }
+     41|
+ ❯ tests/scene3d.test.ts:690:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[49/49]⎯
+== explorer-javascript hidden tests -> exit 1:       Tests  8 failed | 45 passed (53) (details hidden)

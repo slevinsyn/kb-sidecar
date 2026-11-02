@@ -1,0 +1,163 @@
+== core-rust (run 1): cargo test --quiet -> exit 0
+1025 | fn test_AC_03_08_large_result_reports_the_removed_count() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_03_08_large_result_reports_the_removed_count`
+
+warning: function `test_AC_03_08_truncated_error_result_keeps_both_markers` should have a snake case name
+    --> tests/phase03_nodes.rs:1033:4
+     |
+1033 | fn test_AC_03_08_truncated_error_result_keeps_both_markers() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_03_08_truncated_error_result_keeps_both_markers`
+
+warning: function `test_AC_03_08_tool_input_is_not_truncated` should have a snake case name
+    --> tests/phase03_nodes.rs:1041:4
+     |
+1041 | fn test_AC_03_08_tool_input_is_not_truncated() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_03_08_tool_input_is_not_truncated`
+
+warning: function `test_AC_03_09_result_with_triple_backticks_gets_four_backtick_fence` should have a snake case name
+    --> tests/phase03_nodes.rs:1058:4
+     |
+1058 | fn test_AC_03_09_result_with_triple_backticks_gets_four_backtick_fence() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_03_09_result_with_triple_backticks_gets_four_backtick_fence`
+
+warning: function `test_AC_03_09_fence_is_one_longer_than_the_longest_run` should have a snake case name
+    --> tests/phase03_nodes.rs:1067:4
+     |
+1067 | fn test_AC_03_09_fence_is_one_longer_than_the_longest_run() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_03_09_fence_is_one_longer_than_the_longest_run`
+
+warning: function `test_AC_03_09_longest_run_counts_even_when_it_is_not_first` should have a snake case name
+    --> tests/phase03_nodes.rs:1074:4
+     |
+1074 | fn test_AC_03_09_longest_run_counts_even_when_it_is_not_first() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_03_09_longest_run_counts_even_when_it_is_not_first`
+
+warning: function `test_AC_03_09_short_backtick_runs_keep_the_minimum_three_backtick_fence` should have a snake case name
+    --> tests/phase03_nodes.rs:1081:4
+     |
+1081 | fn test_AC_03_09_short_backtick_runs_keep_the_minimum_three_backtick_fence() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_03_09_short_backtick_runs_keep_the_minimum_three_backtick_fence`
+
+warning: function `test_AC_03_09_tool_input_with_backticks_gets_longer_json_fence` should have a snake case name
+    --> tests/phase03_nodes.rs:1089:4
+     |
+1089 | fn test_AC_03_09_tool_input_with_backticks_gets_longer_json_fence() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_03_09_tool_input_with_backticks_gets_longer_json_fence`
+
+warning: function `test_AC_03_09_tool_input_without_backticks_uses_three_backticks` should have a snake case name
+    --> tests/phase03_nodes.rs:1102:4
+     |
+1102 | fn test_AC_03_09_tool_input_without_backticks_uses_three_backticks() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_03_09_tool_input_without_backticks_uses_three_backticks`
+
+warning: function `test_AC_03_09_each_block_gets_its_own_fence_length` should have a snake case name
+    --> tests/phase03_nodes.rs:1114:4
+     |
+1114 | fn test_AC_03_09_each_block_gets_its_own_fence_length() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_03_09_each_block_gets_its_own_fence_length`
+
+warning: function `test_AC_03_10_render_is_byte_identical_across_calls` should have a snake case name
+    --> tests/phase03_nodes.rs:1131:4
+     |
+1131 | fn test_AC_03_10_render_is_byte_identical_across_calls() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_03_10_render_is_byte_identical_across_calls`
+
+warning: function `test_AC_03_10_output_ends_with_exactly_one_newline` should have a snake case name
+    --> tests/phase03_nodes.rs:1142:4
+     |
+1142 | fn test_AC_03_10_output_ends_with_exactly_one_newline() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_03_10_output_ends_with_exactly_one_newline`
+
+warning: function `test_AC_03_10_session_without_messages_ends_after_the_conversation_heading` should have a snake case name
+    --> tests/phase03_nodes.rs:1159:4
+     |
+1159 | fn test_AC_03_10_session_without_messages_ends_after_the_conversation_heading() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_03_10_session_without_messages_ends_after_the_conversation_heading`
+
+warning: function `test_AC_03_10_output_does_not_depend_on_other_calls` should have a snake case name
+    --> tests/phase03_nodes.rs:1165:4
+     |
+1165 | fn test_AC_03_10_output_does_not_depend_on_other_calls() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_03_10_output_does_not_depend_on_other_calls`
+== explorer-javascript (run 1): npx vitest run --exclude 'tests/holdout/**' -> exit 1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/10]⎯
+
+ FAIL  tests/glow.test.ts > glowLevels > AC-17-03 selected opacity and ring are 1
+Error: not implemented
+ ❯ glowLevels src/scene3d.ts:304:9
+    302|   void brightness;
+    303|   void state;
+    304|   throw new Error('not implemented');
+       |         ^
+    305| }
+    306|
+ ❯ tests/glow.test.ts:38:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/10]⎯
+
+ FAIL  tests/glow.test.ts > glowLevels > AC-17-04 dim gives 0, 0.3, 0.2 for any brightness
+Error: not implemented
+ ❯ glowLevels src/scene3d.ts:304:9
+    302|   void brightness;
+    303|   void state;
+    304|   throw new Error('not implemented');
+       |         ^
+    305| }
+    306|
+ ❯ tests/glow.test.ts:46:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/10]⎯
+
+ FAIL  tests/glow.test.ts > glowLevels > AC-17-05 brightness below 0 behaves like 0
+Error: not implemented
+ ❯ glowLevels src/scene3d.ts:304:9
+    302|   void brightness;
+    303|   void state;
+    304|   throw new Error('not implemented');
+       |         ^
+    305| }
+    306|
+ ❯ tests/glow.test.ts:54:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/10]⎯
+
+ FAIL  tests/glow.test.ts > glowLevels > AC-17-05 brightness above 1 behaves like 1
+Error: not implemented
+ ❯ glowLevels src/scene3d.ts:304:9
+    302|   void brightness;
+    303|   void state;
+    304|   throw new Error('not implemented');
+       |         ^
+    305| }
+    306|
+ ❯ tests/glow.test.ts:59:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/10]⎯
+
+ FAIL  tests/glow.test.ts > glowLevels > AC-17-05 NaN behaves like 0.5
+Error: not implemented
+ ❯ glowLevels src/scene3d.ts:304:9
+    302|   void brightness;
+    303|   void state;
+    304|   throw new Error('not implemented');
+       |         ^
+    305| }
+    306|
+ ❯ tests/glow.test.ts:65:14
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/10]⎯
+
+ FAIL  tests/glow.test.ts > glowLevels > AC-17-05 emissive never exceeds MAX_EMISSIVE and opacity/ring never exceed 1
+Error: not implemented
+ ❯ glowLevels src/scene3d.ts:304:9
+    302|   void brightness;
+    303|   void state;
+    304|   throw new Error('not implemented');
+       |         ^
+    305| }
+    306|
+ ❯ tests/glow.test.ts:73:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/10]⎯
+== explorer-javascript hidden tests -> exit 1:       Tests  5 failed | 68 passed (73) (details hidden)

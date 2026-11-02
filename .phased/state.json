@@ -1,8 +1,8 @@
 {
   "initialized": true,
   "self_test_passed": true,
-  "phase": "09",
-  "title": "`kb context` - token-light context for assistants (GraphRAG)",
+  "phase": "20",
+  "title": "3D neuron look - cells, branches, axons",
   "stage": "done",
   "history": [
     {
@@ -746,11 +746,829 @@
       "at": "2026-11-02T00:08:34+05:30",
       "event": "kba-facts",
       "phase": "09"
+    },
+    {
+      "at": "2026-11-02T00:18:12+05:30",
+      "event": "plan",
+      "phase": "09",
+      "change": "changes/2026-11-01-graph-map"
+    },
+    {
+      "at": "2026-11-02T00:21:28+05:30",
+      "event": "approve-plan",
+      "phase": "09",
+      "phases": [
+        "10",
+        "11",
+        "12"
+      ]
+    },
+    {
+      "at": "2026-11-02T00:22:55+05:30",
+      "event": "prefetch",
+      "phase": "09",
+      "phases": [
+        "10",
+        "11",
+        "12"
+      ]
+    },
+    {
+      "at": "2026-11-02T00:34:24+05:30",
+      "event": "prefetch-done",
+      "phase": "09",
+      "ready": [
+        "10",
+        "11",
+        "12"
+      ],
+      "dropped": []
+    },
+    {
+      "at": "2026-11-02T00:34:26+05:30",
+      "event": "start",
+      "phase": "10",
+      "title": "Explorer analysis - communities, rank, bridges, gaps, timeline"
+    },
+    {
+      "at": "2026-11-02T00:34:26+05:30",
+      "event": "approve-spec",
+      "phase": "10",
+      "criteria": [
+        "AC-10-01",
+        "AC-10-02",
+        "AC-10-03",
+        "AC-10-04",
+        "AC-10-05",
+        "AC-10-06",
+        "AC-10-07",
+        "AC-10-08",
+        "AC-10-09",
+        "AC-10-10"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-02T00:34:26+05:30",
+      "event": "tests-moved-in",
+      "phase": "10",
+      "files": 2
+    },
+    {
+      "at": "2026-11-02T00:34:58+05:30",
+      "event": "red",
+      "phase": "10",
+      "tests": 2
+    },
+    {
+      "at": "2026-11-02T00:38:26+05:30",
+      "event": "review-prep",
+      "phase": "10",
+      "round": 1
+    },
+    {
+      "at": "2026-11-02T00:39:50+05:30",
+      "event": "review",
+      "phase": "10",
+      "round": 1,
+      "verdict": "PASS",
+      "important": 0
+    },
+    {
+      "at": "2026-11-02T00:40:02+05:30",
+      "event": "finish",
+      "phase": "10",
+      "commit": "913cb8229ee6276408d8191ea65ac9ba5e006fa6"
+    },
+    {
+      "at": "2026-11-02T00:40:05+05:30",
+      "event": "start",
+      "phase": "11",
+      "title": "Offline insights - executive summary, roadmap, Markdown export"
+    },
+    {
+      "at": "2026-11-02T00:40:05+05:30",
+      "event": "approve-spec",
+      "phase": "11",
+      "criteria": [
+        "AC-11-01",
+        "AC-11-02",
+        "AC-11-03",
+        "AC-11-04",
+        "AC-11-05",
+        "AC-11-06",
+        "AC-11-07",
+        "AC-11-08"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-02T00:40:05+05:30",
+      "event": "tests-moved-in",
+      "phase": "11",
+      "files": 2
+    },
+    {
+      "at": "2026-11-02T00:40:36+05:30",
+      "event": "red",
+      "phase": "11",
+      "tests": 2
+    },
+    {
+      "at": "2026-11-02T00:41:23+05:30",
+      "event": "review-prep",
+      "phase": "11",
+      "round": 1
+    },
+    {
+      "at": "2026-11-02T00:42:01+05:30",
+      "event": "review",
+      "phase": "11",
+      "round": 1,
+      "verdict": "PASS",
+      "important": 0
+    },
+    {
+      "at": "2026-11-02T00:42:05+05:30",
+      "event": "finish",
+      "phase": "11",
+      "commit": "8d31ca122e6873e7efe7dee92c6ea0194d8f9061"
+    },
+    {
+      "at": "2026-11-02T00:42:06+05:30",
+      "event": "start",
+      "phase": "12",
+      "title": "Explorer UI - 2D labelled community map, insights panel, month filter"
+    },
+    {
+      "at": "2026-11-02T00:42:06+05:30",
+      "event": "approve-spec",
+      "phase": "12",
+      "criteria": [
+        "AC-12-01",
+        "AC-12-02",
+        "AC-12-03",
+        "AC-12-04",
+        "AC-12-05",
+        "AC-12-06",
+        "AC-12-07"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-02T00:42:06+05:30",
+      "event": "tests-moved-in",
+      "phase": "12",
+      "files": 2
+    },
+    {
+      "at": "2026-11-02T00:42:40+05:30",
+      "event": "red",
+      "phase": "12",
+      "tests": 2
+    },
+    {
+      "at": "2026-11-02T00:48:18+05:30",
+      "event": "review-prep",
+      "phase": "12",
+      "round": 1
+    },
+    {
+      "at": "2026-11-02T00:49:53+05:30",
+      "event": "review",
+      "phase": "12",
+      "round": 1,
+      "verdict": "PASS",
+      "important": 0
+    },
+    {
+      "at": "2026-11-02T00:50:02+05:30",
+      "event": "finish",
+      "phase": "12",
+      "commit": "98cf4a41df74aebd5b906d111b1e672de4b811a5"
+    },
+    {
+      "at": "2026-11-02T00:50:09+05:30",
+      "event": "report",
+      "phase": "12"
+    },
+    {
+      "at": "2026-11-02T00:50:09+05:30",
+      "event": "kba-facts",
+      "phase": "12"
+    },
+    {
+      "at": "2026-11-02T10:36:47+05:30",
+      "event": "plan",
+      "phase": "12",
+      "change": "changes/2026-11-02-graph-3d"
+    },
+    {
+      "at": "2026-11-02T10:41:39+05:30",
+      "event": "approve-plan",
+      "phase": "12",
+      "phases": [
+        "13",
+        "14",
+        "15",
+        "16"
+      ]
+    },
+    {
+      "at": "2026-11-02T10:43:38+05:30",
+      "event": "prefetch",
+      "phase": "12",
+      "phases": [
+        "13",
+        "14",
+        "15",
+        "16"
+      ]
+    },
+    {
+      "at": "2026-11-02T10:47:40+05:30",
+      "event": "prefetch-done",
+      "phase": "12",
+      "ready": [
+        "13",
+        "14",
+        "15",
+        "16"
+      ],
+      "dropped": []
+    },
+    {
+      "at": "2026-11-02T10:47:40+05:30",
+      "event": "start",
+      "phase": "13",
+      "title": "3D layout maths - time axis, islands, layers, size, brightness"
+    },
+    {
+      "at": "2026-11-02T10:47:40+05:30",
+      "event": "approve-spec",
+      "phase": "13",
+      "criteria": [
+        "AC-13-01",
+        "AC-13-02",
+        "AC-13-03",
+        "AC-13-04",
+        "AC-13-05",
+        "AC-13-06",
+        "AC-13-07",
+        "AC-13-08",
+        "AC-13-09"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-02T10:47:40+05:30",
+      "event": "tests-moved-in",
+      "phase": "13",
+      "files": 2
+    },
+    {
+      "at": "2026-11-02T10:47:58+05:30",
+      "event": "red",
+      "phase": "13",
+      "tests": 2
+    },
+    {
+      "at": "2026-11-02T10:49:23+05:30",
+      "event": "review-prep",
+      "phase": "13",
+      "round": 1
+    },
+    {
+      "at": "2026-11-02T10:49:57+05:30",
+      "event": "review",
+      "phase": "13",
+      "round": 1,
+      "verdict": "PASS",
+      "important": 0
+    },
+    {
+      "at": "2026-11-02T10:50:06+05:30",
+      "event": "finish",
+      "phase": "13",
+      "commit": "226d0a616d3865385482111c13fc40a5f53e070f"
+    },
+    {
+      "at": "2026-11-02T11:03:55+05:30",
+      "event": "prefetch",
+      "phase": "13",
+      "phases": [
+        "14",
+        "15",
+        "16"
+      ]
+    },
+    {
+      "at": "2026-11-02T11:07:42+05:30",
+      "event": "prefetch-done",
+      "phase": "13",
+      "ready": [
+        "14",
+        "15",
+        "16"
+      ],
+      "dropped": []
+    },
+    {
+      "at": "2026-11-02T11:07:44+05:30",
+      "event": "start",
+      "phase": "14",
+      "title": "3D graph logic - link filter and colours, shortest path, time-lapse, orbit maths"
+    },
+    {
+      "at": "2026-11-02T11:07:44+05:30",
+      "event": "approve-spec",
+      "phase": "14",
+      "criteria": [
+        "AC-14-01",
+        "AC-14-02",
+        "AC-14-03",
+        "AC-14-04",
+        "AC-14-05",
+        "AC-14-06",
+        "AC-14-07",
+        "AC-14-08",
+        "AC-14-09"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-02T11:07:44+05:30",
+      "event": "tests-moved-in",
+      "phase": "14",
+      "files": 2
+    },
+    {
+      "at": "2026-11-02T11:08:09+05:30",
+      "event": "red",
+      "phase": "14",
+      "tests": 2
+    },
+    {
+      "at": "2026-11-02T11:09:01+05:30",
+      "event": "review-prep",
+      "phase": "14",
+      "round": 1
+    },
+    {
+      "at": "2026-11-02T11:09:33+05:30",
+      "event": "review",
+      "phase": "14",
+      "round": 1,
+      "verdict": "PASS",
+      "important": 0
+    },
+    {
+      "at": "2026-11-02T11:09:39+05:30",
+      "event": "finish",
+      "phase": "14",
+      "commit": "c6b72af243adc57f5fd7e92a248a356036dd7497"
+    },
+    {
+      "at": "2026-11-02T11:09:39+05:30",
+      "event": "start",
+      "phase": "15",
+      "title": "3D look - shapes, fog, bloom, particles, legend, fit, auto-rotate, width"
+    },
+    {
+      "at": "2026-11-02T11:09:39+05:30",
+      "event": "approve-spec",
+      "phase": "15",
+      "criteria": [
+        "AC-15-01",
+        "AC-15-02",
+        "AC-15-03",
+        "AC-15-04",
+        "AC-15-05"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-02T11:09:39+05:30",
+      "event": "tests-moved-in",
+      "phase": "15",
+      "files": 2
+    },
+    {
+      "at": "2026-11-02T11:10:07+05:30",
+      "event": "red",
+      "phase": "15",
+      "tests": 2
+    },
+    {
+      "at": "2026-11-02T11:17:53+05:30",
+      "event": "review-prep",
+      "phase": "15",
+      "round": 1
+    },
+    {
+      "at": "2026-11-02T11:24:42+05:30",
+      "event": "review",
+      "phase": "15",
+      "round": 1,
+      "verdict": "FAIL",
+      "important": 1
+    },
+    {
+      "at": "2026-11-02T11:26:13+05:30",
+      "event": "review-prep",
+      "phase": "15",
+      "round": 2
+    },
+    {
+      "at": "2026-11-02T11:28:09+05:30",
+      "event": "review",
+      "phase": "15",
+      "round": 2,
+      "verdict": "PASS",
+      "important": 0
+    },
+    {
+      "at": "2026-11-02T11:28:18+05:30",
+      "event": "finish",
+      "phase": "15",
+      "commit": "9d2df8908d9d57ff456a39dbd097f47ec1a16ad1"
+    },
+    {
+      "at": "2026-11-02T11:28:18+05:30",
+      "event": "start",
+      "phase": "16",
+      "title": "3D wiring - time and island forces, labels, layers, time-lapse, path, camera"
+    },
+    {
+      "at": "2026-11-02T11:28:18+05:30",
+      "event": "approve-spec",
+      "phase": "16",
+      "criteria": [
+        "AC-16-01",
+        "AC-16-02",
+        "AC-16-03",
+        "AC-16-04",
+        "AC-16-05",
+        "AC-16-06"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-02T11:28:18+05:30",
+      "event": "tests-moved-in",
+      "phase": "16",
+      "files": 2
+    },
+    {
+      "at": "2026-11-02T11:28:53+05:30",
+      "event": "red",
+      "phase": "16",
+      "tests": 2
+    },
+    {
+      "at": "2026-11-02T11:44:19+05:30",
+      "event": "review-prep",
+      "phase": "16",
+      "round": 1
+    },
+    {
+      "at": "2026-11-02T11:47:49+05:30",
+      "event": "review",
+      "phase": "16",
+      "round": 1,
+      "verdict": "PASS",
+      "important": 0
+    },
+    {
+      "at": "2026-11-02T11:47:57+05:30",
+      "event": "finish",
+      "phase": "16",
+      "commit": "f308bdd233263958935671ef0dfee246a8c10135"
+    },
+    {
+      "at": "2026-11-02T11:48:02+05:30",
+      "event": "report",
+      "phase": "16"
+    },
+    {
+      "at": "2026-11-02T11:48:04+05:30",
+      "event": "kba-facts",
+      "phase": "16"
+    },
+    {
+      "at": "2026-11-02T12:55:19+05:30",
+      "event": "plan",
+      "phase": "16",
+      "change": "changes/2026-11-02-graph-glare"
+    },
+    {
+      "at": "2026-11-02T12:56:07+05:30",
+      "event": "approve-plan",
+      "phase": "16",
+      "phases": [
+        "17",
+        "18"
+      ]
+    },
+    {
+      "at": "2026-11-02T12:57:55+05:30",
+      "event": "prefetch",
+      "phase": "16",
+      "phases": [
+        "17",
+        "18"
+      ]
+    },
+    {
+      "at": "2026-11-02T13:07:59+05:30",
+      "event": "prefetch-done",
+      "phase": "16",
+      "ready": [
+        "17"
+      ],
+      "dropped": [
+        "18"
+      ]
+    },
+    {
+      "at": "2026-11-02T13:08:00+05:30",
+      "event": "start",
+      "phase": "17",
+      "title": "Glow levels - capped, pure, selection never brighter"
+    },
+    {
+      "at": "2026-11-02T13:08:00+05:30",
+      "event": "approve-spec",
+      "phase": "17",
+      "criteria": [
+        "AC-17-01",
+        "AC-17-02",
+        "AC-17-03",
+        "AC-17-04",
+        "AC-17-05"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-02T13:08:00+05:30",
+      "event": "tests-moved-in",
+      "phase": "17",
+      "files": 2
+    },
+    {
+      "at": "2026-11-02T13:08:32+05:30",
+      "event": "red",
+      "phase": "17",
+      "tests": 2
+    },
+    {
+      "at": "2026-11-02T13:09:01+05:30",
+      "event": "review-prep",
+      "phase": "17",
+      "round": 1
+    },
+    {
+      "at": "2026-11-02T13:09:43+05:30",
+      "event": "review",
+      "phase": "17",
+      "round": 1,
+      "verdict": "PASS",
+      "important": 0
+    },
+    {
+      "at": "2026-11-02T13:10:08+05:30",
+      "event": "finish",
+      "phase": "17",
+      "commit": "6ceb24fab838c6cdae5b6476f000e4ac8c2016f6"
+    },
+    {
+      "at": "2026-11-02T13:10:14+05:30",
+      "event": "start",
+      "phase": "18",
+      "title": "3D glare fix - gentler glow, soft selection, readable hover name"
+    },
+    {
+      "at": "2026-11-02T13:10:14+05:30",
+      "event": "approve-spec",
+      "phase": "18",
+      "criteria": [
+        "AC-18-01",
+        "AC-18-02",
+        "AC-18-03",
+        "AC-18-04"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-02T13:10:32+05:30",
+      "event": "review",
+      "phase": "18",
+      "verdict": "PASS"
+    },
+    {
+      "at": "2026-11-02T13:19:46+05:30",
+      "event": "review",
+      "phase": "18",
+      "verdict": "FAIL"
+    },
+    {
+      "at": "2026-11-02T13:22:14+05:30",
+      "event": "review",
+      "phase": "18",
+      "verdict": "FAIL"
+    },
+    {
+      "at": "2026-11-02T13:23:12+05:30",
+      "event": "review",
+      "phase": "18",
+      "verdict": "PASS"
+    },
+    {
+      "at": "2026-11-02T13:23:20+05:30",
+      "event": "review",
+      "phase": "18",
+      "verdict": "PASS"
+    },
+    {
+      "at": "2026-11-02T13:23:23+05:30",
+      "event": "red",
+      "phase": "18",
+      "tests": 2
+    },
+    {
+      "at": "2026-11-02T17:12:39+05:30",
+      "event": "review-prep",
+      "phase": "18",
+      "round": 1
+    },
+    {
+      "at": "2026-11-02T17:14:40+05:30",
+      "event": "review-prep",
+      "phase": "18",
+      "round": 2
+    },
+    {
+      "at": "2026-11-02T17:16:31+05:30",
+      "event": "review-prep",
+      "phase": "18",
+      "round": 3
+    },
+    {
+      "at": "2026-11-02T17:17:06+05:30",
+      "event": "review",
+      "phase": "18",
+      "round": 3,
+      "verdict": "PASS",
+      "important": 0
+    },
+    {
+      "at": "2026-11-02T17:19:34+05:30",
+      "event": "finish",
+      "phase": "18",
+      "commit": "fe54a5bf277ec0e405da86bdac66873ca41c8fab"
+    },
+    {
+      "at": "2026-11-02T17:28:21+05:30",
+      "event": "plan",
+      "phase": "18",
+      "change": "changes/2026-11-02-graph-neurons"
+    },
+    {
+      "at": "2026-11-02T17:30:07+05:30",
+      "event": "approve-plan",
+      "phase": "18",
+      "phases": [
+        "19",
+        "20"
+      ]
+    },
+    {
+      "at": "2026-11-02T17:30:32+05:30",
+      "event": "start",
+      "phase": "19",
+      "title": "Neuron maths - cell per theme, branch spots, axon curves"
+    },
+    {
+      "at": "2026-11-02T17:30:32+05:30",
+      "event": "approve-spec",
+      "phase": "19",
+      "criteria": [
+        "AC-19-01",
+        "AC-19-02",
+        "AC-19-03",
+        "AC-19-04",
+        "AC-19-05"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-02T17:33:34+05:30",
+      "event": "review",
+      "phase": "19",
+      "verdict": "PASS"
+    },
+    {
+      "at": "2026-11-02T17:33:42+05:30",
+      "event": "red",
+      "phase": "19",
+      "tests": 2
+    },
+    {
+      "at": "2026-11-02T17:35:06+05:30",
+      "event": "review-prep",
+      "phase": "19",
+      "round": 1
+    },
+    {
+      "at": "2026-11-02T17:35:39+05:30",
+      "event": "review",
+      "phase": "19",
+      "round": 1,
+      "verdict": "PASS",
+      "important": 0
+    },
+    {
+      "at": "2026-11-02T17:35:58+05:30",
+      "event": "finish",
+      "phase": "19",
+      "commit": "3753ea547fc4d1d1f216973f4ff41fdc812adb2d"
+    },
+    {
+      "at": "2026-11-02T17:36:01+05:30",
+      "event": "start",
+      "phase": "20",
+      "title": "3D neuron look - cells, branches, axons"
+    },
+    {
+      "at": "2026-11-02T17:36:01+05:30",
+      "event": "approve-spec",
+      "phase": "20",
+      "criteria": [
+        "AC-20-01",
+        "AC-20-02",
+        "AC-20-03",
+        "AC-20-04"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-02T17:44:52+05:30",
+      "event": "review",
+      "phase": "20",
+      "verdict": "FAIL"
+    },
+    {
+      "at": "2026-11-02T17:50:02+05:30",
+      "event": "review",
+      "phase": "20",
+      "verdict": "FAIL"
+    },
+    {
+      "at": "2026-11-02T17:52:18+05:30",
+      "event": "review",
+      "phase": "20",
+      "verdict": "PASS"
+    },
+    {
+      "at": "2026-11-02T17:52:23+05:30",
+      "event": "red",
+      "phase": "20",
+      "tests": 2
+    },
+    {
+      "at": "2026-11-02T17:53:45+05:30",
+      "event": "review-prep",
+      "phase": "20",
+      "round": 1
+    },
+    {
+      "at": "2026-11-02T17:55:32+05:30",
+      "event": "review",
+      "phase": "20",
+      "round": 1,
+      "verdict": "PASS",
+      "important": 0
+    },
+    {
+      "at": "2026-11-02T17:55:49+05:30",
+      "event": "finish",
+      "phase": "20",
+      "commit": "6629192075d2a3cf3ef7728eec32be5d2b966dba"
+    },
+    {
+      "at": "2026-11-02T17:55:54+05:30",
+      "event": "report",
+      "phase": "20"
+    },
+    {
+      "at": "2026-11-02T17:55:54+05:30",
+      "event": "kba-facts",
+      "phase": "20"
     }
   ],
-  "change_dir": "changes/2026-11-01-graph-insights",
-  "base_commit": "d687f1c2c143563c04de522b4c1b469e4ea73925",
-  "change_sha256": "edf8a1539bf36e0d50148f33a22ce666a314323b2641c72d53bad4be47d42755",
+  "change_dir": "changes/2026-11-02-graph-neurons",
+  "base_commit": "fe54a5bf277ec0e405da86bdac66873ca41c8fab",
+  "change_sha256": "f4e25b1ce51cd6f409af53800bf14923347eddee9051d7aedf166428dffb31ba",
   "approved_specs": {
     "01": "01527e477aa90e33e8bb613e55b1396690ec40feae5f8c7c307d20e0abc62f70",
     "02": "d1083c8313f6c92a4b22916064d84005ca65389623c38fe5a37ac1b4ed1f8c47",
@@ -760,25 +1578,35 @@
     "06": "d1982818f0df1140e6660f14262fa5720a0b7ed6ec7e2ce2793a2d404cf8b256",
     "07": "74125299bb42ccb25b6197d0edba5144b952e46ef005f9f11f381f6c47063009",
     "08": "34062d84b3b93f6e62a9b4a0c17754dc949d3fc4cc6bbd7704fcf9e369881f10",
-    "09": "ee26e597b1a04a07840b9384d34393490f9cc8e94be8c8b84bd9aeca0bc9a117"
+    "09": "ee26e597b1a04a07840b9384d34393490f9cc8e94be8c8b84bd9aeca0bc9a117",
+    "10": "115921bb49d2ce5e7c20882049cea7adc1be1654e7a402e044b6cebc765a55f3",
+    "11": "817ec346cc5605055e98a145d0b033917ddbe8a469c95188bf044e41f4395fa0",
+    "12": "a860d89a6e367dcd3530d110190f5aaa0ae963cbb40e9b5cb4fc4784dfa3072a",
+    "13": "84fbb60d86a871006bd93b964c6b2cb9a2b13e0c62b11b9944ccd689bc892715",
+    "14": "6c893a50b4bdfc951fc65f430f93a3e7e15f6c71baf7c7138dac4ee507d0b797",
+    "15": "85097673d02fd58d2e700f6f5a84bc171fedf06b8a30c9ab72acd14cf3921d2f",
+    "16": "ea26eda3e2454db327eb7ab8c32d36a93cfffd4b8dee3baeede10b7dac6abbf1",
+    "17": "95672c8c19ef5503671b5dd78ebffa8a9e2c11fc1525b3e147ef914556592a21",
+    "18": "e39425076c2b88a5f15d3919838aef205b0e291b2136100574412bdb5cc40b04",
+    "19": "7fa008a9626f5e0d8bfa8cee1013d04f452a9e9e6350c29021afabf62cd5db5d",
+    "20": "24ddcff06770044ce451ee61c9bd1da8764cc92cc706e723af570a9acc074b74"
   },
   "change_phases": [
-    "08",
-    "09"
+    "19",
+    "20"
   ],
   "pending_tests": {},
   "review": {
     "verdict": "PASS",
-    "lock_digest": "474c9d89d7089761cd69dbfb78ce26dba64eceafb50e667748f6ceea938ac296",
-    "at": "2026-11-02T00:04:07+05:30",
-    "prefetched": true
+    "lock_digest": "2336bd50dc34847815b746c5d224247c9d2180c7a87c85d21d9748233512ce23",
+    "at": "2026-11-02T17:52:18+05:30"
   },
   "red": {
     "ok": true,
-    "lock_digest": "474c9d89d7089761cd69dbfb78ce26dba64eceafb50e667748f6ceea938ac296",
-    "evidence": ".phased/evidence/phase-09-red.log"
+    "lock_digest": "2336bd50dc34847815b746c5d224247c9d2180c7a87c85d21d9748233512ce23",
+    "evidence": ".phased/evidence/phase-20-red.log"
   },
-  "spec_sha256": "ee26e597b1a04a07840b9384d34393490f9cc8e94be8c8b84bd9aeca0bc9a117",
+  "spec_sha256": "24ddcff06770044ce451ee61c9bd1da8764cc92cc706e723af570a9acc074b74",
   "code_reviews": {
     "01": {
       "rounds": [
@@ -952,6 +1780,180 @@
           "classes": []
         }
       ]
+    },
+    "10": {
+      "rounds": [
+        {
+          "tree": "68b4f27ef673e0b94c1ed4de31513beb549588bb",
+          "at": "2026-11-02T00:38:26+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 2,
+          "preexisting": 0,
+          "classes": [
+            "none"
+          ]
+        }
+      ]
+    },
+    "11": {
+      "rounds": [
+        {
+          "tree": "8c66dd101b7a2e4f8bf2ad0a5a32d865fb9f522f",
+          "at": "2026-11-02T00:41:23+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 2,
+          "preexisting": 0,
+          "classes": [
+            "none"
+          ]
+        }
+      ]
+    },
+    "12": {
+      "rounds": [
+        {
+          "tree": "efbfe15699bd1405383d33fe10b6e97d6c94bf43",
+          "at": "2026-11-02T00:48:18+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 4,
+          "preexisting": 0,
+          "classes": [
+            "none"
+          ]
+        }
+      ]
+    },
+    "13": {
+      "rounds": [
+        {
+          "tree": "469466f886689e96c4d196a0a62ddbc85d4f81f0",
+          "at": "2026-11-02T10:49:23+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 3,
+          "preexisting": 0,
+          "classes": [
+            "none"
+          ]
+        }
+      ]
+    },
+    "14": {
+      "rounds": [
+        {
+          "tree": "22879823985192509d8f9006d67e96520f287826",
+          "at": "2026-11-02T11:09:01+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 3,
+          "preexisting": 0,
+          "classes": [
+            "none"
+          ]
+        }
+      ]
+    },
+    "15": {
+      "rounds": [
+        {
+          "tree": "a5127eef8e0d0efdc038d0ea59eb65115db76665",
+          "at": "2026-11-02T11:17:53+05:30",
+          "verdict": "FAIL",
+          "important": 1,
+          "nits": 4,
+          "preexisting": 0,
+          "classes": [
+            "unplanned dependency"
+          ]
+        },
+        {
+          "tree": "048a0e75de8be7ff0a9a0db0fa6039cfb8201e86",
+          "at": "2026-11-02T11:26:13+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 2,
+          "preexisting": 0,
+          "classes": []
+        }
+      ]
+    },
+    "16": {
+      "rounds": [
+        {
+          "tree": "b1229a0b4a36e46e20add7ef298fc8536ca4faf1",
+          "at": "2026-11-02T11:44:19+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 3,
+          "preexisting": 1,
+          "classes": [
+            "none"
+          ]
+        }
+      ]
+    },
+    "17": {
+      "rounds": [
+        {
+          "tree": "cdb5d4007ae940d0d8b3bab1d56539a4f196c9c0",
+          "at": "2026-11-02T13:09:01+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 2,
+          "preexisting": 0,
+          "classes": []
+        }
+      ]
+    },
+    "18": {
+      "rounds": [
+        {
+          "tree": "0020c66ab14be0bd1684c0234aed087af4b674af",
+          "at": "2026-11-02T17:12:39+05:30"
+        },
+        {
+          "tree": "ff83c3050a3ba9766edfda544f34b4cb9f27f5c6",
+          "at": "2026-11-02T17:14:40+05:30"
+        },
+        {
+          "tree": "e5b00aa337f0c32d6d6e588b9eb02087373195c8",
+          "at": "2026-11-02T17:16:31+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 1,
+          "preexisting": 0,
+          "classes": []
+        }
+      ]
+    },
+    "19": {
+      "rounds": [
+        {
+          "tree": "404a87f1f983ab7b81e234f50f7e7c8c6a3454d8",
+          "at": "2026-11-02T17:35:06+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 2,
+          "preexisting": 0,
+          "classes": []
+        }
+      ]
+    },
+    "20": {
+      "rounds": [
+        {
+          "tree": "8d16e2f2f316d8bc9e1d49f6a498c7f3b3999403",
+          "at": "2026-11-02T17:53:45+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 3,
+          "preexisting": 0,
+          "classes": []
+        }
+      ]
     }
   },
   "durations": [
@@ -999,6 +2001,61 @@
       "phase": "09",
       "level": "M",
       "minutes": 4.3
+    },
+    {
+      "phase": "10",
+      "level": "L",
+      "minutes": 5.6
+    },
+    {
+      "phase": "11",
+      "level": "M",
+      "minutes": 2.0
+    },
+    {
+      "phase": "12",
+      "level": "M",
+      "minutes": 7.9
+    },
+    {
+      "phase": "13",
+      "level": "M",
+      "minutes": 2.4
+    },
+    {
+      "phase": "14",
+      "level": "M",
+      "minutes": 1.9
+    },
+    {
+      "phase": "15",
+      "level": "L",
+      "minutes": 18.7
+    },
+    {
+      "phase": "16",
+      "level": "L",
+      "minutes": 19.7
+    },
+    {
+      "phase": "17",
+      "level": "S",
+      "minutes": 2.1
+    },
+    {
+      "phase": "18",
+      "level": "M",
+      "minutes": 249.3
+    },
+    {
+      "phase": "19",
+      "level": "M",
+      "minutes": 5.4
+    },
+    {
+      "phase": "20",
+      "level": "M",
+      "minutes": 19.8
     }
   ]
 }

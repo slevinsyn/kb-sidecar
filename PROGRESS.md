@@ -13,5 +13,16 @@ _Written by `.phased/bin/phase.py`. Do not edit by hand._
 | 07 | 3D explorer web app | done | 2026-11-01T20:59 | 2026-11-01T20:59 | 2 | 2026-11-01T21:02 | b56b27d900 |
 | 08 | Clean topics | done | 2026-11-01T23:59 | 2026-11-01T23:59 | 3 | 2026-11-02T00:00 | e0c156e613 |
 | 09 | `kb context` - token-light context for assistants (GraphRAG) | done | 2026-11-02T00:04 | 2026-11-02T00:04 | 2 | 2026-11-02T00:04 | 9ea9520b0b |
+| 10 | Explorer analysis - communities, rank, bridges, gaps, timeline | done | 2026-11-02T00:34 | 2026-11-02T00:34 | 2 | 2026-11-02T00:34 | 913cb8229e |
+| 11 | Offline insights - executive summary, roadmap, Markdown export | done | 2026-11-02T00:40 | 2026-11-02T00:40 | 2 | 2026-11-02T00:40 | 8d31ca122e |
+| 12 | Explorer UI - 2D labelled community map, insights panel, month filter | done | 2026-11-02T00:42 | 2026-11-02T00:42 | 2 | 2026-11-02T00:42 | 98cf4a41df |
+| 13 | 3D layout maths - time axis, islands, layers, size, brightness | done | 2026-11-02T10:47 | 2026-11-02T10:47 | 2 | 2026-11-02T10:47 | 226d0a616d |
+| 14 | 3D graph logic - link filter and colours, shortest path, time-lapse, orbit maths | done | 2026-11-02T11:07 | 2026-11-02T11:07 | 2 | 2026-11-02T11:08 | c6b72af243 |
+| 15 | 3D look - shapes, fog, bloom, particles, legend, fit, auto-rotate, width | done | 2026-11-02T11:09 | 2026-11-02T11:09 | 2 | 2026-11-02T11:10 | 9d2df8908d |
+| 16 | 3D wiring - time and island forces, labels, layers, time-lapse, path, camera | done | 2026-11-02T11:28 | 2026-11-02T11:28 | 2 | 2026-11-02T11:28 | f308bdd233 |
+| 17 | Glow levels - capped, pure, selection never brighter | done | 2026-11-02T13:08 | 2026-11-02T13:08 | 2 | 2026-11-02T13:08 | 6ceb24fab8 |
+| 18 | 3D glare fix - gentler glow, soft selection, readable hover name | done | 2026-11-02T13:10 | 2026-11-02T13:10 | 2 | 2026-11-02T13:23 | fe54a5bf27 |
+| 19 | Neuron maths - cell per theme, branch spots, axon curves | done | 2026-11-02T17:30 | 2026-11-02T17:30 | 2 | 2026-11-02T17:33 | 3753ea547f |
+| 20 | 3D neuron look - cells, branches, axons | done | 2026-11-02T17:36 | 2026-11-02T17:36 | 2 | 2026-11-02T17:52 | 6629192075 |
 
 Evidence of failing-first test runs is in `.phased/evidence/`.

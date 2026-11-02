@@ -1,0 +1,1069 @@
+diff --git a/changes/2026-11-02-graph-3d/kba/screenshots/phase-16-path.png b/changes/2026-11-02-graph-3d/kba/screenshots/phase-16-path.png
+new file mode 100644
+index 0000000..6231d2a
+Binary files /dev/null and b/changes/2026-11-02-graph-3d/kba/screenshots/phase-16-path.png differ
+diff --git a/explorer/index.html b/explorer/index.html
+index 3d8b1e2..2555c14 100644
+--- a/explorer/index.html
++++ b/explorer/index.html
+@@ -31,6 +31,9 @@
+       button { cursor: pointer; }
+       button:hover { background: #222a3c; }
+       #mode-toggle { font-weight: 600; }
++      .path-line select { max-width: 96px; }
++      #path-result { margin-top: 6px; word-break: break-word; }
++      #path-result:empty { display: none; }
+       #stats { margin-top: 6px; color: #8a93a6; }
+       .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; }
+       #insights { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
+@@ -71,6 +74,18 @@
+           <label>to <select id="to-month"></select></label>
+           <button id="mode-toggle" type="button" title="Switch to the 3D view">3D</button>
+         </div>
++        <div id="controls3d" hidden>
++          <div class="row-line">
++            <label title="Put projects, sessions and topics on three levels"><input type="checkbox" id="layers-mode" /> Layers</label>
++            <button id="timelapse" type="button" title="Grow the graph month by month">Time-lapse</button>
++          </div>
++          <div class="row-line path-line">
++            <label>Path <select id="path-from"></select></label>
++            <label>to <select id="path-to"></select></label>
++            <button id="path-go" type="button">Find path</button>
++          </div>
++          <div id="path-result" class="muted" role="status"></div>
++        </div>
+         <div id="stats"></div>
+       </div>
+       <div id="insights" class="panel">
+diff --git a/explorer/src/main.ts b/explorer/src/main.ts
+index 5d41a35..da9d837 100644
+--- a/explorer/src/main.ts
++++ b/explorer/src/main.ts
+@@ -24,7 +24,21 @@ import {
+   monthRange,
+   viewGraph,
+ } from './view';
+-import { bridgeIds, brightnessMap, defaultLinkFilter, linkRgba, nodeSize } from './scene3d';
++import {
++  bridgeIds,
++  brightnessMap,
++  clusterBounds,
++  defaultLinkFilter,
++  islandCenters,
++  layerZ,
++  linkRgba,
++  nextMonth,
++  nodeSize,
++  orbitPosition,
++  shortestPath,
++  timeAxis,
++} from './scene3d';
++import type { Point3 } from './scene3d';
+ 
+ const DIM_COLOR = '#2b3040';
+ const TOP_LABEL_COUNT = 30;
+@@ -52,6 +66,23 @@ const BLOOM_THRESHOLD = 0.15;
+ const FOG_NEAR_FACTOR = 0.25;
+ const FOG_FAR_FACTOR = 1.5;
+ const DEFAULT_SCENE_RADIUS = 300;
++// 3D wiring: forces, theme labels, time-lapse, camera orbit, path.
++const TIME_STRENGTH = 0.4;
++const ISLAND_STRENGTH = 0.15;
++/** World height of a floating theme name, and its gap above the anchor node. */
++const LABEL_WORLD_HEIGHT = 14;
++const LABEL_GAP = 4;
++const LABEL_FONT_PX = 48;
++const LABEL_PAD_PX = 10;
++const LABEL_MAX_CHARS = 48;
++const TIMELAPSE_STEP_MS = 900;
++const ORBIT_FLY_MS = 1000;
++/** The camera orbits this many cluster radii away from the cluster centre, so the cluster fits. */
++const ORBIT_DISTANCE = 2.6;
++/** Radians per millisecond: one full turn in about 70 seconds. */
++const ORBIT_SPEED = (2 * Math.PI) / 70_000;
++const PATH_COLOR = '#ffd166';
++const NO_PATH_TEXT = 'No path between these topics';
+ const LEGEND_SHAPES: ReadonlyArray<readonly [string, string]> = [
+   ['●', 'sphere = session'],
+   ['■', 'cube = project'],
+@@ -68,6 +99,8 @@ const LEGEND_LINKS: ReadonlyArray<readonly [string, string]> = [
+ type Mode = '2d' | '3d';
+ type Tab = 'summary' | 'themes' | 'bridges' | 'loose' | 'roadmap' | 'timeline';
+ type RenderNode = GraphNode & { x?: number; y?: number; z?: number };
++/** A node as the d3 simulation sees it: position plus velocity. */
++type SimNode = RenderNode & { vx?: number; vy?: number; vz?: number };
+ 
+ function el<T extends HTMLElement>(id: string): T {
+   const found = document.getElementById(id);
+@@ -117,6 +150,13 @@ const copyButton = el<HTMLButtonElement>('copy-md');
+ const downloadButton = el<HTMLButtonElement>('download-md');
+ const exportStatus = el<HTMLSpanElement>('export-status');
+ const legendBox = el<HTMLDivElement>('legend');
++const controls3dBox = el<HTMLDivElement>('controls3d');
++const layersBox = el<HTMLInputElement>('layers-mode');
++const timelapseButton = el<HTMLButtonElement>('timelapse');
++const pathFromSelect = el<HTMLSelectElement>('path-from');
++const pathToSelect = el<HTMLSelectElement>('path-to');
++const pathButton = el<HTMLButtonElement>('path-go');
++const pathResult = el<HTMLDivElement>('path-result');
+ 
+ let full: GraphData = { nodes: [], links: [] };
+ let visible: GraphData = full;
+@@ -136,15 +176,37 @@ let brightness = new Map<string, number>();
+ let bridges = new Set<string>();
+ /** 3D node sizes, computed once per loaded graph. */
+ let sizes = new Map<string, number>();
++/** Theme name per anchor node id, for the floating 3D labels. */
++let anchorLabels = new Map<string, { community: number; label: string }>();
++/** Members of the cluster the 3D camera is focused on; everything else is faded. */
++let clusterIds: Set<string> | null = null;
++/** Nodes and links (keyed by linkKey) on the found path; everything else is dimmed. */
++let pathNodes: Set<string> | null = null;
++let pathLinks: Set<string> | null = null;
+ 
+ function colorOf(n: GraphNode): string {
+   return communityColor(analysis?.communityOf.get(n.id));
+ }
+ 
+ function isDimmed(n: GraphNode): boolean {
++  if (pathNodes !== null) return !pathNodes.has(n.id);
++  if (clusterIds !== null) return !clusterIds.has(n.id);
+   return selectedId !== null && !highlighted.has(n.id);
+ }
+ 
++/** Direction-free key of a link, so a path step matches the link whichever way it points. */
++function linkKey(a: string, b: string): string {
++  return a < b ? `${a}\u0000${b}` : `${b}\u0000${a}`;
++}
++
++function onPath(l: GraphLink): boolean {
++  return pathLinks !== null && pathLinks.has(linkKey(linkEnd(l.source), linkEnd(l.target)));
++}
++
++function inCluster(l: GraphLink): boolean {
++  return clusterIds !== null && clusterIds.has(linkEnd(l.source)) && clusterIds.has(linkEnd(l.target));
++}
++
+ function touchesSelected(l: GraphLink): boolean {
+   return selectedId !== null && (linkEnd(l.source) === selectedId || linkEnd(l.target) === selectedId);
+ }
+@@ -273,6 +335,8 @@ interface NodeLook {
+   node: GraphNode;
+   body: THREE.MeshLambertMaterial;
+   ring: THREE.MeshBasicMaterial | null;
++  /** The floating theme name, on theme anchor nodes only. */
++  label: THREE.SpriteMaterial | null;
+ }
+ 
+ const nodeLooks = new Map<string, NodeLook>();
+@@ -295,6 +359,7 @@ function styleNode(look: NodeLook): void {
+     look.ring.color.set(dim ? DIM_COLOR : '#ffffff');
+     look.ring.opacity = dim ? 0.2 : 0.45 + 0.4 * b;
+   }
++  if (look.label) look.label.opacity = dim ? 0.25 : 1;
+ }
+ 
+ function nodeObject3d(obj: object): THREE.Object3D {
+@@ -312,27 +377,149 @@ function nodeObject3d(obj: object): THREE.Object3D {
+     };
+     group.add(halo);
+   }
+-  group.scale.setScalar((sizes.get(node.id) ?? FALLBACK_NODE_SIZE) * NODE_SCALE);
+-  const look: NodeLook = { node, body, ring };
++  const scale = (sizes.get(node.id) ?? FALLBACK_NODE_SIZE) * NODE_SCALE;
++  group.scale.setScalar(scale);
++  let label: THREE.SpriteMaterial | null = null;
++  const theme = anchorLabels.get(node.id);
++  if (theme) {
++    const sprite = themeSprite(theme.community, theme.label, scale);
++    if (sprite) {
++      group.add(sprite);
++      label = sprite.material;
++    }
++  }
++  const look: NodeLook = { node, body, ring, label };
+   styleNode(look);
+   nodeLooks.set(node.id, look);
+   return group;
+ }
+ 
+ function linkColor3d(l: GraphLink): string {
+-  if (selectedId === null) return linkRgba(l.type);
+-  return touchesSelected(l) ? '#ffffff' : linkRgba(l.type, DIM_LINK_ALPHA);
++  if (pathLinks !== null) return onPath(l) ? PATH_COLOR : linkRgba(l.type, DIM_LINK_ALPHA);
++  if (selectedId === null && clusterIds === null) return linkRgba(l.type);
++  if (touchesSelected(l)) return '#ffffff';
++  return inCluster(l) ? linkRgba(l.type) : linkRgba(l.type, DIM_LINK_ALPHA);
++}
++
++function linkWidth3d(l: GraphLink): number {
++  if (pathLinks !== null) return onPath(l) ? 2.5 : 0.5;
++  return linkWidthOf(l);
+ }
+ 
+ function linkParticles(l: GraphLink): number {
++  if (pathLinks !== null) return onPath(l) ? SELECTED_PARTICLES : 0;
+   return touchesSelected(l) ? SELECTED_PARTICLES : 0;
+ }
+ 
++// ---------- 3D theme labels ----------
++
++/**
++ * Draws a theme name onto its own canvas texture. Each node object owns its texture: the graph
++ * library disposes a node's materials and maps when the node object is removed.
++ */
++function labelTexture(community: number, raw: string): { texture: THREE.CanvasTexture; aspect: number } | null {
++  const text = raw.length > LABEL_MAX_CHARS ? `${raw.slice(0, LABEL_MAX_CHARS - 1)}…` : raw;
++  const canvas = document.createElement('canvas');
++  const ctx = canvas.getContext('2d');
++  if (!ctx) return null;
++  const font = `600 ${LABEL_FONT_PX}px system-ui, sans-serif`;
++  ctx.font = font;
++  canvas.width = Math.max(1, Math.ceil(ctx.measureText(text).width) + 2 * LABEL_PAD_PX);
++  canvas.height = LABEL_FONT_PX + 2 * LABEL_PAD_PX;
++  // Resizing a canvas resets its state, so set the font again. fillText draws plain text: the
++  // theme name is never parsed as HTML.
++  ctx.font = font;
++  ctx.textAlign = 'center';
++  ctx.textBaseline = 'middle';
++  ctx.lineJoin = 'round';
++  ctx.lineWidth = LABEL_FONT_PX / 6;
++  ctx.strokeStyle = 'rgba(11, 14, 20, 0.9)';
++  ctx.strokeText(text, canvas.width / 2, canvas.height / 2);
++  ctx.fillStyle = communityColor(community);
++  ctx.fillText(text, canvas.width / 2, canvas.height / 2);
++  const texture = new THREE.CanvasTexture(canvas);
++  texture.colorSpace = THREE.SRGBColorSpace;
++  return { texture, aspect: canvas.width / canvas.height };
++}
++
++/** A camera-facing theme name floating above its anchor node; a child of the node's group. */
++function themeSprite(community: number, label: string, groupScale: number): THREE.Sprite | null {
++  const made = labelTexture(community, label);
++  if (!made) return null;
++  const material = new THREE.SpriteMaterial({
++    map: made.texture,
++    transparent: true,
++    depthWrite: false,
++    depthTest: false,
++    fog: false,
++  });
++  const sprite = new THREE.Sprite(material);
++  // The parent group is scaled by the node size; undo that so every name has the same size.
++  const s = groupScale > 0 ? groupScale : 1;
++  sprite.center.set(0.5, 0);
++  sprite.scale.set((LABEL_WORLD_HEIGHT * made.aspect) / s, LABEL_WORLD_HEIGHT / s, 1);
++  sprite.position.set(0, 1.4 + LABEL_GAP / s, 0);
++  sprite.renderOrder = 10;
++  return sprite;
++}
++
+ /** File and tool links are shown in 3D only when one of those node types is ticked. */
+ function showNoiseLinks(): boolean {
+   return activeTypes.has('file') || activeTypes.has('tool');
+ }
+ 
++// ---------- 3D forces: islands on x/y, time or layers on z ----------
++
++type Axis = 'x' | 'y' | 'z';
++const VELOCITY: Readonly<Record<Axis, 'vx' | 'vy' | 'vz'>> = { x: 'vx', y: 'vy', z: 'vz' };
++
++/**
++ * Pulls every node along one axis toward its own target, like d3's forceX/forceZ:
++ * v += (target - position) * strength * alpha. Targets are worked out once per initialize.
++ */
++function axisForce(axis: Axis, target: (n: SimNode) => number, strength: number) {
++  let nodes: SimNode[] = [];
++  let targets: number[] = [];
++  const v = VELOCITY[axis];
++  const force = (alpha: number): void => {
++    for (let i = 0; i < nodes.length; i += 1) {
++      const n = nodes[i];
++      const pos = n[axis] ?? 0;
++      n[v] = (n[v] ?? 0) + (targets[i] - pos) * strength * alpha;
++    }
++  };
++  force.initialize = (all: object[]): void => {
++    nodes = all as SimNode[];
++    targets = nodes.map((n) => {
++      const t = target(n);
++      return Number.isFinite(t) ? t : 0;
++    });
++  };
++  return force;
++}
++
++/** Islands: each theme is pulled toward its own point on a ring; unassigned nodes to the origin. */
++function installForces(g: Graph3D): void {
++  const centers = analysis ? islandCenters(analysis) : new Map<number, { x: number; y: number }>();
++  const centerOf = (n: SimNode): { x: number; y: number } | undefined => {
++    const c = analysis?.communityOf.get(n.id);
++    return c === undefined ? undefined : centers.get(c);
++  };
++  g.d3Force('x', axisForce('x', (n) => centerOf(n)?.x ?? 0, ISLAND_STRENGTH));
++  g.d3Force('y', axisForce('y', (n) => centerOf(n)?.y ?? 0, ISLAND_STRENGTH));
++  installDepthForce(g);
++}
++
++/** Depth is time (session date order) or, in layers mode, the node type's level. */
++function installDepthForce(g: Graph3D): void {
++  if (layersBox.checked) {
++    g.d3Force('z', axisForce('z', (n) => layerZ(n.type), TIME_STRENGTH));
++    return;
++  }
++  const z = timeAxis(visible);
++  g.d3Force('z', axisForce('z', (n) => z.get(n.id) ?? 0, TIME_STRENGTH));
++}
++
+ // ---------- 3D camera: fit, auto-rotate, fog ----------
+ 
+ type Graph3D = ForceGraph3DInstance;
+@@ -370,7 +557,8 @@ function resumeRotationWhenIdle(): void {
+   pauseRotation();
+   idleTimer = setTimeout(() => {
+     idleTimer = null;
+-    if (dragging) return;
++    // A cluster orbit drives the camera itself; auto-rotate stays off until it ends.
++    if (dragging || orbiting) return;
+     const c = rotatingControls();
+     if (c) c.autoRotate = true;
+   }, IDLE_RESUME_MS);
+@@ -433,6 +621,8 @@ function setUpScene3d(g: Graph3D): void {
+     c.autoRotateSpeed = AUTO_ROTATE_SPEED;
+     c.addEventListener('start', () => {
+       dragging = true;
++      // The user takes the camera: stop circling, but keep the cluster faded.
++      stopOrbit();
+       pauseRotation();
+     });
+     c.addEventListener('end', () => {
+@@ -457,7 +647,7 @@ function makeGraph3d(): Graph3D {
+     // linkRgba carries the opacity; keep the library from scaling it down further.
+     .linkOpacity(1)
+     .linkColor((l) => linkColor3d(l as GraphLink))
+-    .linkWidth((l) => linkWidthOf(l as GraphLink))
++    .linkWidth((l) => linkWidth3d(l as GraphLink))
+     .linkDirectionalParticles((l) => linkParticles(l as GraphLink))
+     .linkDirectionalParticleWidth(PARTICLE_WIDTH)
+     .cooldownTicks(250)
+@@ -471,7 +661,8 @@ function makeGraph3d(): Graph3D {
+     })
+     .onNodeDrag(() => pauseRotation())
+     .onNodeDragEnd(() => resumeRotationWhenIdle())
+-    .onNodeClick((n) => select((n as GraphNode).id, false));
++    .onNodeClick((n) => select((n as GraphNode).id, false))
++    .onBackgroundClick(() => clearSelection());
+   setUpScene3d(g);
+   return g;
+ }
+@@ -556,6 +747,9 @@ function buildMonthSelects(): void {
+ }
+ 
+ function setGraph(data: GraphData): void {
++  stopTimelapse();
++  endFocus();
++  clearPath();
+   full = data;
+   errorBox.hidden = true;
+   selectedId = null;
+@@ -605,22 +799,30 @@ function computeViewState(): void {
+       .map((n) => n.id),
+   );
+   anchors = new Map();
++  anchorLabels = new Map();
+   if (!analysis) return;
+   const inView = new Set(visible.nodes.map((n) => n.id));
+   for (const label of clusterLabels(analysis)) {
+     const anchor = inView.has(label.nodeId) ? label.nodeId : bestVisibleSession(label.community);
+-    if (anchor !== null) anchors.set(label.community, anchor);
++    if (anchor === null) continue;
++    anchors.set(label.community, anchor);
++    // One floating name per node: the first theme to claim an anchor keeps it.
++    if (!anchorLabels.has(anchor)) anchorLabels.set(anchor, { community: label.community, label: label.label });
+   }
+ }
+ 
+ function applyFilters(): void {
+   visible = viewGraph(full, { types: activeTypes, fromMonth, toMonth });
++  // A filter change ends the cluster focus and any shown path.
++  endFocus();
++  clearPath();
+   if (selectedId !== null && !visible.nodes.some((n) => n.id === selectedId)) {
+     selectedId = null;
+     highlighted = new Set();
+     detailsBox.hidden = true;
+   }
+   computeViewState();
++  fillPathSelects();
+   const sessions = visible.nodes.filter((n) => n.type === 'session').length;
+   statsBox.textContent =
+     visible.nodes.length === 0
+@@ -640,15 +842,31 @@ function applyFilters(): void {
+     // The nodes below are fresh copies, so the library builds a new object for every node
+     // (nodeObject3d records its look again). Old looks belong to discarded objects.
+     nodeLooks.clear();
++    // Within one graph, nodes keep their place across filter steps (the time-lapse grows
++    // smoothly); a new graph starts from scratch.
++    const previous = new Map<string, SimNode>();
+     if (rebuild3d) {
+       // A new graph: set the accessor again so nothing built for the old graph is kept.
+       rebuild3d = false;
+       g.nodeThreeObject(nodeObject3d);
++    } else {
++      for (const n of g.graphData().nodes as SimNode[]) previous.set(n.id, n);
+     }
+-    g.graphData({
+-      nodes: shown.nodes.map((n) => ({ ...n })),
+-      links: shown.links.map((l) => ({ ...l })),
++    const nodes: SimNode[] = shown.nodes.map((n) => {
++      const copy: SimNode = { ...n };
++      const old = previous.get(n.id);
++      if (old) {
++        copy.x = old.x;
++        copy.y = old.y;
++        copy.z = old.z;
++        copy.vx = old.vx;
++        copy.vy = old.vy;
++        copy.vz = old.vz;
++      }
++      return copy;
+     });
++    installForces(g);
++    g.graphData({ nodes, links: shown.links.map((l) => ({ ...l })) });
+   }
+   if (selectedId !== null) select(selectedId, false);
+ }
+@@ -675,15 +893,166 @@ function flyTo(id: string): void {
+ function select(id: string, fly: boolean): void {
+   const details = nodeDetails(visible, id);
+   if (!details) return;
++  if (id !== selectedId) {
++    // A new selection stops the cluster orbit and drops the shown path.
++    endFocus();
++    clearPath();
++  }
+   selectedId = id;
+   highlighted = new Set([id, ...neighbors(visible, id).nodes.map((n) => n.id)]);
+   renderDetails(details.node, details.neighborsByType);
+   refreshColors();
+-  // Selecting stops the 3D turn; it starts again after a quiet spell.
++  // Selecting stops the 3D turn; it starts again after a quiet spell (never during an orbit).
+   if (mode === '3d') resumeRotationWhenIdle();
+   if (fly) flyTo(id);
+ }
+ 
++/** Clicking the empty background clears the selection, the cluster focus and the path. */
++function clearSelection(): void {
++  endFocus();
++  clearPath();
++  selectedId = null;
++  highlighted = new Set();
++  detailsBox.hidden = true;
++  refreshColors();
++  if (mode === '3d') resumeRotationWhenIdle();
++}
++
++// ---------- 3D cluster orbit ----------
++
++let orbitFrame: number | null = null;
++let orbitFlyTimer: ReturnType<typeof setTimeout> | null = null;
++/** True from the start of the fly-in until the orbit is stopped; auto-rotate stays off. */
++let orbiting = false;
++
++function stopOrbit(): void {
++  if (orbitFrame !== null) cancelAnimationFrame(orbitFrame);
++  if (orbitFlyTimer !== null) clearTimeout(orbitFlyTimer);
++  orbitFrame = null;
++  orbitFlyTimer = null;
++  orbiting = false;
++}
++
++/** Ends a cluster focus: stops the orbit and un-fades the rest of the graph. */
++function endFocus(): void {
++  const wasFocused = orbiting || clusterIds !== null;
++  stopOrbit();
++  clusterIds = null;
++  if (wasFocused) {
++    refreshColors();
++    if (mode === '3d' && graph3d) resumeRotationWhenIdle();
++  }
++}
++
++/**
++ * Flies the camera to a point on a circle around the cluster's members, then circles slowly
++ * around them until the selection changes or is cleared. Auto-rotate is off meanwhile.
++ */
++function orbitCluster(ids: ReadonlySet<string>): void {
++  stopOrbit();
++  const g = graph3d;
++  if (!g || mode !== '3d') return;
++  const points: Point3[] = [];
++  for (const n of g.graphData().nodes as SimNode[]) {
++    if (!ids.has(n.id)) continue;
++    if (Number.isFinite(n.x) && Number.isFinite(n.y) && Number.isFinite(n.z)) {
++      points.push({ x: n.x as number, y: n.y as number, z: n.z as number });
++    }
++  }
++  if (points.length === 0) return;
++  const { center, radius } = clusterBounds(points);
++  const distance = radius * ORBIT_DISTANCE;
++  const cam = g.camera().position;
++  let angle = Math.atan2(cam.x - center.x, cam.z - center.z);
++  pauseRotation();
++  orbiting = true;
++  g.cameraPosition(orbitPosition(center, distance, angle), center, ORBIT_FLY_MS);
++  orbitFlyTimer = setTimeout(() => {
++    orbitFlyTimer = null;
++    let last = performance.now();
++    const step = (now: number): void => {
++      if (!orbiting || mode !== '3d') return;
++      angle += Math.max(0, now - last) * ORBIT_SPEED;
++      last = now;
++      g.cameraPosition(orbitPosition(center, distance, angle), center, 0);
++      updateFog(g);
++      orbitFrame = requestAnimationFrame(step);
++    };
++    orbitFrame = requestAnimationFrame(step);
++  }, ORBIT_FLY_MS);
++}
++
++// ---------- 3D path picker ----------
++
++function clearPath(): void {
++  const had = pathNodes !== null || pathLinks !== null;
++  pathNodes = null;
++  pathLinks = null;
++  pathResult.textContent = '';
++  if (had) refreshColors();
++}
++
++function fillTopicSelect(select: HTMLSelectElement, topics: GraphNode[]): void {
++  const previous = select.value;
++  select.replaceChildren();
++  const blank = document.createElement('option');
++  blank.value = '';
++  blank.textContent = 'Topic';
++  select.append(blank);
++  for (const t of topics) {
++    const o = document.createElement('option');
++    o.value = t.id;
++    // textContent: topic names are untrusted text.
++    o.textContent = t.label;
++    select.append(o);
++  }
++  select.value = topics.some((t) => t.id === previous) ? previous : '';
++}
++
++/** Both path selects list the visible topics, by name. */
++function fillPathSelects(): void {
++  const topics = visible.nodes
++    .filter((n) => n.type === 'topic')
++    .sort((a, b) => a.label.localeCompare(b.label) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
++  fillTopicSelect(pathFromSelect, topics);
++  fillTopicSelect(pathToSelect, topics);
++  const none = topics.length === 0;
++  pathFromSelect.disabled = none;
++  pathToSelect.disabled = none;
++  pathButton.disabled = none;
++}
++
++/** Highlights the shortest chain between the two picked topics, or says there is none. */
++function findPath(): void {
++  const from = pathFromSelect.value;
++  const to = pathToSelect.value;
++  endFocus();
++  clearPath();
++  if (from === '' || to === '') {
++    pathResult.textContent = 'Pick two topics.';
++    return;
++  }
++  const path = shortestPath(visible, from, to);
++  if (path === null) {
++    pathResult.textContent = NO_PATH_TEXT;
++    return;
++  }
++  pathNodes = new Set(path);
++  pathLinks = new Set();
++  for (let i = 1; i < path.length; i += 1) pathLinks.add(linkKey(path[i - 1], path[i]));
++  const labelOf = new Map(visible.nodes.map((n) => [n.id, n.label]));
++  // textContent: the chain of untrusted labels is never parsed as HTML.
++  pathResult.textContent = path.map((id) => labelOf.get(id) ?? id).join(' → ');
++  refreshColors();
++}
++
++/** In 3D, fades everything outside `ids` and orbits the camera around them. */
++function focusCluster(ids: Set<string>): void {
++  clusterIds = ids;
++  refreshColors();
++  orbitCluster(ids);
++}
++
+ function swatch(color: string): HTMLSpanElement {
+   const s = h('span', '', 'swatch');
+   s.style.background = color;
+@@ -755,11 +1124,29 @@ const TABS: Array<{ id: Tab; title: string }> = [
+ 
+ function focusCommunity(community: number): void {
+   const anchor = anchors.get(community) ?? bestVisibleSession(community);
+-  if (anchor !== null) select(anchor, true);
++  if (anchor === null) return;
++  if (mode !== '3d') {
++    select(anchor, true);
++    return;
++  }
++  // select() ends any earlier focus, so the new cluster is set after it. The orbit does the flying.
++  select(anchor, false);
++  if (selectedId !== anchor) return;
++  const a = analysis;
++  const members = new Set(visible.nodes.filter((n) => a?.communityOf.get(n.id) === community).map((n) => n.id));
++  members.add(anchor);
++  focusCluster(members);
+ }
+ 
+ function focusNode(id: string): void {
+-  select(id, true);
++  if (mode !== '3d') {
++    select(id, true);
++    return;
++  }
++  select(id, false);
++  if (selectedId !== id) return;
++  // A bridge's cluster is the node and its visible neighbours (highlighted by select).
++  focusCluster(new Set(highlighted));
+ }
+ 
+ function emptyNote(text: string): HTMLParagraphElement {
+@@ -874,6 +1261,45 @@ function downloadMarkdown(): void {
+   exportStatus.textContent = 'Downloaded insights.md.';
+ }
+ 
++// ---------- time-lapse ----------
++
++let lapseTimer: ReturnType<typeof setInterval> | null = null;
++
++function setMonths(from: string, to: string): void {
++  fromMonth = from;
++  toMonth = to;
++  fromSelect.value = from;
++  toSelect.value = to;
++  applyFilters();
++  renderResults();
++}
++
++/** Stops the time-lapse and leaves the month filter where it is. */
++function stopTimelapse(): void {
++  if (lapseTimer !== null) clearInterval(lapseTimer);
++  lapseTimer = null;
++  timelapseButton.textContent = 'Time-lapse';
++}
++
++/** Shows the first month, then widens the "to" month one step every TIMELAPSE_STEP_MS. */
++function startTimelapse(): void {
++  stopTimelapse();
++  const months = monthKeys();
++  const first = nextMonth(months, null);
++  if (first === null) return;
++  timelapseButton.textContent = 'Stop';
++  setMonths(first, first);
++  lapseTimer = setInterval(() => {
++    const next = nextMonth(months, toMonth);
++    if (next === null) {
++      // The last month is shown: the full range stays.
++      stopTimelapse();
++      return;
++    }
++    setMonths(first, next);
++  }, TIMELAPSE_STEP_MS);
++}
++
+ // ---------- 2D / 3D toggle ----------
+ 
+ function setMode(next: Mode): void {
+@@ -881,6 +1307,12 @@ function setMode(next: Mode): void {
+   container2d.hidden = mode !== '2d';
+   container3d.hidden = mode !== '3d';
+   legendBox.hidden = mode !== '3d';
++  controls3dBox.hidden = mode !== '3d';
++  if (mode === '2d') {
++    stopTimelapse();
++    endFocus();
++    clearPath();
++  }
+   modeButton.textContent = mode === '2d' ? '3D' : '2D';
+   modeButton.title = mode === '2d' ? 'Switch to the 3D view' : 'Switch back to the 2D map';
+   if (mode === '2d') graph3d?.pauseAnimation();
+@@ -917,15 +1349,30 @@ buildMonthSelects();
+ renderTabs();
+ modeButton.addEventListener('click', () => setMode(mode === '2d' ? '3d' : '2d'));
+ fromSelect.addEventListener('change', () => {
++  // A hand-picked month takes over from a running time-lapse.
++  stopTimelapse();
+   fromMonth = fromSelect.value;
+   applyFilters();
+   renderResults();
+ });
+ toSelect.addEventListener('change', () => {
++  stopTimelapse();
+   toMonth = toSelect.value;
+   applyFilters();
+   renderResults();
+ });
++layersBox.addEventListener('change', () => {
++  if (mode !== '3d' || !graph3d) return;
++  installDepthForce(graph3d);
++  graph3d.d3ReheatSimulation();
++});
++timelapseButton.addEventListener('click', () => {
++  if (lapseTimer !== null) stopTimelapse();
++  else startTimelapse();
++});
++pathFromSelect.addEventListener('change', () => clearPath());
++pathToSelect.addEventListener('change', () => clearPath());
++pathButton.addEventListener('click', findPath);
+ copyButton.addEventListener('click', () => void copyMarkdown());
+ downloadButton.addEventListener('click', downloadMarkdown);
+ searchBox.addEventListener('input', renderResults);
+diff --git a/explorer/tests/holdout/shell3d_hidden.test.ts b/explorer/tests/holdout/shell3d_hidden.test.ts
+new file mode 100644
+index 0000000..f2b89e3
+--- /dev/null
++++ b/explorer/tests/holdout/shell3d_hidden.test.ts
+@@ -0,0 +1,125 @@
++import { describe, it, expect } from 'vitest';
++import { readFileSync } from 'node:fs';
++import { fileURLToPath } from 'node:url';
++
++// Hidden checks for the phase 16 shell markup. Self-contained: own tiny parser.
++
++function markup(): string {
++  return readFileSync(fileURLToPath(new URL('../../index.html', import.meta.url)), 'utf8')
++    .replace(/<!--[\s\S]*?-->/g, '')
++    .replace(/<style\b[\s\S]*?<\/style>/gi, '')
++    .replace(/<script\b[\s\S]*?<\/script>/gi, '');
++}
++
++interface El {
++  tag: string;
++  attrs: Record<string, string>;
++  at: number;
++  after: number;
++}
++
++function elements(html: string): El[] {
++  const list: El[] = [];
++  const tagRe = /<([a-zA-Z][\w-]*)(\s[^>]*)?>/g;
++  let t: RegExpExecArray | null;
++  while ((t = tagRe.exec(html)) !== null) {
++    const attrs: Record<string, string> = {};
++    const attrRe = /([^\s=/>"']+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>"']+)))?/g;
++    let a: RegExpExecArray | null;
++    const src = t[2] ?? '';
++    while ((a = attrRe.exec(src)) !== null) {
++      const key = a[1].toLowerCase();
++      if (!(key in attrs)) attrs[key] = a[2] ?? a[3] ?? a[4] ?? '';
++    }
++    list.push({ tag: t[1].toLowerCase(), attrs, at: t.index, after: t.index + t[0].length });
++  }
++  return list;
++}
++
++function single(html: string, id: string): El {
++  const hits = elements(html).filter((e) => e.attrs.id === id);
++  expect(hits.length, `id="${id}" count`).toBe(1);
++  return hits[0];
++}
++
++function contentText(html: string, el: El): string {
++  const end = html.toLowerCase().indexOf(`</${el.tag}>`, el.after);
++  expect(end).toBeGreaterThan(el.after - 1);
++  return html
++    .slice(el.after, end)
++    .replace(/<[^>]*>/g, ' ')
++    .replace(/&amp;/g, '&')
++    .replace(/&nbsp;/g, ' ')
++    .replace(/\s+/g, ' ')
++    .trim();
++}
++
++describe('phase 16 shell markup (hidden)', () => {
++  const html = markup();
++
++  it('AC-16-03 layers checkbox: unticked, enabled, labelled exactly "Layers"', () => {
++    const box = single(html, 'layers-mode');
++    expect(box.tag).toBe('input');
++    expect(box.attrs.type?.toLowerCase()).toBe('checkbox');
++    expect('checked' in box.attrs).toBe(false);
++    expect('disabled' in box.attrs).toBe(false);
++
++    const labels: string[] = [];
++    const labelRe = /<label\b([^>]*)>([\s\S]*?)<\/label>/gi;
++    let m: RegExpExecArray | null;
++    while ((m = labelRe.exec(html)) !== null) {
++      const forMatch = /\bfor\s*=\s*["']?([^"'\s>]+)/i.exec(m[1]);
++      const wraps = /\bid\s*=\s*["']?layers-mode["'\s>/]/.test(m[2]);
++      if ((forMatch && forMatch[1] === 'layers-mode') || wraps) {
++        labels.push(m[2].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim());
++      }
++    }
++    expect(labels).toEqual(['Layers']);
++  });
++
++  it('AC-16-04 time-lapse control is a <button> whose resting caption is "Time-lapse"', () => {
++    const btn = single(html, 'timelapse');
++    expect(btn.tag).toBe('button');
++    expect(contentText(html, btn)).toBe('Time-lapse');
++    // The month filter it drives is a distinct, still-present select.
++    const to = single(html, 'to-month');
++    expect(to.tag).toBe('select');
++    expect(to.at).not.toBe(btn.at);
++  });
++
++  it('AC-16-06 path picker: two separate single selects, a "Find path" button, a result div', () => {
++    const from = single(html, 'path-from');
++    const to = single(html, 'path-to');
++    const go = single(html, 'path-go');
++    const result = single(html, 'path-result');
++
++    expect([from.tag, to.tag, go.tag, result.tag]).toEqual(['select', 'select', 'button', 'div']);
++    expect(from.at).not.toBe(to.at);
++    expect('multiple' in from.attrs || 'multiple' in to.attrs).toBe(false);
++    expect(contentText(html, go)).toBe('Find path');
++
++    // The path selects are not the month filter selects.
++    expect(single(html, 'from-month').at).not.toBe(from.at);
++    expect(single(html, 'to-month').at).not.toBe(to.at);
++  });
++
++  it('AC-16-01 every phase 16 id and the existing shell ids are unique in the page', () => {
++    const ids = elements(html)
++      .map((e) => e.attrs.id)
++      .filter((id): id is string => typeof id === 'string' && id.length > 0);
++    const wanted = [
++      'layers-mode',
++      'timelapse',
++      'path-from',
++      'path-to',
++      'path-go',
++      'path-result',
++      'from-month',
++      'to-month',
++      'mode-toggle',
++    ];
++    for (const id of wanted) {
++      expect(ids.filter((x) => x === id), id).toEqual([id]);
++    }
++  });
++});
+diff --git a/explorer/tests/shell3d.test.ts b/explorer/tests/shell3d.test.ts
+new file mode 100644
+index 0000000..1caee42
+--- /dev/null
++++ b/explorer/tests/shell3d.test.ts
+@@ -0,0 +1,207 @@
++import { describe, it, expect } from 'vitest';
++import { readFileSync } from 'node:fs';
++import { fileURLToPath } from 'node:url';
++
++// Phase 16 is an app-shell phase: behaviour is checked in the browser. These tests pin the
++// static parts of the Interface contract in explorer/index.html (ids, element kinds, labels
++// and default state) plus the build script AC-16-01 depends on.
++
++// ---------- helpers ----------
++
++function loadHtml(): string {
++  const raw = readFileSync(fileURLToPath(new URL('../index.html', import.meta.url)), 'utf8');
++  // Ignore comments, styles and scripts so commented-out markup or CSS selectors never count.
++  return raw
++    .replace(/<!--[\s\S]*?-->/g, '')
++    .replace(/<style\b[\s\S]*?<\/style>/gi, '')
++    .replace(/<script\b[\s\S]*?<\/script>/gi, '');
++}
++
++interface StartTag {
++  tag: string;
++  attrs: Map<string, string>;
++  start: number;
++  end: number; // index just after the closing '>' of the start tag
++}
++
++function parseAttrs(src: string): Map<string, string> {
++  const attrs = new Map<string, string>();
++  const re = /([^\s=/>"']+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>"']+)))?/g;
++  let m: RegExpExecArray | null;
++  while ((m = re.exec(src)) !== null) {
++    const name = m[1].toLowerCase();
++    const value = m[2] ?? m[3] ?? m[4] ?? '';
++    if (!attrs.has(name)) attrs.set(name, value);
++  }
++  return attrs;
++}
++
++function startTags(html: string): StartTag[] {
++  const out: StartTag[] = [];
++  const re = /<([a-zA-Z][\w-]*)(\s[^>]*)?>/g;
++  let m: RegExpExecArray | null;
++  while ((m = re.exec(html)) !== null) {
++    out.push({
++      tag: m[1].toLowerCase(),
++      attrs: parseAttrs(m[2] ?? ''),
++      start: m.index,
++      end: m.index + m[0].length,
++    });
++  }
++  return out;
++}
++
++function byId(html: string, id: string): StartTag[] {
++  return startTags(html).filter((t) => t.attrs.get('id') === id);
++}
++
++function only(html: string, id: string): StartTag {
++  const found = byId(html, id);
++  expect(found, `expected exactly one element with id="${id}"`).toHaveLength(1);
++  return found[0];
++}
++
++function decode(text: string): string {
++  return text
++    .replace(/&nbsp;/g, ' ')
++    .replace(/&lt;/g, '<')
++    .replace(/&gt;/g, '>')
++    .replace(/&quot;/g, '"')
++    .replace(/&#39;/g, "'")
++    .replace(/&amp;/g, '&');
++}
++
++function textOf(fragment: string): string {
++  return decode(fragment.replace(/<[^>]*>/g, ' ')).replace(/\s+/g, ' ').trim();
++}
++
++function innerText(html: string, el: StartTag): string {
++  const close = html.toLowerCase().indexOf(`</${el.tag}>`, el.end);
++  expect(close, `missing </${el.tag}> for #${el.attrs.get('id')}`).toBeGreaterThan(-1);
++  return textOf(html.slice(el.end, close));
++}
++
++/** Text of the <label> tied to the element: either <label for=id> or a wrapping <label>. */
++function labelTextFor(html: string, id: string): string[] {
++  const texts: string[] = [];
++  const re = /<label\b([^>]*)>([\s\S]*?)<\/label>/gi;
++  let m: RegExpExecArray | null;
++  while ((m = re.exec(html)) !== null) {
++    const attrs = parseAttrs(m[1]);
++    const body = m[2];
++    const wraps = startTags(body).some((t) => t.attrs.get('id') === id);
++    if (attrs.get('for') === id || wraps) texts.push(textOf(body));
++  }
++  return texts;
++}
++
++const NEW_IDS = ['layers-mode', 'timelapse', 'path-from', 'path-to', 'path-go', 'path-result'];
++
++// ---------- tests ----------
++
++describe('phase 16 controls exist once each', () => {
++  const html = loadHtml();
++
++  for (const id of NEW_IDS) {
++    it(`AC-16-01 index.html has exactly one element with id="${id}"`, () => {
++      expect(byId(html, id)).toHaveLength(1);
++    });
++  }
++
++  it('AC-16-01 the new ids are all different elements', () => {
++    const positions = NEW_IDS.map((id) => only(html, id).start);
++    expect(new Set(positions).size).toBe(NEW_IDS.length);
++  });
++
++  it('AC-16-04 the month filter selects the time-lapse drives are still there once each', () => {
++    expect(only(html, 'from-month').tag).toBe('select');
++    expect(only(html, 'to-month').tag).toBe('select');
++  });
++
++  it('AC-16-02 the 2D/3D mode toggle is still present once', () => {
++    expect(only(html, 'mode-toggle').tag).toBe('button');
++  });
++});
++
++describe('Layers switch', () => {
++  const html = loadHtml();
++
++  it('AC-16-03 #layers-mode is a checkbox input', () => {
++    const el = only(html, 'layers-mode');
++    expect(el.tag).toBe('input');
++    expect((el.attrs.get('type') ?? '').toLowerCase()).toBe('checkbox');
++  });
++
++  it('AC-16-03 #layers-mode is unticked by default so the time axis is used first', () => {
++    const el = only(html, 'layers-mode');
++    expect(el.attrs.has('checked')).toBe(false);
++  });
++
++  it('AC-16-03 #layers-mode has a label reading "Layers"', () => {
++    const texts = labelTextFor(html, 'layers-mode');
++    expect(texts).toHaveLength(1);
++    expect(texts[0]).toBe('Layers');
++  });
++});
++
++describe('Time-lapse button', () => {
++  const html = loadHtml();
++
++  it('AC-16-04 #timelapse is a button', () => {
++    expect(only(html, 'timelapse').tag).toBe('button');
++  });
++
++  it('AC-16-04 #timelapse reads "Time-lapse" before it runs (not "Stop")', () => {
++    const text = innerText(html, only(html, 'timelapse'));
++    expect(text).toBe('Time-lapse');
++    expect(text).not.toBe('Stop');
++  });
++
++  it('AC-16-04 #timelapse is not disabled in the markup', () => {
++    expect(only(html, 'timelapse').attrs.has('disabled')).toBe(false);
++  });
++});
++
++describe('Path picker', () => {
++  const html = loadHtml();
++
++  it('AC-16-06 #path-from and #path-to are select elements', () => {
++    expect(only(html, 'path-from').tag).toBe('select');
++    expect(only(html, 'path-to').tag).toBe('select');
++  });
++
++  it('AC-16-06 the two topic selects pick a single topic each', () => {
++    expect(only(html, 'path-from').attrs.has('multiple')).toBe(false);
++    expect(only(html, 'path-to').attrs.has('multiple')).toBe(false);
++  });
++
++  it('AC-16-06 #path-go is a button labelled "Find path"', () => {
++    const el = only(html, 'path-go');
++    expect(el.tag).toBe('button');
++    expect(innerText(html, el)).toBe('Find path');
++  });
++
++  it('AC-16-06 #path-result is a div that starts without the no-path message', () => {
++    const el = only(html, 'path-result');
++    expect(el.tag).toBe('div');
++    expect(innerText(html, el)).not.toContain('No path between these topics');
++  });
++});
++
++describe('build', () => {
++  const pkg = JSON.parse(
++    readFileSync(fileURLToPath(new URL('../package.json', import.meta.url)), 'utf8'),
++  ) as { scripts?: Record<string, string>; dependencies?: Record<string, string> };
++
++  it('AC-16-01 npm run build type-checks with tsc --noEmit and builds with vite', () => {
++    const build = pkg.scripts?.build ?? '';
++    expect(build).toContain('tsc --noEmit');
++    expect(build).toContain('vite build');
++  });
++
++  it('AC-16-01 3d-force-graph and force-graph stay in dependencies', () => {
++    expect(Object.keys(pkg.dependencies ?? {})).toEqual(
++      expect.arrayContaining(['3d-force-graph', 'force-graph']),
++    );
++  });
++});

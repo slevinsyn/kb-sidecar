@@ -7,36 +7,103 @@
     <style>
       html, body { margin: 0; height: 100%; background: #0b0e14; color: #e6e6e6;
         font: 13px/1.4 system-ui, sans-serif; overflow: hidden; }
-      #graph { position: absolute; inset: 0; }
-      .panel { position: absolute; background: rgba(20, 24, 34, 0.92); border: 1px solid #2a3142;
+      #graph2d, #graph3d { position: absolute; inset: 0; left: 324px; }
+      #legend { position: absolute; left: 336px; bottom: 12px; pointer-events: none; }
+      #legend .legend-title { margin: 4px 0 2px; font-size: 11px; text-transform: uppercase; color: #8a93a6; }
+      #legend .legend-title:first-child { margin-top: 0; }
+      #legend .legend-row { display: flex; align-items: center; gap: 6px; }
+      #legend .legend-glyph { display: inline-block; width: 14px; text-align: center; }
+      #legend .legend-line { display: inline-block; width: 18px; height: 3px; border-radius: 2px; }
+      .panel { background: rgba(20, 24, 34, 0.92); border: 1px solid #2a3142;
         border-radius: 6px; padding: 10px; box-sizing: border-box; }
-      #controls { top: 12px; left: 12px; width: 260px; }
+      #left { position: absolute; top: 12px; left: 12px; width: 300px;
+        max-height: calc(100% - 24px); display: flex; flex-direction: column; gap: 8px; }
       #controls input[type="search"] { width: 100%; box-sizing: border-box; padding: 4px 6px;
         background: #0b0e14; color: inherit; border: 1px solid #2a3142; border-radius: 4px; }
-      #results { list-style: none; margin: 6px 0 0; padding: 0; max-height: 220px; overflow: auto; }
+      #results { list-style: none; margin: 6px 0 0; padding: 0; max-height: 160px; overflow: auto; }
       #results li { padding: 3px 4px; cursor: pointer; border-radius: 3px; }
       #results li:hover { background: #222a3c; }
       #filters { margin-top: 8px; }
       #filters label { display: block; }
+      .row-line { display: flex; gap: 6px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+      select, button { background: #0b0e14; color: inherit; border: 1px solid #2a3142;
+        border-radius: 4px; padding: 3px 6px; font: inherit; }
+      button { cursor: pointer; }
+      button:hover { background: #222a3c; }
+      #mode-toggle { font-weight: 600; }
+      .path-line select { max-width: 96px; }
+      #path-result { margin-top: 6px; word-break: break-word; }
+      #path-result:empty { display: none; }
+      #stats { margin-top: 6px; color: #8a93a6; }
       .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; }
-      #details { top: 12px; right: 12px; width: 300px; max-height: calc(100% - 24px); overflow: auto; }
+      #insights { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
+      #tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+      .tab.active { background: #2a3550; border-color: #4a5a85; }
+      #tab-body { overflow: auto; min-height: 60px; flex: 1 1 auto; }
+      #tab-body .headline { margin: 0 0 6px; font-weight: 600; }
+      #tab-body ul { margin: 0; padding-left: 16px; }
+      #tab-body .row { padding: 4px; border-radius: 3px; }
+      #tab-body .clickable { cursor: pointer; }
+      #tab-body .clickable:hover { background: #222a3c; }
+      .muted { color: #8a93a6; margin: 0; }
+      .bar { height: 8px; background: #4e79a7; border-radius: 2px; margin-top: 2px; }
+      .month { font-variant-numeric: tabular-nums; }
+      #export { margin-top: 8px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+      #details { position: absolute; top: 12px; right: 12px; width: 300px;
+        max-height: calc(100% - 24px); overflow: auto; }
       #details h2 { margin: 0 0 4px; font-size: 15px; }
       #details h3 { margin: 10px 0 2px; font-size: 12px; text-transform: uppercase; color: #8a93a6; }
       #details pre { white-space: pre-wrap; word-break: break-word; margin: 4px 0; }
       #details ul { margin: 0; padding-left: 16px; }
       #details a { color: #7fb2ff; cursor: pointer; }
-      #error { bottom: 12px; left: 12px; max-width: 420px; border-color: #7a2b2b; }
+      #error { position: absolute; bottom: 12px; right: 12px; max-width: 420px; border-color: #7a2b2b; }
       #error p { margin: 0 0 8px; color: #ff9b9b; }
+      .scene-tooltip { background: rgba(15, 18, 26, 0.88) !important; color: #e8ecf4 !important;
+        font-size: 12px !important; line-height: 1.4; padding: 4px 8px; border-radius: 4px;
+        border: 1px solid #2a3142; white-space: nowrap !important;
+        max-width: 280px; overflow: hidden; text-overflow: ellipsis; pointer-events: none !important; }
       [hidden] { display: none !important; }
     </style>
   </head>
   <body>
-    <div id="graph"></div>
-    <div id="controls" class="panel">
-      <input id="search" type="search" placeholder="Search nodes" autocomplete="off" />
-      <ul id="results"></ul>
-      <div id="filters"></div>
+    <div id="graph2d"></div>
+    <div id="graph3d" hidden></div>
+    <div id="left">
+      <div id="controls" class="panel">
+        <input id="search" type="search" placeholder="Search nodes" autocomplete="off" />
+        <ul id="results"></ul>
+        <div id="filters"></div>
+        <div class="row-line">
+          <label>From <select id="from-month"></select></label>
+          <label>to <select id="to-month"></select></label>
+          <button id="mode-toggle" type="button" title="Switch to the 3D view">3D</button>
+        </div>
+        <div id="controls3d" hidden>
+          <div class="row-line">
+            <label title="Put projects, sessions and topics on three levels"><input type="checkbox" id="layers-mode" /> Layers</label>
+            <label title="Draw each theme as a neuron: a big cell, branches around it and curved links between themes"><input type="checkbox" id="neuron-look" checked /> Neuron look</label>
+            <button id="timelapse" type="button" title="Grow the graph month by month">Time-lapse</button>
+          </div>
+          <div class="row-line path-line">
+            <label>Path <select id="path-from"></select></label>
+            <label>to <select id="path-to"></select></label>
+            <button id="path-go" type="button">Find path</button>
+          </div>
+          <div id="path-result" class="muted" role="status"></div>
+        </div>
+        <div id="stats"></div>
+      </div>
+      <div id="insights" class="panel">
+        <div id="tabs"></div>
+        <div id="tab-body"></div>
+        <div id="export">
+          <button id="copy-md" type="button">Copy Markdown</button>
+          <button id="download-md" type="button">Download insights.md</button>
+          <span id="export-status" class="muted" role="status"></span>
+        </div>
+      </div>
     </div>
+    <div id="legend" class="panel" hidden></div>
     <div id="details" class="panel" hidden></div>
     <div id="error" class="panel" hidden>
       <p id="error-text"></p>

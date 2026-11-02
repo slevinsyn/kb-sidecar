@@ -1,0 +1,448 @@
+diff --git a/.claude/launch.json b/.claude/launch.json
+new file mode 100644
+index 0000000..f46c160
+--- /dev/null
++++ b/.claude/launch.json
+@@ -0,0 +1,11 @@
++{
++  "version": "0.0.1",
++  "configurations": [
++    {
++      "name": "explorer",
++      "runtimeExecutable": "npm",
++      "runtimeArgs": ["--prefix", "explorer", "run", "dev", "--", "--port", "5173"],
++      "port": 5173
++    }
++  ]
++}
+diff --git a/changes/2026-11-01-graph-insights/pr.md b/changes/2026-11-01-graph-insights/pr.md
+new file mode 100644
+index 0000000..725eafb
+--- /dev/null
++++ b/changes/2026-11-01-graph-insights/pr.md
+@@ -0,0 +1,46 @@
++## Graph insights, part 1: clean topics and `kb context`
++
++## Why
++
++The explorer finds clusters, but topics are full of noise words (number, evening, goal, say) and plurals are split. This part cleans the topics and adds `kb context`, an offline command that prints a short Markdown block of past context from `graph.json`, so a future assistant does not need whole transcripts. Part 2 (analysis, insights, 2D map) is planned separately in `changes/2026-11-01-graph-map/`.
++
++## What changed
++
++| Phase | Title | Size | Review rounds | Bugs found and fixed |
++|---|---|---|---|---|
++| 08 | Clean topics | medium | 2 | 1 |
++| 09 | `kb context` - token-light context for assistants (GraphRAG) | medium | 2 | 1 |
++
++2 of 2 phases done, one commit per phase.
++
++- `kb ingest` now writes cleaner topics: more stop words, plurals merged, technology terms preferred, generic words (in over 40% of sessions) dropped. The old topic functions are unchanged.
++- `kb context <words> [--out] [--limit] [--max-chars]` prints the best-matching sessions and their related topics, files and projects (4,000 characters by default). Exit codes: 0 (including no match), 1 (graph.json missing or unreadable), 2 (usage).
++
++## Risk and approvals
++
++High: it reads private conversation data and changes what the knowledge base writes. Everything stays on this computer; nothing is sent anywhere. **2 approvals needed.**
++
++## How to run the checks
++
++```bash
++cd core && cargo test && cargo clippy -- -D warnings
++cd ../explorer && npx vitest run
++```
++
++Try it:
++
++```bash
++kb ingest
++kb context "proposal app"
++```
++
++## Known limits
++
++- Tests and specs are locked, so no test covers `kubernetes` / `postgres` (they are kept unnormalised in topics and matched in `kb context`).
++- `kb context --max-chars` below 14 prints only the 14-character truncation marker.
++
++## More
++
++- Report: `changes/2026-11-01-graph-insights/report.md`
++- Article: `changes/2026-11-01-graph-insights/kba/kba.docx`
++- Undo: revert the two phase commits and re-run `kb ingest`.
+diff --git a/changes/2026-11-01-graph-map/pr.md b/changes/2026-11-01-graph-map/pr.md
+new file mode 100644
+index 0000000..bdab109
+--- /dev/null
++++ b/changes/2026-11-01-graph-map/pr.md
+@@ -0,0 +1,36 @@
++## Graph insights, part 2: analysis, insights and the 2D map
++
++## Why
++
++The explorer shows 2,571 nodes as a 3D hairball. This part adds, on top of the cleaner topics from part 1, themes (communities), bridges, one-off topics, loose ends, a monthly timeline, an offline summary with a roadmap, and a readable 2D map coloured and labelled by theme. All of it runs in the browser from graph.json; nothing is sent anywhere.
++
++## What changed
++
++| Phase | Title | Size | Review rounds | Bugs found and fixed |
++|---|---|---|---|---|
++| 10 | Explorer analysis - communities, rank, bridges, gaps, timeline | large | 1 | 0 |
++| 11 | Offline insights - executive summary, roadmap, Markdown export | medium | 1 | 0 |
++| 12 | Explorer UI - 2D labelled community map, insights panel, month filter | medium | 1 | 0 |
++
++3 of 3 phases done, one commit per phase. Adds one dependency: `force-graph`.
++
++## Risk and approvals
++
++Medium. Reads private conversation data, only in the browser. **1 person approves the merge.**
++
++## How to run the checks
++
++```bash
++cd explorer && npx vitest run && npx tsc --noEmit && npm run build
++```
++
++## More
++
++- Report: `changes/2026-11-01-graph-map/report.md`
++- Article: `changes/2026-11-01-graph-map/kba/kba.docx`
++
++## Known limits
++
++- Copy Markdown (clipboard) and Download were not exercised in a real browser.
++- Project nodes are grey on the map, because the analysis assigns themes only to sessions and topics.
++- Insight rows whose target is hidden by the current filter do nothing.
+diff --git a/changes/2026-11-02-graph-3d/pr.md b/changes/2026-11-02-graph-3d/pr.md
+new file mode 100644
+index 0000000..1af6ca7
+--- /dev/null
++++ b/changes/2026-11-02-graph-3d/pr.md
+@@ -0,0 +1,25 @@
++# Give the third dimension a job: time, themes, layers and paths in the 3D map
++
++## Why
++3D was just a worse 2D. Depth now carries meaning: sessions sit along Z by date, themes form islands with floating names, size and brightness carry data, and there is a layers mode, a time-lapse, camera moves from the insights tabs and a topic-to-topic shortest path. The look is also reworked: shapes per type, fog, bloom, faint coloured links, particles, legend, and a view that starts 324 px from the left. This branch also restores the 2D map reverted on the base branch.
++
++## Phases
++| Phase | What | Commit |
++|---|---|---|
++| 13 | Layout maths (time axis, islands, layers, size, brightness) | 226d0a6 |
++| 14 | Graph logic (link filter, colours, shortest path, time-lapse, orbit) | c6b72af |
++| 15 | 3D look (shapes, fog, bloom, particles, legend, fit, auto-rotate, width) | 9d2df89 |
++| 16 | Wiring (forces, labels, layers, time-lapse, path, camera) | f308bdd |
++
++## Risk: Medium - 1 person approves the merge
++- Adds `three ^0.179.0` (dependency) and `@types/three ^0.179.0` (dev, type-only; approved during phase 15).
++- `three` is pinned to 0.179.x, so the installed version moves down from 0.187 to 0.179.1.
++- Browser-only, no data leaves the machine. `graph.json`, `kb ingest`, `analysis.ts`, `insights.ts` unchanged.
++
++## Checks
++```
++cd explorer && npx vitest run --exclude 'tests/holdout/**' && npx tsc --noEmit && npm run build
++```
++Phase 16 was also checked in a headless browser on made-up data (path, layers, time-lapse, orbit, escaping). Not checked by eye: layers seen from a side angle, and a manual drag stopping the orbit.
++
++See `changes/2026-11-02-graph-3d/report.md` and `kba/kba.docx`.
+diff --git a/changes/2026-11-02-graph-glare/change.md b/changes/2026-11-02-graph-glare/change.md
+new file mode 100644
+index 0000000..692dd0a
+--- /dev/null
++++ b/changes/2026-11-02-graph-glare/change.md
+@@ -0,0 +1,45 @@
++# Change: Tame the 3D glare and make the hover names readable
++
++Date: 2026-11-02 · Requested by: Sarthak Bhatt · Status: draft
++Client: Internal
++Linked: changes/2026-11-02-graph-3d/change.md (the 3D look this fixes; same branch)
++
++## Why
++Sarthak: the 3D graph is too bright, the names shown on hover are hard to read, and after selecting
++a node the brightness becomes enormous. Causes found in the code: the glow filter picks up almost
++every pixel (threshold 0.15, strength 0.9), every node also lights itself up on top of that, and a
++selected node adds white links, four particles per link and a white ring, all of which the glow then
++multiplies. The hover name is the library's default plain text with no background, so it sinks into
++the glow.
++
++## Must work
++- Glow levels are capped: a node's self-light never goes above 0.25 (today up to 0.75), a dim node has 0.
++- Selecting a node does not make it brighter: selected light = normal light for the same node; it stands out through full opacity and a white ring instead.
++- Brightness still carries data: a more recent node (brightness 1) is lighter than an old one (0.25), by a small, visible step.
++- Out-of-range or missing brightness (below 0, above 1, NaN) is treated as the nearest valid value (NaN -> 0.5), so the light never exceeds the cap.
++- Bloom is gentler: threshold 0.6 (only the brightest spots glow), strength 0.35, radius 0.4.
++- Links touching the selected node are a soft white (about 55% opacity), not pure white; particles are fewer (2) and thinner.
++- Hover name: dark panel, light text, readable size, shows the name and the type (for example "Billing API - topic"); the name is still escaped.
++- 2D map, panels, path, time-lapse, orbit and layers behave as before.
++
++## Steps
++| Phase | What it delivers | Size |
++|---|---|---|
++| 17 | `explorer/src/scene3d.ts`: capped, pure glow levels (self-light, opacity, ring) per node state | S |
++| 18 | App shell: use the glow levels, gentler bloom, softer selected links and particles, readable hover panel | M |
++
++## Risk: Low
++Look-only change in the explorer, no data, no dependency, no `graph.json` or ingest change.
++
++## Undo
++Revert the two phase commits.
++
++## Not in this change
++- New controls (a brightness slider), new packages, changes to `analysis.ts`, `insights.ts`, the 2D drawing.
++
++## Assumptions
++- Same branch `build/graph-3d`; the commits are added to the open pull request.
++- The exact numbers above (0.25 cap, 0.6 threshold, 0.35 strength, 2 particles) are a first tune; they live in named constants so they are easy to adjust after a look.
++- "Descriptions" means the hover name in 3D; the side details panel is already readable and stays.
++
++## Still open
+diff --git a/explorer/src/scene3d.ts b/explorer/src/scene3d.ts
+index d4a0a09..7418d4b 100644
+--- a/explorer/src/scene3d.ts
++++ b/explorer/src/scene3d.ts
+@@ -287,3 +287,25 @@ export function orbitPosition(center: Point3, radius: number, angle: number): Po
+     z: center.z + radius * Math.cos(angle),
+   };
+ }
++
++export const MAX_EMISSIVE = 0.25;
++
++export type NodeState = 'normal' | 'selected' | 'dim';
++
++export interface GlowLevels {
++  emissive: number;
++  opacity: number;
++  ring: number;
++}
++
++export function glowLevels(brightness: number, state: NodeState): GlowLevels {
++  const b = Number.isNaN(brightness) ? 0.5 : Math.min(1, Math.max(0, brightness));
++  if (state === 'dim') return { emissive: 0, opacity: 0.3, ring: 0.2 };
++  const emissive = Math.min(MAX_EMISSIVE, 0.05 + 0.2 * b);
++  if (state === 'selected') return { emissive, opacity: 1, ring: 1 };
++  return {
++    emissive,
++    opacity: Math.min(1, 0.4 + 0.6 * b),
++    ring: Math.min(1, 0.45 + 0.4 * b),
++  };
++}
+diff --git a/explorer/tests/glow.test.ts b/explorer/tests/glow.test.ts
+new file mode 100644
+index 0000000..58ace48
+--- /dev/null
++++ b/explorer/tests/glow.test.ts
+@@ -0,0 +1,81 @@
++import { describe, it, expect } from 'vitest';
++import { MAX_EMISSIVE, glowLevels } from '../src/scene3d';
++import type { NodeState } from '../src/scene3d';
++
++const STATES: NodeState[] = ['normal', 'selected', 'dim'];
++
++describe('glowLevels', () => {
++  it('AC-17-01 normal at brightness 1 hits the cap, opacity 1, ring 0.85', () => {
++    const g = glowLevels(1, 'normal');
++    expect(MAX_EMISSIVE).toBe(0.25);
++    expect(g.emissive).toBeCloseTo(0.25, 10);
++    expect(g.opacity).toBeCloseTo(1, 10);
++    expect(g.ring).toBeCloseTo(0.85, 10);
++  });
++
++  it('AC-17-01 normal at brightness 0 gives 0.05, 0.4, 0.45', () => {
++    const g = glowLevels(0, 'normal');
++    expect(g.emissive).toBeCloseTo(0.05, 10);
++    expect(g.opacity).toBeCloseTo(0.4, 10);
++    expect(g.ring).toBeCloseTo(0.45, 10);
++  });
++
++  it('AC-17-02 recent node glows at least 0.03 more than an old one', () => {
++    const recent = glowLevels(1, 'normal').emissive;
++    const old = glowLevels(0.25, 'normal').emissive;
++    expect(recent - old).toBeGreaterThanOrEqual(0.03);
++    expect(old).toBeCloseTo(0.1, 10);
++  });
++
++  it('AC-17-03 selected emissive equals normal emissive for the same brightness', () => {
++    for (const b of [0, 0.25, 0.5, 1]) {
++      expect(glowLevels(b, 'selected').emissive).toBe(glowLevels(b, 'normal').emissive);
++    }
++  });
++
++  it('AC-17-03 selected opacity and ring are 1', () => {
++    for (const b of [0, 0.25, 0.5, 1]) {
++      const g = glowLevels(b, 'selected');
++      expect(g.opacity).toBe(1);
++      expect(g.ring).toBe(1);
++    }
++  });
++
++  it('AC-17-04 dim gives 0, 0.3, 0.2 for any brightness', () => {
++    for (const b of [0, 0.25, 0.5, 1, -3, 7, NaN]) {
++      const g = glowLevels(b, 'dim');
++      expect(g.emissive).toBe(0);
++      expect(g.opacity).toBe(0.3);
++      expect(g.ring).toBe(0.2);
++    }
++  });
++
++  it('AC-17-05 brightness below 0 behaves like 0', () => {
++    expect(glowLevels(-5, 'normal')).toEqual(glowLevels(0, 'normal'));
++    expect(glowLevels(-0.001, 'selected')).toEqual(glowLevels(0, 'selected'));
++  });
++
++  it('AC-17-05 brightness above 1 behaves like 1', () => {
++    expect(glowLevels(5, 'normal')).toEqual(glowLevels(1, 'normal'));
++    expect(glowLevels(1.001, 'selected')).toEqual(glowLevels(1, 'selected'));
++  });
++
++  it('AC-17-05 NaN behaves like 0.5', () => {
++    for (const s of STATES) {
++      expect(glowLevels(NaN, s)).toEqual(glowLevels(0.5, s));
++    }
++    expect(glowLevels(NaN, 'normal').emissive).toBeCloseTo(0.15, 10);
++  });
++
++  it('AC-17-05 emissive never exceeds MAX_EMISSIVE and opacity/ring never exceed 1', () => {
++    for (const s of STATES) {
++      for (const b of [-100, -1, 0, 0.3, 0.5, 0.99, 1, 2, 1e9, Infinity, NaN]) {
++        const g = glowLevels(b, s);
++        expect(g.emissive).toBeLessThanOrEqual(MAX_EMISSIVE);
++        expect(g.emissive).toBeGreaterThanOrEqual(0);
++        expect(g.opacity).toBeLessThanOrEqual(1);
++        expect(g.ring).toBeLessThanOrEqual(1);
++      }
++    }
++  });
++});
+diff --git a/explorer/tests/holdout/glow_hidden.test.ts b/explorer/tests/holdout/glow_hidden.test.ts
+new file mode 100644
+index 0000000..39ed427
+--- /dev/null
++++ b/explorer/tests/holdout/glow_hidden.test.ts
+@@ -0,0 +1,37 @@
++import { describe, it, expect } from 'vitest';
++import { MAX_EMISSIVE, glowLevels } from '../../src/scene3d';
++
++describe('glowLevels hidden', () => {
++  it('AC-17-01 normal at brightness 0.6 follows the linear formulas', () => {
++    const g = glowLevels(0.6, 'normal');
++    expect(g.emissive).toBeCloseTo(0.05 + 0.2 * 0.6, 10);
++    expect(g.opacity).toBeCloseTo(0.4 + 0.6 * 0.6, 10);
++    expect(g.ring).toBeCloseTo(0.45 + 0.4 * 0.6, 10);
++  });
++
++  it('AC-17-02 emissive grows with brightness and differs by 0.2*delta', () => {
++    const hi = glowLevels(0.9, 'normal').emissive;
++    const lo = glowLevels(0.1, 'normal').emissive;
++    expect(hi - lo).toBeCloseTo(0.16, 10);
++  });
++
++  it('AC-17-03 selected is never brighter than normal at brightness 0.8', () => {
++    const s = glowLevels(0.8, 'selected');
++    expect(s.emissive).toBeCloseTo(glowLevels(0.8, 'normal').emissive, 10);
++    expect(s.emissive).toBeLessThanOrEqual(MAX_EMISSIVE);
++    expect(s.opacity).toBe(1);
++    expect(s.ring).toBe(1);
++  });
++
++  it('AC-17-04 dim at brightness 0.77 is fixed', () => {
++    expect(glowLevels(0.77, 'dim')).toEqual({ emissive: 0, opacity: 0.3, ring: 0.2 });
++  });
++
++  it('AC-17-05 out-of-range and NaN inputs are clamped', () => {
++    expect(glowLevels(-42, 'normal').emissive).toBeCloseTo(0.05, 10);
++    expect(glowLevels(42, 'normal').emissive).toBeCloseTo(MAX_EMISSIVE, 10);
++    expect(glowLevels(NaN, 'normal').opacity).toBeCloseTo(0.7, 10);
++    expect(glowLevels(NaN, 'normal').ring).toBeCloseTo(0.65, 10);
++    expect(glowLevels(NaN, 'selected').emissive).toBeCloseTo(0.15, 10);
++  });
++});
+diff --git a/specs/phase-17.md b/specs/phase-17.md
+new file mode 100644
+index 0000000..017a5a8
+--- /dev/null
++++ b/specs/phase-17.md
+@@ -0,0 +1,43 @@
++# Phase 17: Glow levels - capped, pure, selection never brighter
++
++## Intent
++One small pure function decides how much a node lights itself, how opaque it is and how strong its
++ring is, so the 3D view can no longer blow out: the self-light has a low cap and selecting a node
++does not raise it.
++
++## Complexity
++S - one small function with clamping and three states.
++
++## Scope
++- In scope: add to `explorer/src/scene3d.ts` (pure, unit-tested).
++- Out of scope: rendering, DOM, `three`, bloom settings (phase 18).
++
++## Interface contract
++Tests import from `../src/scene3d`. No DOM, no `three`.
++
++| Item | Location | Signature or shape | Errors |
++|---|---|---|---|
++| `MAX_EMISSIVE` | `explorer/src/scene3d.ts` | `export const MAX_EMISSIVE = 0.25` | - |
++| `NodeState` | same | `export type NodeState = 'normal' \| 'selected' \| 'dim'` | - |
++| `GlowLevels` | same | `export interface GlowLevels { emissive: number; opacity: number; ring: number }` | - |
++| `glowLevels` | same | `export function glowLevels(brightness: number, state: NodeState): GlowLevels` | - |
++
++## Behaviour
++1. `b` = `brightness` clamped to 0..1; `NaN` -> 0.5.
++2. `normal`: `emissive = 0.05 + 0.2 * b` (so 0.05 to `MAX_EMISSIVE`), `opacity = 0.4 + 0.6 * b`, `ring = 0.45 + 0.4 * b`.
++3. `selected`: `emissive` equals the `normal` value for the same `b` (never higher), `opacity = 1`, `ring = 1`.
++4. `dim`: `emissive = 0`, `opacity = 0.3`, `ring = 0.2`, whatever `b` is.
++5. Results never exceed `MAX_EMISSIVE` for `emissive`, and never exceed 1 for `opacity` and `ring`.
++
++## Acceptance criteria
++- AC-17-01: `glowLevels(1, 'normal').emissive` is `MAX_EMISSIVE` (0.25) and `glowLevels(0, 'normal').emissive` is 0.05; opacity is 1 and 0.4; ring is 0.85 and 0.45.
++- AC-17-02: a more recent node (brightness 1) has higher emissive than an old one (0.25) in `normal`, by at least 0.03.
++- AC-17-03: `selected` emissive equals `normal` emissive for the same brightness (0, 0.25, 0.5, 1) and `selected` opacity and ring are 1.
++- AC-17-04: `dim` gives emissive 0, opacity 0.3, ring 0.2 for any brightness.
++- AC-17-05: brightness below 0 or above 1 behaves like 0 or 1; `NaN` behaves like 0.5; emissive never exceeds `MAX_EMISSIVE` in any state.
++
++## External systems to mock
++- None (pure function).
++
++## Dependencies on earlier phases
++- Phase 13 (same module `scene3d.ts`).
+diff --git a/specs/phase-18.md b/specs/phase-18.md
+new file mode 100644
+index 0000000..99d117d
+--- /dev/null
++++ b/specs/phase-18.md
+@@ -0,0 +1,40 @@
++# Phase 18: 3D glare fix - gentler glow, soft selection, readable hover name
++
++## Intent
++Use the capped glow levels in the 3D view, make the bloom gentler, stop the selection from piling
++white links and particles into the glow, and give the hover name a dark panel so it can be read.
++
++## Complexity
++M - rendering constants and a styled tooltip that interact with selection, paths and orbit, checked in the browser.
++
++## Scope
++- In scope: `explorer/src/main.ts`, `explorer/index.html`, using `glowLevels` from `scene3d.ts`.
++- Out of scope: `scene3d.ts` behaviour, 2D drawing, new controls or packages.
++
++## Interface contract
++App shell, not unit-tested. Checked by `npm run build`, `npx tsc --noEmit`, the existing tests and a browser run.
++
++| Item | Location | Shape | Errors |
++|---|---|---|---|
++| Bloom constants | `main.ts` | `BLOOM_STRENGTH = 0.35`, `BLOOM_RADIUS = 0.4`, `BLOOM_THRESHOLD = 0.6` | - |
++| Selected particles | `main.ts` | `SELECTED_PARTICLES = 2`, `PARTICLE_WIDTH = 1.2` | - |
++| Hover panel | `index.html` | CSS for `.scene-tooltip` (the library's tooltip class): dark background, light text, 12-13px, padding, radius | - |
++
++## Behaviour
++- `styleNode` takes emissive, opacity and ring from `glowLevels(brightness, state)`, with state `selected` for the selected node, `dim` when `isDimmed`, otherwise `normal`. The selected node is no longer lit more than others.
++- Links touching the selected node use a soft white `rgba(255, 255, 255, 0.55)` instead of `#ffffff`.
++- Path highlight colour and widths stay as they are.
++- The 3D hover label (`nodeLabel`) shows the escaped name and, on a second line, the type (for example "topic"); it stays escaped. 2D hover is unchanged.
++- The tooltip panel is readable on top of the scene: dark semi-opaque background, light text, no wrapping of short names, `pointer-events: none`.
++
++## Acceptance criteria
++- AC-18-01: `npm run build` and `npx tsc --noEmit` pass and the existing unit tests still pass.
++- AC-18-02: In the browser the 3D view at rest is clearly less bright than before and colours are still distinguishable.
++- AC-18-03: Selecting a node does not make the picture brighter overall; the node is marked by a white ring and its links by soft white lines with 2 thin particles.
++- AC-18-04: The hover name shows on a dark panel, in light text, with the node type, and a label containing `<b>` is shown as plain text.
++
++## External systems to mock
++- None; visual check in the browser preview.
++
++## Dependencies on earlier phases
++- Phase 17 (`glowLevels`). Phases 15-16 (3D look and wiring).

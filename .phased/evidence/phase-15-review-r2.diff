@@ -1,0 +1,748 @@
+diff --git a/changes/2026-11-02-graph-3d/change.md b/changes/2026-11-02-graph-3d/change.md
+index 01e4486..7c8998b 100644
+--- a/changes/2026-11-02-graph-3d/change.md
++++ b/changes/2026-11-02-graph-3d/change.md
+@@ -43,6 +43,7 @@ per type, fog, glow, faint coloured links, less clutter, and a view that starts
+ ## Risk: Medium
+ Normal product change to the explorer, runs only in the browser on private data and sends nothing
+ out. Adds one dependency (`three`, already installed through `3d-force-graph`), so `package.json` changes.
++Also adds `@types/three` as a dev-only, type-only dependency (approved by Sarthak during phase 15, needed for `tsc --noEmit`). `three` is pinned to 0.179.x, so the installed version moves down from 0.187.
+ 
+ ## Undo
+ Revert the phase commits. The 2D map comes back with the first commit on this branch; revert that too to drop it.
+diff --git a/explorer/index.html b/explorer/index.html
+index 8eefdd4..3d8b1e2 100644
+--- a/explorer/index.html
++++ b/explorer/index.html
+@@ -7,8 +7,13 @@
+     <style>
+       html, body { margin: 0; height: 100%; background: #0b0e14; color: #e6e6e6;
+         font: 13px/1.4 system-ui, sans-serif; overflow: hidden; }
+-      #graph2d, #graph3d { position: absolute; inset: 0; }
+-      #graph2d { left: 324px; }
++      #graph2d, #graph3d { position: absolute; inset: 0; left: 324px; }
++      #legend { position: absolute; left: 336px; bottom: 12px; pointer-events: none; }
++      #legend .legend-title { margin: 4px 0 2px; font-size: 11px; text-transform: uppercase; color: #8a93a6; }
++      #legend .legend-title:first-child { margin-top: 0; }
++      #legend .legend-row { display: flex; align-items: center; gap: 6px; }
++      #legend .legend-glyph { display: inline-block; width: 14px; text-align: center; }
++      #legend .legend-line { display: inline-block; width: 18px; height: 3px; border-radius: 2px; }
+       .panel { background: rgba(20, 24, 34, 0.92); border: 1px solid #2a3142;
+         border-radius: 6px; padding: 10px; box-sizing: border-box; }
+       #left { position: absolute; top: 12px; left: 12px; width: 300px;
+@@ -78,6 +83,7 @@
+         </div>
+       </div>
+     </div>
++    <div id="legend" class="panel" hidden></div>
+     <div id="details" class="panel" hidden></div>
+     <div id="error" class="panel" hidden>
+       <p id="error-text"></p>
+diff --git a/explorer/package-lock.json b/explorer/package-lock.json
+index 48b0e92..c96f9c2 100644
+--- a/explorer/package-lock.json
++++ b/explorer/package-lock.json
+@@ -9,10 +9,12 @@
+       "version": "0.1.0",
+       "dependencies": {
+         "3d-force-graph": "^1.80.1",
+-        "force-graph": "^1.52.0"
++        "force-graph": "^1.52.0",
++        "three": "^0.179.0"
+       },
+       "devDependencies": {
+         "@types/node": "^22.0.0",
++        "@types/three": "^0.179.0",
+         "typescript": "^7.0.2",
+         "vite": "^8.3.5",
+         "vitest": "^5.0.5"
+@@ -27,6 +29,13 @@
+         "node": ">=6.9.0"
+       }
+     },
++    "node_modules/@dimforge/rapier3d-compat": {
++      "version": "0.12.0",
++      "resolved": "https://registry.npmjs.org/@dimforge/rapier3d-compat/-/rapier3d-compat-0.12.0.tgz",
++      "integrity": "sha512-uekIGetywIgopfD97oDL5PfeezkFpNhwlzlaEYNOA0N6ghdsOvh/HYjSMek5Q2O1PYvRSDFcqFVJl4r4ZBwOow==",
++      "dev": true,
++      "license": "Apache-2.0"
++    },
+     "node_modules/@jridgewell/resolve-uri": {
+       "version": "3.1.2",
+       "resolved": "https://registry.npmjs.org/@jridgewell/resolve-uri/-/resolve-uri-3.1.2.tgz",
+@@ -386,6 +395,43 @@
+         "undici-types": "~6.21.0"
+       }
+     },
++    "node_modules/@types/stats.js": {
++      "version": "0.17.4",
++      "resolved": "https://registry.npmjs.org/@types/stats.js/-/stats.js-0.17.4.tgz",
++      "integrity": "sha512-jIBvWWShCvlBqBNIZt0KAshWpvSjhkwkEu4ZUcASoAvhmrgAUI2t1dXrjSL4xXVLB4FznPrIsX3nKXFl/Dt4vA==",
++      "dev": true,
++      "license": "MIT"
++    },
++    "node_modules/@types/three": {
++      "version": "0.179.0",
++      "resolved": "https://registry.npmjs.org/@types/three/-/three-0.179.0.tgz",
++      "integrity": "sha512-VgbFG2Pgsm84BqdegZzr7w2aKbQxmgzIu4Dy7/75ygiD/0P68LKmp5ie08KMPNqGTQwIge8s6D1guZf1RnZE0A==",
++      "dev": true,
++      "license": "MIT",
++      "dependencies": {
++        "@dimforge/rapier3d-compat": "~0.12.0",
++        "@tweenjs/tween.js": "~23.1.3",
++        "@types/stats.js": "*",
++        "@types/webxr": "*",
++        "@webgpu/types": "*",
++        "fflate": "~0.8.2",
++        "meshoptimizer": "~0.22.0"
++      }
++    },
++    "node_modules/@types/three/node_modules/@tweenjs/tween.js": {
++      "version": "23.1.3",
++      "resolved": "https://registry.npmjs.org/@tweenjs/tween.js/-/tween.js-23.1.3.tgz",
++      "integrity": "sha512-vJmvvwFxYuGnF2axRtPYocag6Clbb5YS7kLL+SO/TeVFzHqDIWrNKYtcsPMibjDx9O+bu+psAy9NKfWklassUA==",
++      "dev": true,
++      "license": "MIT"
++    },
++    "node_modules/@types/webxr": {
++      "version": "0.5.24",
++      "resolved": "https://registry.npmjs.org/@types/webxr/-/webxr-0.5.24.tgz",
++      "integrity": "sha512-h8fgEd/DpoS9CBrjEQXR+dIDraopAEfu4wYVNY2tEPwk60stPWhvZMf4Foo5FakuQ7HFZoa8WceaWFervK2Ovg==",
++      "dev": true,
++      "license": "MIT"
++    },
+     "node_modules/@typescript/typescript-aix-ppc64": {
+       "version": "7.0.2",
+       "resolved": "https://registry.npmjs.org/@typescript/typescript-aix-ppc64/-/typescript-aix-ppc64-7.0.2.tgz",
+@@ -764,6 +810,13 @@
+         "url": "https://opencollective.com/vitest"
+       }
+     },
++    "node_modules/@webgpu/types": {
++      "version": "0.1.74",
++      "resolved": "https://registry.npmjs.org/@webgpu/types/-/types-0.1.74.tgz",
++      "integrity": "sha512-lgiI4hbuLcI9unnm2cL/tvCaQU45dp0xcLWJh5uB/9MBGvIA4F8XIk7nSiBeg+K4xWGYwgZKn80LmERI5CxoTA==",
++      "dev": true,
++      "license": "BSD-3-Clause"
++    },
+     "node_modules/3d-force-graph": {
+       "version": "1.80.1",
+       "resolved": "https://registry.npmjs.org/3d-force-graph/-/3d-force-graph-1.80.1.tgz",
+@@ -1114,6 +1167,13 @@
+         }
+       }
+     },
++    "node_modules/fflate": {
++      "version": "0.8.3",
++      "resolved": "https://registry.npmjs.org/fflate/-/fflate-0.8.3.tgz",
++      "integrity": "sha512-tbZNuJrLwGUp3zshBtdy4W+ORxZuIh8a5ilyIEQDC5rY1f3U20JMry0Ll3WBzU58EZKsEuJFXhb5gwv8CsPvgA==",
++      "dev": true,
++      "license": "MIT"
++    },
+     "node_modules/float-tooltip": {
+       "version": "1.7.5",
+       "resolved": "https://registry.npmjs.org/float-tooltip/-/float-tooltip-1.7.5.tgz",
+@@ -1488,6 +1548,13 @@
+         "@jridgewell/sourcemap-codec": "^1.6.0"
+       }
+     },
++    "node_modules/meshoptimizer": {
++      "version": "0.22.0",
++      "resolved": "https://registry.npmjs.org/meshoptimizer/-/meshoptimizer-0.22.0.tgz",
++      "integrity": "sha512-IebiK79sqIy+E4EgOr+CAw+Ke8hAspXKzBd0JdgEmPHiAwmvEj2S4h1rfvo+o/BnfEYd/jAOg5IeeIjzlzSnDg==",
++      "dev": true,
++      "license": "MIT"
++    },
+     "node_modules/nanoid": {
+       "version": "3.3.20",
+       "resolved": "https://registry.npmjs.org/nanoid/-/nanoid-3.3.20.tgz",
+@@ -1690,9 +1757,9 @@
+       "license": "MIT"
+     },
+     "node_modules/three": {
+-      "version": "0.187.0",
+-      "resolved": "https://registry.npmjs.org/three/-/three-0.187.0.tgz",
+-      "integrity": "sha512-Qiu7R+Cmh8CstZsY1uJOSWnVlfo7ZtNLV7mF8Jltk3LB3AtDu9cRZlcnRKkAk8Y4z6KKw35z7Y7Urd7jWY8etA==",
++      "version": "0.179.1",
++      "resolved": "https://registry.npmjs.org/three/-/three-0.179.1.tgz",
++      "integrity": "sha512-5y/elSIQbrvKOISxpwXCR4sQqHtGiOI+MKLc3SsBdDXA2hz3Mdp3X59aUp8DyybMa34aeBwbFTpdoLJaUDEWSw==",
+       "license": "MIT"
+     },
+     "node_modules/three-forcegraph": {
+diff --git a/explorer/package.json b/explorer/package.json
+index 088af32..a776fce 100644
+--- a/explorer/package.json
++++ b/explorer/package.json
+@@ -10,10 +10,12 @@
+   },
+   "dependencies": {
+     "3d-force-graph": "^1.80.1",
+-    "force-graph": "^1.52.0"
++    "force-graph": "^1.52.0",
++    "three": "^0.179.0"
+   },
+   "devDependencies": {
+     "@types/node": "^22.0.0",
++    "@types/three": "^0.179.0",
+     "typescript": "^7.0.2",
+     "vite": "^8.3.5",
+     "vitest": "^5.0.5"
+diff --git a/explorer/src/main.ts b/explorer/src/main.ts
+index e924b64..5d41a35 100644
+--- a/explorer/src/main.ts
++++ b/explorer/src/main.ts
+@@ -1,5 +1,7 @@
+ import ForceGraph from 'force-graph';
+ import ForceGraph3D from '3d-force-graph';
++import type { ForceGraph3DInstance } from '3d-force-graph';
++import * as THREE from 'three';
+ import {
+   GraphError,
+   NODE_TYPES,
+@@ -22,16 +24,47 @@ import {
+   monthRange,
+   viewGraph,
+ } from './view';
++import { bridgeIds, brightnessMap, defaultLinkFilter, linkRgba, nodeSize } from './scene3d';
+ 
+ const DIM_COLOR = '#2b3040';
+ const TOP_LABEL_COUNT = 30;
+ const LABEL_ZOOM = 1.6;
+-/** The 2D canvas starts to the right of the left-hand panels (matches #graph2d in index.html). */
++/** Both canvases start to the right of the left-hand panels (matches #graph2d/#graph3d in index.html). */
+ const LEFT_PANEL_PX = 324;
+-const width2d = (): number => Math.max(200, window.innerWidth - LEFT_PANEL_PX);
++const graphWidth = (): number => Math.max(200, window.innerWidth - LEFT_PANEL_PX);
+ const MONTH_KEY = /^\d{4}-\d{2}$/;
+ const BACKGROUND = '#0b0e14';
+ 
++// 3D look.
++/** World units per unit of nodeSize (nodeSize is 3..15). */
++const NODE_SCALE = 0.6;
++const FALLBACK_NODE_SIZE = 3;
++/** Alpha of a link that does not touch the selected node while something is selected. */
++const DIM_LINK_ALPHA = 0.04;
++const SELECTED_PARTICLES = 4;
++const PARTICLE_WIDTH = 2;
++const AUTO_ROTATE_SPEED = 0.5;
++const IDLE_RESUME_MS = 5000;
++const BLOOM_STRENGTH = 0.9;
++const BLOOM_RADIUS = 0.4;
++const BLOOM_THRESHOLD = 0.15;
++/** Fog starts a little in front of the graph centre and ends well behind it. */
++const FOG_NEAR_FACTOR = 0.25;
++const FOG_FAR_FACTOR = 1.5;
++const DEFAULT_SCENE_RADIUS = 300;
++const LEGEND_SHAPES: ReadonlyArray<readonly [string, string]> = [
++  ['●', 'sphere = session'],
++  ['■', 'cube = project'],
++  ['◆', 'octahedron = topic'],
++  ['○', 'ring = bridge'],
++];
++const LEGEND_LINKS: ReadonlyArray<readonly [string, string]> = [
++  ['in_project', 'in project'],
++  ['has_topic', 'has topic'],
++  ['touched_file', 'touched file'],
++  ['used_tool', 'used tool'],
++];
++
+ type Mode = '2d' | '3d';
+ type Tab = 'summary' | 'themes' | 'bridges' | 'loose' | 'roadmap' | 'timeline';
+ type RenderNode = GraphNode & { x?: number; y?: number; z?: number };
+@@ -83,6 +116,7 @@ const tabBody = el<HTMLDivElement>('tab-body');
+ const copyButton = el<HTMLButtonElement>('copy-md');
+ const downloadButton = el<HTMLButtonElement>('download-md');
+ const exportStatus = el<HTMLSpanElement>('export-status');
++const legendBox = el<HTMLDivElement>('legend');
+ 
+ let full: GraphData = { nodes: [], links: [] };
+ let visible: GraphData = full;
+@@ -98,6 +132,10 @@ let anchors = new Map<number, string>();
+ let fromMonth = '';
+ let toMonth = '';
+ const activeTypes = new Set<NodeType>(DEFAULT_VIEW_TYPES);
++let brightness = new Map<string, number>();
++let bridges = new Set<string>();
++/** 3D node sizes, computed once per loaded graph. */
++let sizes = new Map<string, number>();
+ 
+ function colorOf(n: GraphNode): string {
+   return communityColor(analysis?.communityOf.get(n.id));
+@@ -151,7 +189,7 @@ function makeGraph2d(): ForceGraph {
+   const g = new ForceGraph(container2d)
+     .backgroundColor(BACKGROUND)
+     .nodeId('id')
+-    .width(width2d())
++    .width(graphWidth())
+     .height(window.innerHeight)
+     .nodeLabel((n) => escapeHtml((n as GraphNode).label))
+     // The default link label reads link.name as HTML; links carry no label text, so show none.
+@@ -224,22 +262,236 @@ function drawThemeLabels(ctx: CanvasRenderingContext2D, scale: number): void {
+ 
+ // ---------- 3D view ----------
+ 
+-function makeGraph3d() {
+-  return new ForceGraph3D(container3d)
++// One unit-sized geometry per shape; each node scales its own group.
++const SPHERE = new THREE.SphereGeometry(1, 16, 12);
++const CUBE = new THREE.BoxGeometry(1.6, 1.6, 1.6);
++const OCTAHEDRON = new THREE.OctahedronGeometry(1.35);
++const RING = new THREE.TorusGeometry(1.75, 0.08, 8, 40);
++
++/** The materials of one rendered node, so selection changes can restyle it in place. */
++interface NodeLook {
++  node: GraphNode;
++  body: THREE.MeshLambertMaterial;
++  ring: THREE.MeshBasicMaterial | null;
++}
++
++const nodeLooks = new Map<string, NodeLook>();
++
++function geometryFor(type: NodeType): THREE.BufferGeometry {
++  if (type === 'project') return CUBE;
++  if (type === 'topic') return OCTAHEDRON;
++  return SPHERE;
++}
++
++function styleNode(look: NodeLook): void {
++  const dim = isDimmed(look.node);
++  const color = dim ? DIM_COLOR : colorOf(look.node);
++  const b = brightness.get(look.node.id) ?? 0.5;
++  look.body.color.set(color);
++  look.body.emissive.set(color);
++  look.body.emissiveIntensity = dim ? 0 : 0.15 + 0.6 * b;
++  look.body.opacity = dim ? 0.3 : 0.4 + 0.6 * b;
++  if (look.ring) {
++    look.ring.color.set(dim ? DIM_COLOR : '#ffffff');
++    look.ring.opacity = dim ? 0.2 : 0.45 + 0.4 * b;
++  }
++}
++
++function nodeObject3d(obj: object): THREE.Object3D {
++  const node = obj as GraphNode;
++  const group = new THREE.Group();
++  const body = new THREE.MeshLambertMaterial({ transparent: true });
++  group.add(new THREE.Mesh(geometryFor(node.type), body));
++  let ring: THREE.MeshBasicMaterial | null = null;
++  if (bridges.has(node.id)) {
++    ring = new THREE.MeshBasicMaterial({ transparent: true });
++    const halo = new THREE.Mesh(RING, ring);
++    // Keep the halo facing the camera (the parent group is never rotated).
++    halo.onBeforeRender = (_renderer, _scene, camera) => {
++      halo.quaternion.copy(camera.quaternion);
++    };
++    group.add(halo);
++  }
++  group.scale.setScalar((sizes.get(node.id) ?? FALLBACK_NODE_SIZE) * NODE_SCALE);
++  const look: NodeLook = { node, body, ring };
++  styleNode(look);
++  nodeLooks.set(node.id, look);
++  return group;
++}
++
++function linkColor3d(l: GraphLink): string {
++  if (selectedId === null) return linkRgba(l.type);
++  return touchesSelected(l) ? '#ffffff' : linkRgba(l.type, DIM_LINK_ALPHA);
++}
++
++function linkParticles(l: GraphLink): number {
++  return touchesSelected(l) ? SELECTED_PARTICLES : 0;
++}
++
++/** File and tool links are shown in 3D only when one of those node types is ticked. */
++function showNoiseLinks(): boolean {
++  return activeTypes.has('file') || activeTypes.has('tool');
++}
++
++// ---------- 3D camera: fit, auto-rotate, fog ----------
++
++type Graph3D = ForceGraph3DInstance;
++
++/** The parts of OrbitControls this app uses; other control types lack autoRotate. */
++interface RotatingControls {
++  autoRotate: boolean;
++  autoRotateSpeed: number;
++  target?: THREE.Vector3;
++  addEventListener(type: string, listener: () => void): void;
++}
++
++let fit3dPending = true;
++let rebuild3d = false;
++let dragging = false;
++let idleTimer: ReturnType<typeof setTimeout> | null = null;
++const sceneCenter = new THREE.Vector3();
++let sceneRadius = DEFAULT_SCENE_RADIUS;
++
++function rotatingControls(): RotatingControls | null {
++  const c = graph3d?.controls() as Partial<RotatingControls> | undefined;
++  if (!c || typeof c.autoRotate !== 'boolean' || typeof c.addEventListener !== 'function') return null;
++  return c as RotatingControls;
++}
++
++function pauseRotation(): void {
++  if (idleTimer !== null) clearTimeout(idleTimer);
++  idleTimer = null;
++  const c = rotatingControls();
++  if (c) c.autoRotate = false;
++}
++
++/** Stops rotating now and starts again after IDLE_RESUME_MS without dragging or selecting. */
++function resumeRotationWhenIdle(): void {
++  pauseRotation();
++  idleTimer = setTimeout(() => {
++    idleTimer = null;
++    if (dragging) return;
++    const c = rotatingControls();
++    if (c) c.autoRotate = true;
++  }, IDLE_RESUME_MS);
++}
++
++function measureScene(g: Graph3D): void {
++  const box = g.getGraphBbox();
++  if (!box) return;
++  sceneCenter.set((box.x[0] + box.x[1]) / 2, (box.y[0] + box.y[1]) / 2, (box.z[0] + box.z[1]) / 2);
++  const half = Math.hypot(box.x[1] - box.x[0], box.y[1] - box.y[0], box.z[1] - box.z[0]) / 2;
++  sceneRadius = Number.isFinite(half) && half > 1 ? half : DEFAULT_SCENE_RADIUS;
++}
++
++function updateFog(g: Graph3D): void {
++  const fog = g.scene().fog;
++  if (!(fog instanceof THREE.Fog)) return;
++  const d = g.camera().position.distanceTo(sceneCenter);
++  fog.near = Math.max(1, d - FOG_NEAR_FACTOR * sceneRadius);
++  fog.far = Math.max(fog.near + 1, d + FOG_FAR_FACTOR * sceneRadius);
++}
++
++/** Adds a soft glow. Any failure leaves the plain renderer in place. */
++async function addBloom(g: Graph3D): Promise<void> {
++  try {
++    const [{ UnrealBloomPass }, { OutputPass }] = await Promise.all([
++      import('three/examples/jsm/postprocessing/UnrealBloomPass.js'),
++      import('three/examples/jsm/postprocessing/OutputPass.js'),
++    ]);
++    const composer = g.postProcessingComposer();
++    const bloom = new UnrealBloomPass(
++      new THREE.Vector2(graphWidth(), window.innerHeight),
++      BLOOM_STRENGTH,
++      BLOOM_RADIUS,
++      BLOOM_THRESHOLD,
++    );
++    // Bloom becomes the last pass, so colour-space output has to be done by an OutputPass.
++    const output = new OutputPass();
++    composer.addPass(bloom);
++    composer.addPass(output);
++    // Size the new passes' render targets for the current pixel ratio (HiDPI).
++    composer.setSize(graphWidth(), window.innerHeight);
++    try {
++      composer.render();
++    } catch (e) {
++      composer.removePass(output);
++      composer.removePass(bloom);
++      throw e;
++    }
++  } catch (e) {
++    console.warn('Bloom is unavailable; the 3D view renders without glow.', e);
++  }
++}
++
++function setUpScene3d(g: Graph3D): void {
++  g.scene().fog = new THREE.Fog(BACKGROUND, 1, 2000);
++  updateFog(g);
++  const c = g.controls() as Partial<RotatingControls>;
++  if (typeof c.autoRotate === 'boolean' && typeof c.addEventListener === 'function') {
++    c.autoRotate = true;
++    c.autoRotateSpeed = AUTO_ROTATE_SPEED;
++    c.addEventListener('start', () => {
++      dragging = true;
++      pauseRotation();
++    });
++    c.addEventListener('end', () => {
++      dragging = false;
++      resumeRotationWhenIdle();
++    });
++    c.addEventListener('change', () => updateFog(g));
++  }
++  void addBloom(g);
++}
++
++function makeGraph3d(): Graph3D {
++  // Orbit controls are the ones that support autoRotate.
++  const g = new ForceGraph3D(container3d, { controlType: 'orbit' })
+     .backgroundColor(BACKGROUND)
+     .nodeId('id')
+-    .width(window.innerWidth)
++    .width(graphWidth())
+     .height(window.innerHeight)
+     .nodeLabel((n) => escapeHtml((n as GraphNode).label))
+     .linkLabel(() => '')
+-    .nodeVal((n) => (n as GraphNode).size)
+-    .nodeColor((n) => {
+-      const node = n as GraphNode;
+-      return isDimmed(node) ? DIM_COLOR : colorOf(node);
+-    })
+-    .linkColor((l) => linkColorOf(l as GraphLink))
++    .nodeThreeObject(nodeObject3d)
++    // linkRgba carries the opacity; keep the library from scaling it down further.
++    .linkOpacity(1)
++    .linkColor((l) => linkColor3d(l as GraphLink))
+     .linkWidth((l) => linkWidthOf(l as GraphLink))
++    .linkDirectionalParticles((l) => linkParticles(l as GraphLink))
++    .linkDirectionalParticleWidth(PARTICLE_WIDTH)
++    .cooldownTicks(250)
++    .onEngineStop(() => {
++      measureScene(g);
++      if (fit3dPending) {
++        fit3dPending = false;
++        g.zoomToFit(800, 60);
++      }
++      updateFog(g);
++    })
++    .onNodeDrag(() => pauseRotation())
++    .onNodeDragEnd(() => resumeRotationWhenIdle())
+     .onNodeClick((n) => select((n as GraphNode).id, false));
++  setUpScene3d(g);
++  return g;
++}
++
++function buildLegend(): void {
++  legendBox.replaceChildren();
++  legendBox.append(h('div', 'Shapes', 'legend-title'));
++  for (const [glyph, text] of LEGEND_SHAPES) {
++    const row = h('div', '', 'legend-row');
++    row.append(h('span', glyph, 'legend-glyph'), document.createTextNode(text));
++    legendBox.append(row);
++  }
++  legendBox.append(h('div', 'Links', 'legend-title'));
++  for (const [type, text] of LEGEND_LINKS) {
++    const row = h('div', '', 'legend-row');
++    const line = h('span', '', 'legend-line');
++    line.style.background = linkRgba(type, 1);
++    row.append(line, document.createTextNode(text));
++    legendBox.append(row);
++  }
+ }
+ 
+ // ---------- data and filters ----------
+@@ -258,10 +510,12 @@ function refreshColors(): void {
+     // nodeCanvasObject reads the selection on every frame; only the link styles need a nudge.
+     graph2d?.linkColor(graph2d.linkColor()).linkWidth(graph2d.linkWidth());
+   } else {
++    // Node materials are restyled in place; link accessors are set again to re-read the selection.
++    for (const look of nodeLooks.values()) styleNode(look);
+     graph3d
+-      ?.nodeColor(graph3d.nodeColor())
+-      .linkColor(graph3d.linkColor())
+-      .linkWidth(graph3d.linkWidth());
++      ?.linkColor(graph3d.linkColor())
++      .linkWidth(graph3d.linkWidth())
++      .linkDirectionalParticles(graph3d.linkDirectionalParticles());
+   }
+ }
+ 
+@@ -309,6 +563,13 @@ function setGraph(data: GraphData): void {
+   detailsBox.hidden = true;
+   // Analysis and insights are computed once per loaded graph, in the browser only.
+   analysis = analyzeGraph(full);
++  brightness = brightnessMap(full, analysis);
++  bridges = bridgeIds(analysis);
++  const a = analysis;
++  sizes = new Map(full.nodes.map((n) => [n.id, nodeSize(n, a)]));
++  // A new graph gets new sizes, rings and a fresh camera fit.
++  fit3dPending = true;
++  rebuild3d = true;
+   insights = buildInsights(full, analysis);
+   markdown = insightsMarkdown(insights);
+   fromMonth = '';
+@@ -367,10 +628,28 @@ function applyFilters(): void {
+       : `${visible.nodes.length} nodes, ${visible.links.length} links, ${sessions} sessions`;
+   fitPending = true;
+   // Both libraries mutate the data they are given, so hand them copies.
+-  activeGraph().graphData({
+-    nodes: visible.nodes.map((n) => ({ ...n })),
+-    links: visible.links.map((l) => ({ ...l })),
+-  });
++  if (mode === '2d') {
++    activeGraph().graphData({
++      nodes: visible.nodes.map((n) => ({ ...n })),
++      links: visible.links.map((l) => ({ ...l })),
++    });
++  } else {
++    // 3D hides file/tool links unless one of those node types is ticked.
++    const shown = defaultLinkFilter(visible, showNoiseLinks());
++    const g = activeGraph() as Graph3D;
++    // The nodes below are fresh copies, so the library builds a new object for every node
++    // (nodeObject3d records its look again). Old looks belong to discarded objects.
++    nodeLooks.clear();
++    if (rebuild3d) {
++      // A new graph: set the accessor again so nothing built for the old graph is kept.
++      rebuild3d = false;
++      g.nodeThreeObject(nodeObject3d);
++    }
++    g.graphData({
++      nodes: shown.nodes.map((n) => ({ ...n })),
++      links: shown.links.map((l) => ({ ...l })),
++    });
++  }
+   if (selectedId !== null) select(selectedId, false);
+ }
+ 
+@@ -400,6 +679,8 @@ function select(id: string, fly: boolean): void {
+   highlighted = new Set([id, ...neighbors(visible, id).nodes.map((n) => n.id)]);
+   renderDetails(details.node, details.neighborsByType);
+   refreshColors();
++  // Selecting stops the 3D turn; it starts again after a quiet spell.
++  if (mode === '3d') resumeRotationWhenIdle();
+   if (fly) flyTo(id);
+ }
+ 
+@@ -599,6 +880,7 @@ function setMode(next: Mode): void {
+   mode = next;
+   container2d.hidden = mode !== '2d';
+   container3d.hidden = mode !== '3d';
++  legendBox.hidden = mode !== '3d';
+   modeButton.textContent = mode === '2d' ? '3D' : '2D';
+   modeButton.title = mode === '2d' ? 'Switch to the 3D view' : 'Switch back to the 2D map';
+   if (mode === '2d') graph3d?.pauseAnimation();
+@@ -655,10 +937,12 @@ filePicker.addEventListener('change', () => {
+   read.then(load, (e) => showError(`Could not read file: ${String(e)}`));
+ });
+ window.addEventListener('resize', () => {
+-  graph2d?.width(width2d()).height(window.innerHeight);
+-  graph3d?.width(window.innerWidth).height(window.innerHeight);
++  graph2d?.width(graphWidth()).height(window.innerHeight);
++  graph3d?.width(graphWidth()).height(window.innerHeight);
+ });
+ 
++buildLegend();
++legendBox.hidden = true;
+ container3d.hidden = true;
+ graph2d = makeGraph2d();
+ void loadFromServer();
+diff --git a/explorer/tests/app3d.test.ts b/explorer/tests/app3d.test.ts
+new file mode 100644
+index 0000000..8d31ea5
+--- /dev/null
++++ b/explorer/tests/app3d.test.ts
+@@ -0,0 +1,65 @@
++import { describe, it, expect } from 'vitest';
++import { readFileSync } from 'node:fs';
++import { fileURLToPath } from 'node:url';
++
++// Phase 15 is an app shell (rendering in main.ts) checked by build, tsc and the browser.
++// Only the static, file-level parts of the contract are unit-testable: the `three`
++// dependency (package.json + package-lock.json) and the legend element in index.html.
++
++interface PackageJson {
++  dependencies?: Record<string, string>;
++  devDependencies?: Record<string, string>;
++}
++
++interface LockPackage {
++  version?: string;
++  dependencies?: Record<string, string>;
++}
++
++interface PackageLock {
++  packages?: Record<string, LockPackage>;
++}
++
++function readText(rel: string): string {
++  return readFileSync(fileURLToPath(new URL(rel, import.meta.url)), 'utf8');
++}
++
++describe('three dependency', () => {
++  const pkg = JSON.parse(readText('../package.json')) as PackageJson;
++
++  it('AC-15-01 package.json lists three at ^0.179.0 under dependencies', () => {
++    expect(pkg.dependencies).toBeDefined();
++    expect(pkg.dependencies?.['three']).toBe('^0.179.0');
++  });
++
++  it('AC-15-01 package.json keeps 3d-force-graph and force-graph alongside three', () => {
++    const deps = Object.keys(pkg.dependencies ?? {});
++    expect(deps).toContain('three');
++    expect(deps).toContain('3d-force-graph');
++    expect(deps).toContain('force-graph');
++  });
++
++  it('AC-15-01 package-lock.json root entry lists three at ^0.179.0', () => {
++    const lock = JSON.parse(readText('../package-lock.json')) as PackageLock;
++    expect(lock.packages?.['']?.dependencies?.['three']).toBe('^0.179.0');
++  });
++
++  it('AC-15-01 package-lock.json resolves three to a 0.179.x version', () => {
++    const lock = JSON.parse(readText('../package-lock.json')) as PackageLock;
++    const version = lock.packages?.['node_modules/three']?.version ?? '';
++    expect(version).toMatch(/^0\.179\.\d+$/);
++  });
++});
++
++describe('legend element', () => {
++  const html = readText('../index.html');
++
++  it('AC-15-03 index.html contains a <div id="legend"> element', () => {
++    expect(html).toMatch(/<div\b[^>]*\bid\s*=\s*["']legend["'][^>]*>/i);
++  });
++
++  it('AC-15-03 index.html has exactly one element with id legend', () => {
++    const matches = html.match(/\bid\s*=\s*["']legend["']/gi) ?? [];
++    expect(matches).toHaveLength(1);
++  });
++});
+diff --git a/explorer/tests/holdout/app3d_hidden.test.ts b/explorer/tests/holdout/app3d_hidden.test.ts
+new file mode 100644
+index 0000000..baefbfb
+--- /dev/null
++++ b/explorer/tests/holdout/app3d_hidden.test.ts
+@@ -0,0 +1,51 @@
++import { describe, it, expect } from 'vitest';
++import { existsSync, readFileSync } from 'node:fs';
++import { fileURLToPath } from 'node:url';
++
++function path(rel: string): string {
++  return fileURLToPath(new URL(rel, import.meta.url));
++}
++
++function readJson<T>(rel: string): T {
++  return JSON.parse(readFileSync(path(rel), 'utf8')) as T;
++}
++
++describe('three dependency (hidden)', () => {
++  it('AC-15-01 three is a runtime dependency, not a devDependency, in package.json and the lock root', () => {
++    const pkg = readJson<{
++      dependencies?: Record<string, string>;
++      devDependencies?: Record<string, string>;
++    }>('../../package.json');
++    expect(Object.keys(pkg.devDependencies ?? {})).not.toContain('three');
++    expect(Object.keys(pkg.dependencies ?? {})).toContain('three');
++
++    const lock = readJson<{
++      packages?: Record<string, { dependencies?: Record<string, string>; devDependencies?: Record<string, string> }>;
++    }>('../../package-lock.json');
++    const root = lock.packages?.[''];
++    expect(Object.keys(root?.devDependencies ?? {})).not.toContain('three');
++    expect(root?.dependencies?.['three']).toBe(pkg.dependencies?.['three']);
++  });
++
++  it('AC-15-01 the installed three is 0.179.x and ships the UnrealBloomPass module main.ts imports', () => {
++    const installed = readJson<{ name?: string; version?: string }>('../../node_modules/three/package.json');
++    expect(installed.name).toBe('three');
++    expect(installed.version ?? '').toMatch(/^0\.179\.\d+$/);
++    expect(
++      existsSync(path('../../node_modules/three/examples/jsm/postprocessing/UnrealBloomPass.js')),
++    ).toBe(true);
++  });
++});
++
++describe('legend element (hidden)', () => {
++  it('AC-15-03 the legend div sits inside the document body', () => {
++    const html = readFileSync(path('../../index.html'), 'utf8');
++    const bodyOpen = html.search(/<body\b/i);
++    const bodyClose = html.search(/<\/body>/i);
++    const legend = html.search(/<div\b[^>]*\bid\s*=\s*["']legend["']/i);
++    expect(bodyOpen).toBeGreaterThanOrEqual(0);
++    expect(bodyClose).toBeGreaterThan(bodyOpen);
++    expect(legend).toBeGreaterThan(bodyOpen);
++    expect(legend).toBeLessThan(bodyClose);
++  });
++});

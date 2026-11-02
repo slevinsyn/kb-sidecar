@@ -1,0 +1,973 @@
+diff --git a/changes/2026-11-02-graph-neurons/change.md b/changes/2026-11-02-graph-neurons/change.md
+new file mode 100644
+index 0000000..7b6894a
+--- /dev/null
++++ b/changes/2026-11-02-graph-neurons/change.md
+@@ -0,0 +1,43 @@
++# Change: Arrange the 3D graph like a collection of neurons
++
++Date: 2026-11-02 · Requested by: Sarthak Bhatt · Status: draft
++Client: Internal
++Linked: changes/2026-11-02-graph-3d/change.md and changes/2026-11-02-graph-glare/change.md (same branch and pull request)
++
++## Why
++Sarthak: arrange the whole graph so it looks like a collection of neurons. Chosen look: "cells +
++branches". Each theme becomes one neuron: a bigger cell body (the theme's top topic), its sessions
++and other nodes branching around it, and long curved links between themes like axons. 3D view only.
++
++## Must work
++- Each theme (community) with at least one topic has exactly one cell body: its top-ranked topic (highest rank, ties by smaller id). A theme with no topic has none.
++- A cell body is drawn 2.2 times larger than a normal node of the same data and keeps its soft halo on at all times.
++- Every other node of a theme is placed around its cell on rings (12 per ring, outer rings turned half a slot) instead of one blob: the same node always gets the same spot, and no two spots of a theme coincide.
++- A link between two different themes is an axon: curved (curvature 0.3), each with its own fixed bend direction. A link inside one theme stays straight.
++- Nodes without a theme, and graphs with no themes at all, keep working with no curve and no branch spot.
++- A "Neuron look" tick box (on by default) in the 3D controls turns the look off; off gives exactly today's 3D picture.
++- 2D map, panels, path, time-lapse, orbit, layers and the glow caps behave as before.
++
++## Steps
++| Phase | What it delivers | Size |
++|---|---|---|
++| 19 | `explorer/src/scene3d.ts`: pure neuron maths - cell per theme, branch spots, axon curves | M |
++| 20 | App shell: bigger glowing cells, branch forces, curved axon links, "Neuron look" tick box | M |
++
++## Risk: Low
++Look-only change in the explorer, no data, no dependency, no `graph.json` or ingest change.
++
++## Undo
++Untick "Neuron look", or revert the two phase commits.
++
++## Not in this change
++- Animated firing pulses, new packages, changes to `analysis.ts`, `insights.ts` or the 2D drawing.
++
++## Assumptions
++- Same branch `build/graph-3d`; commits go on the open pull request. You asked for "phase 19"; it is split in two (19 maths, 20 wiring) like the earlier changes so the maths can be tested on its own.
++- Numbers (scale 2.2, curvature 0.3, branch radius 60 plus 4 per ring) are a first tune in named constants.
++- Time (depth) still decides the z position; branches spread in x and y around the cell.
++- The floating theme name stays on the node it is on today.
++
++## Still open
++
+diff --git a/explorer/src/scene3d.ts b/explorer/src/scene3d.ts
+index 7418d4b..6aea5c8 100644
+--- a/explorer/src/scene3d.ts
++++ b/explorer/src/scene3d.ts
+@@ -288,6 +288,86 @@ export function orbitPosition(center: Point3, radius: number, angle: number): Po
+   };
+ }
+ 
++export const CELL_SCALE = 2.2;
++export const AXON_CURVATURE = 0.3;
++export const BRANCH_BASE_RADIUS = 60;
++export const BRANCH_RADIUS_STEP = 4;
++
++const BRANCH_SLOTS = 12;
++
++// For each community with topics, the topic with the highest rank (ties: smaller id).
++export function cellBodies(a: Analysis): Map<number, string> {
++  const out = new Map<number, string>();
++  for (const c of a.communities) {
++    let best: string | undefined;
++    let bestRank = 0;
++    for (const t of c.topics) {
++      const r = a.rank.get(t) ?? 0;
++      if (best === undefined || r > bestRank || (r === bestRank && t < best)) {
++        best = t;
++        bestRank = r;
++      }
++    }
++    if (best !== undefined) out.set(c.id, best);
++  }
++  return out;
++}
++
++export function branchOffset(index: number, count: number): { x: number; y: number } {
++  if (!Number.isInteger(index) || !Number.isInteger(count) || index < 0 || index >= count) {
++    return { x: BRANCH_BASE_RADIUS, y: 0 };
++  }
++  const ring = Math.floor(index / BRANCH_SLOTS);
++  const slot = index % BRANCH_SLOTS;
++  const radius = BRANCH_BASE_RADIUS + BRANCH_RADIUS_STEP * ring;
++  const angle = (2 * Math.PI * slot) / BRANCH_SLOTS + (ring * Math.PI) / BRANCH_SLOTS;
++  return { x: radius * Math.cos(angle), y: radius * Math.sin(angle) };
++}
++
++export function branchOffsets(
++  a: Analysis,
++  nodeIds: readonly string[],
++): Map<string, { x: number; y: number }> {
++  const cells = cellBodies(a);
++  const byCommunity = new Map<number, Set<string>>();
++  for (const id of nodeIds) {
++    const c = a.communityOf.get(id);
++    if (c === undefined || cells.get(c) === id) continue;
++    let set = byCommunity.get(c);
++    if (!set) {
++      set = new Set();
++      byCommunity.set(c, set);
++    }
++    set.add(id);
++  }
++  const out = new Map<string, { x: number; y: number }>();
++  for (const set of byCommunity.values()) {
++    const sorted = [...set].sort((x, y) => (x < y ? -1 : x > y ? 1 : 0));
++    sorted.forEach((id, k) => out.set(id, branchOffset(k, sorted.length)));
++  }
++  return out;
++}
++
++// FNV-1a, 32 bit: small, stable and good enough to spread link rotations.
++function hash32(text: string): number {
++  let h = 0x811c9dc5;
++  for (let i = 0; i < text.length; i++) {
++    h ^= text.charCodeAt(i);
++    h = Math.imul(h, 0x01000193) >>> 0;
++  }
++  return h >>> 0;
++}
++
++export function axonCurve(link: GraphLink, a: Analysis): { curvature: number; rotation: number } {
++  const source = linkEnd(link.source);
++  const target = linkEnd(link.target);
++  const cs = a.communityOf.get(source);
++  const ct = a.communityOf.get(target);
++  if (cs === undefined || ct === undefined || cs === ct) return { curvature: 0, rotation: 0 };
++  const rotation = (hash32(source + '>' + target) / 4_294_967_296) * 2 * Math.PI;
++  return { curvature: AXON_CURVATURE, rotation };
++}
++
+ export const MAX_EMISSIVE = 0.25;
+ 
+ export type NodeState = 'normal' | 'selected' | 'dim';
+diff --git a/explorer/tests/holdout/neuron_maths_hidden.test.ts b/explorer/tests/holdout/neuron_maths_hidden.test.ts
+new file mode 100644
+index 0000000..e5f8535
+--- /dev/null
++++ b/explorer/tests/holdout/neuron_maths_hidden.test.ts
+@@ -0,0 +1,162 @@
++import { describe, it, expect } from 'vitest';
++import { axonCurve, branchOffset, branchOffsets, cellBodies } from '../../src/scene3d';
++import type { Analysis, Community } from '../../src/analysis';
++import type { GraphLink } from '../../src/graph';
++
++function comm(id: number, topics: string[] = []): Community {
++  return {
++    id,
++    label: `Community ${id + 1}`,
++    topics,
++    sessions: [],
++    size: 0,
++    projects: [],
++    firstAt: null,
++    lastAt: null,
++  };
++}
++
++function mkAnalysis(over: Partial<Analysis> = {}): Analysis {
++  return {
++    communityOf: new Map(),
++    communities: [],
++    rank: new Map(),
++    bridges: [],
++    oneOffTopics: [],
++    looseEnds: [],
++    timeline: [],
++    latestAt: null,
++    ...over,
++  };
++}
++
++function lk(source: GraphLink['source'], target: GraphLink['target']): GraphLink {
++  return { source, target, type: 'x' } as GraphLink;
++}
++
++describe('neuron maths hidden', () => {
++  it('AC-19-01 picks the top-ranked topic per community with a different layout', () => {
++    const a = mkAnalysis({
++      communities: [comm(4, ['zeta', 'alpha', 'mid']), comm(9, ['p', 'q']), comm(2, [])],
++      rank: new Map([
++        ['zeta', 0.31],
++        ['alpha', 0.12],
++        ['mid', 0.3],
++        ['p', 4],
++        ['q', 4],
++      ]),
++    });
++    const out = cellBodies(a);
++    expect(out.get(4)).toBe('zeta');
++    expect(out.get(9)).toBe('p');
++    expect(out.has(2)).toBe(false);
++    expect(out.size).toBe(2);
++  });
++
++  it('AC-19-01 tie between all-unranked topics goes to the smaller id; empty analysis is empty', () => {
++    const a = mkAnalysis({ communities: [comm(1, ['n-3', 'n-12', 'n-2'])] });
++    expect(cellBodies(a).get(1)).toBe('n-12');
++    expect(cellBodies(mkAnalysis()).size).toBe(0);
++  });
++
++  it('AC-19-02 branch positions on several rings follow the formula', () => {
++    const o1 = branchOffset(1, 3);
++    expect(o1.x).toBeCloseTo(60 * Math.cos(Math.PI / 6), 9);
++    expect(o1.y).toBeCloseTo(30, 9);
++    const o6 = branchOffset(6, 7);
++    expect(o6.x).toBeCloseTo(-60, 9);
++    expect(o6.y).toBeCloseTo(0, 9);
++    const o25 = branchOffset(25, 26);
++    const angle = Math.PI / 6 + (2 * Math.PI) / 12;
++    expect(o25.x).toBeCloseTo(68 * Math.cos(angle), 9);
++    expect(o25.y).toBeCloseTo(68 * Math.sin(angle), 9);
++  });
++
++  it('AC-19-03 invalid index or count falls back to (60, 0)', () => {
++    expect(branchOffset(-0.5, 4)).toEqual({ x: 60, y: 0 });
++    expect(branchOffset(7, 7)).toEqual({ x: 60, y: 0 });
++    expect(branchOffset(3, 2)).toEqual({ x: 60, y: 0 });
++    expect(branchOffset(1, Infinity)).toEqual({ x: 60, y: 0 });
++    expect(branchOffset(NaN, 3)).toEqual({ x: 60, y: 0 });
++    expect(branchOffset(2.25, 9)).toEqual({ x: 60, y: 0 });
++  });
++
++  it('AC-19-04 branchOffsets numbers each community by sorted ids and skips the cell body', () => {
++    const a = mkAnalysis({
++      communities: [comm(8, ['hub', 'minor']), comm(3, [])],
++      rank: new Map([
++        ['hub', 9],
++        ['minor', 1],
++      ]),
++      communityOf: new Map<string, number>([
++        ['hub', 8],
++        ['minor', 8],
++        ['k', 8],
++        ['B', 8],
++        ['x', 3],
++        ['w', 3],
++      ]),
++    });
++    const out = branchOffsets(a, ['x', 'k', 'hub', 'w', 'B', 'minor', 'nowhere', 'k']);
++    // Community 8 minus hub, sorted by plain order: B < k < minor
++    const c8 = ['B', 'k', 'minor'];
++    c8.forEach((id, i) => {
++      const want = branchOffset(i, 3);
++      expect(out.get(id)?.x).toBeCloseTo(want.x, 9);
++      expect(out.get(id)?.y).toBeCloseTo(want.y, 9);
++    });
++    // Community 3 has no cell body: w < x
++    expect(out.get('w')?.x).toBeCloseTo(branchOffset(0, 2).x, 9);
++    expect(out.get('w')?.y).toBeCloseTo(branchOffset(0, 2).y, 9);
++    expect(out.get('x')?.x).toBeCloseTo(branchOffset(1, 2).x, 9);
++    expect(out.get('x')?.y).toBeCloseTo(branchOffset(1, 2).y, 9);
++    expect(out.has('hub')).toBe(false);
++    expect(out.has('nowhere')).toBe(false);
++    expect(out.size).toBe(5);
++  });
++
++  it('AC-19-04 spots in one community are distinct and repeatable for 26 members', () => {
++    const communityOf = new Map<string, number>();
++    const ids: string[] = [];
++    for (let i = 0; i < 26; i++) {
++      const id = `m${String.fromCharCode(97 + i)}`;
++      ids.push(id);
++      communityOf.set(id, 1);
++    }
++    const a = mkAnalysis({ communities: [comm(1, [])], communityOf });
++    const first = branchOffsets(a, ids);
++    const second = branchOffsets(a, [...ids].reverse());
++    expect(second).toEqual(first);
++    const keys = new Set([...first.values()].map((p) => `${p.x.toFixed(6)}|${p.y.toFixed(6)}`));
++    expect(keys.size).toBe(26);
++  });
++
++  it('AC-19-05 axonCurve curves between themes and is flat otherwise', () => {
++    const a = mkAnalysis({
++      communityOf: new Map<string, number>([
++        ['u', 5],
++        ['v', 6],
++        ['w', 5],
++      ]),
++    });
++    const c = axonCurve(lk('u', 'v'), a);
++    expect(c.curvature).toBe(0.3);
++    expect(c.rotation).toBeGreaterThanOrEqual(0);
++    expect(c.rotation).toBeLessThan(2 * Math.PI);
++    expect(axonCurve(lk('u', 'v'), a)).toEqual(c);
++    expect(axonCurve(lk('u', 'w'), a)).toEqual({ curvature: 0, rotation: 0 });
++    expect(axonCurve(lk('u', 'nobody'), a)).toEqual({ curvature: 0, rotation: 0 });
++    expect(axonCurve(lk('nobody', 'v'), a)).toEqual({ curvature: 0, rotation: 0 });
++  });
++
++  it('AC-19-05 object link ends match string link ends', () => {
++    const a = mkAnalysis({
++      communityOf: new Map<string, number>([
++        ['p1', 0],
++        ['q1', 2],
++      ]),
++    });
++    expect(axonCurve(lk({ id: 'p1' }, { id: 'q1' }), a)).toEqual(axonCurve(lk('p1', 'q1'), a));
++    expect(axonCurve(lk({ id: 'p1' }, { id: 'zz' }), a)).toEqual({ curvature: 0, rotation: 0 });
++  });
++});
+diff --git a/explorer/tests/neuron_maths.test.ts b/explorer/tests/neuron_maths.test.ts
+new file mode 100644
+index 0000000..c551763
+--- /dev/null
++++ b/explorer/tests/neuron_maths.test.ts
+@@ -0,0 +1,561 @@
++import { describe, it, expect } from 'vitest';
++import {
++  AXON_CURVATURE,
++  BRANCH_BASE_RADIUS,
++  BRANCH_RADIUS_STEP,
++  CELL_SCALE,
++  axonCurve,
++  branchOffset,
++  branchOffsets,
++  cellBodies,
++} from '../src/scene3d';
++import type { Analysis, Community } from '../src/analysis';
++import type { GraphLink } from '../src/graph';
++
++// ---------- helpers ----------
++
++function comm(id: number, topics: string[] = []): Community {
++  return {
++    id,
++    label: `Community ${id + 1}`,
++    topics,
++    sessions: [],
++    size: 0,
++    projects: [],
++    firstAt: null,
++    lastAt: null,
++  };
++}
++
++function mkAnalysis(over: Partial<Analysis> = {}): Analysis {
++  return {
++    communityOf: new Map(),
++    communities: [],
++    rank: new Map(),
++    bridges: [],
++    oneOffTopics: [],
++    looseEnds: [],
++    timeline: [],
++    latestAt: null,
++    ...over,
++  };
++}
++
++function lk(source: GraphLink['source'], target: GraphLink['target'], type = 'rel'): GraphLink {
++  return { source, target, type } as GraphLink;
++}
++
++function deepFreeze<V>(value: V): V {
++  if (value !== null && typeof value === 'object') {
++    Object.freeze(value);
++    for (const key of Object.keys(value as Record<string, unknown>)) {
++      deepFreeze((value as Record<string, unknown>)[key]);
++    }
++  }
++  return value;
++}
++
++const FALLBACK = { x: 60, y: 0 };
++
++// ---------- constants ----------
++
++describe('neuron constants', () => {
++  it('AC-19-02 branch radius constants are 60 and 4', () => {
++    expect(BRANCH_BASE_RADIUS).toBe(60);
++    expect(BRANCH_RADIUS_STEP).toBe(4);
++  });
++
++  it('AC-19-05 AXON_CURVATURE is 0.3', () => {
++    expect(AXON_CURVATURE).toBe(0.3);
++  });
++
++  it('CELL_SCALE is 2.2', () => {
++    expect(CELL_SCALE).toBe(2.2);
++  });
++});
++
++// ---------- cellBodies ----------
++
++describe('cellBodies', () => {
++  it('AC-19-01 picks the highest-ranked topic of each community', () => {
++    const a = mkAnalysis({
++      communities: [comm(0, ['t:a', 't:b', 't:c']), comm(1, ['t:x', 't:y'])],
++      rank: new Map([
++        ['t:a', 0.1],
++        ['t:b', 0.9],
++        ['t:c', 0.5],
++        ['t:x', 0.7],
++        ['t:y', 0.2],
++      ]),
++    });
++    const out = cellBodies(a);
++    expect(out).toBeInstanceOf(Map);
++    expect(out.get(0)).toBe('t:b');
++    expect(out.get(1)).toBe('t:x');
++    expect(out.size).toBe(2);
++  });
++
++  it('AC-19-01 on equal rank the smaller id wins, whatever the listing order', () => {
++    const rank = new Map([
++      ['t:m', 0.5],
++      ['t:k', 0.5],
++      ['t:z', 0.5],
++    ]);
++    const a1 = mkAnalysis({ communities: [comm(0, ['t:m', 't:k', 't:z'])], rank });
++    const a2 = mkAnalysis({ communities: [comm(0, ['t:z', 't:m', 't:k'])], rank });
++    expect(cellBodies(a1).get(0)).toBe('t:k');
++    expect(cellBodies(a2).get(0)).toBe('t:k');
++  });
++
++  it('AC-19-01 ties use plain string order, not numeric or locale order', () => {
++    const rank = new Map([
++      ['T2', 1],
++      ['T10', 1],
++    ]);
++    expect(cellBodies(mkAnalysis({ communities: [comm(0, ['T2', 'T10'])], rank })).get(0)).toBe('T10');
++    const upper = new Map([
++      ['a', 1],
++      ['B', 1],
++    ]);
++    expect(cellBodies(mkAnalysis({ communities: [comm(0, ['a', 'B'])], rank: upper })).get(0)).toBe('B');
++  });
++
++  it('AC-19-01 a topic with no rank counts as 0', () => {
++    // 'a' has no rank (0) and beats a negative rank.
++    const neg = mkAnalysis({
++      communities: [comm(0, ['b', 'a'])],
++      rank: new Map([['b', -1]]),
++    });
++    expect(cellBodies(neg).get(0)).toBe('a');
++    // A positive rank beats a missing one even if the missing id is smaller.
++    const pos = mkAnalysis({
++      communities: [comm(0, ['a', 'b'])],
++      rank: new Map([['b', 0.01]]),
++    });
++    expect(cellBodies(pos).get(0)).toBe('b');
++  });
++
++  it('AC-19-01 with no ranks at all the smallest id wins', () => {
++    const a = mkAnalysis({ communities: [comm(3, ['t:q', 't:d', 't:m'])] });
++    expect(cellBodies(a).get(3)).toBe('t:d');
++  });
++
++  it('AC-19-01 a missing rank ties with an explicit rank of 0', () => {
++    const a = mkAnalysis({
++      communities: [comm(0, ['t:b', 't:a'])],
++      rank: new Map([['t:b', 0]]),
++    });
++    expect(cellBodies(a).get(0)).toBe('t:a');
++  });
++
++  it('AC-19-01 a single-topic community gets that topic', () => {
++    const a = mkAnalysis({ communities: [comm(7, ['only'])] });
++    expect(cellBodies(a).get(7)).toBe('only');
++  });
++
++  it('AC-19-01 a community with no topics has no entry', () => {
++    const a = mkAnalysis({
++      communities: [comm(0, ['t:a']), comm(1, []), comm(2, ['t:c'])],
++      rank: new Map([
++        ['t:a', 1],
++        ['t:c', 1],
++      ]),
++    });
++    const out = cellBodies(a);
++    expect(out.has(1)).toBe(false);
++    expect(out.get(0)).toBe('t:a');
++    expect(out.get(2)).toBe('t:c');
++    expect(out.size).toBe(2);
++  });
++
++  it('AC-19-01 an empty analysis gives an empty map', () => {
++    const out = cellBodies(mkAnalysis());
++    expect(out).toBeInstanceOf(Map);
++    expect(out.size).toBe(0);
++  });
++
++  it('AC-19-01 only topics listed in the community are considered, not higher-ranked outsiders', () => {
++    const a = mkAnalysis({
++      communities: [comm(0, ['t:a'])],
++      rank: new Map([
++        ['t:a', 0.1],
++        ['t:other', 99],
++      ]),
++    });
++    expect(cellBodies(a).get(0)).toBe('t:a');
++  });
++
++  it('AC-19-01 does not modify the analysis and gives the same answer twice', () => {
++    const a = deepFreeze(
++      mkAnalysis({
++        communities: [comm(0, ['t:a', 't:b']), comm(1, [])],
++        rank: new Map([
++          ['t:a', 2],
++          ['t:b', 3],
++        ]),
++      }),
++    );
++    const first = cellBodies(a);
++    const second = cellBodies(a);
++    expect([...first.entries()]).toEqual([...second.entries()]);
++    expect(first.get(0)).toBe('t:b');
++  });
++});
++
++// ---------- branchOffset ----------
++
++describe('branchOffset', () => {
++  it('AC-19-02 branch 0 of 5 is at (60, 0)', () => {
++    const o = branchOffset(0, 5);
++    expect(o.x).toBeCloseTo(60, 9);
++    expect(o.y).toBeCloseTo(0, 9);
++  });
++
++  it('AC-19-02 branch 3 of 20 is at radius 60 and angle PI/2', () => {
++    const o = branchOffset(3, 20);
++    expect(o.x).toBeCloseTo(0, 9);
++    expect(o.y).toBeCloseTo(60, 9);
++    expect(Math.hypot(o.x, o.y)).toBeCloseTo(60, 9);
++    expect(Math.atan2(o.y, o.x)).toBeCloseTo(Math.PI / 2, 9);
++  });
++
++  it('AC-19-02 branch 12 of 20 is at radius 64 and angle PI/12', () => {
++    const o = branchOffset(12, 20);
++    expect(Math.hypot(o.x, o.y)).toBeCloseTo(64, 9);
++    expect(Math.atan2(o.y, o.x)).toBeCloseTo(Math.PI / 12, 9);
++    expect(o.x).toBeCloseTo(64 * Math.cos(Math.PI / 12), 9);
++    expect(o.y).toBeCloseTo(64 * Math.sin(Math.PI / 12), 9);
++  });
++
++  it('AC-19-02 slots within ring 0 are 30 degrees apart', () => {
++    for (let s = 0; s < 12; s++) {
++      const o = branchOffset(s, 12);
++      expect(o.x).toBeCloseTo(60 * Math.cos((2 * Math.PI * s) / 12), 9);
++      expect(o.y).toBeCloseTo(60 * Math.sin((2 * Math.PI * s) / 12), 9);
++    }
++  });
++
++  it('AC-19-02 outer rings grow by 4 and turn half a slot per ring', () => {
++    for (const [i, n] of [
++      [24, 30],
++      [30, 40],
++      [37, 40],
++    ] as const) {
++      const r = Math.floor(i / 12);
++      const s = i % 12;
++      const radius = 60 + 4 * r;
++      const angle = (2 * Math.PI * s) / 12 + (r * Math.PI) / 12;
++      const o = branchOffset(i, n);
++      expect(o.x).toBeCloseTo(radius * Math.cos(angle), 9);
++      expect(o.y).toBeCloseTo(radius * Math.sin(angle), 9);
++    }
++    expect(Math.hypot(branchOffset(24, 30).x, branchOffset(24, 30).y)).toBeCloseTo(68, 9);
++  });
++
++  it('AC-19-02 the result does not depend on count while the index is valid', () => {
++    const a = branchOffset(5, 6);
++    const b = branchOffset(5, 500);
++    expect(a.x).toBeCloseTo(b.x, 12);
++    expect(a.y).toBeCloseTo(b.y, 12);
++  });
++
++  it('AC-19-03 a negative index gives (60, 0)', () => {
++    expect(branchOffset(-1, 5)).toEqual(FALLBACK);
++    expect(branchOffset(-100, 5)).toEqual(FALLBACK);
++  });
++
++  it('AC-19-03 an index at or past count gives (60, 0)', () => {
++    expect(branchOffset(5, 5)).toEqual(FALLBACK);
++    expect(branchOffset(9, 5)).toEqual(FALLBACK);
++    expect(branchOffset(0, 0)).toEqual(FALLBACK);
++  });
++
++  it('AC-19-03 the last valid index still gives its own spot', () => {
++    const o = branchOffset(4, 5);
++    expect(o.x).toBeCloseTo(60 * Math.cos((2 * Math.PI * 4) / 12), 9);
++    expect(o.y).toBeCloseTo(60 * Math.sin((2 * Math.PI * 4) / 12), 9);
++  });
++
++  it('AC-19-03 a fractional index or count gives (60, 0)', () => {
++    expect(branchOffset(1.5, 5)).toEqual(FALLBACK);
++    expect(branchOffset(2, 5.5)).toEqual(FALLBACK);
++    expect(branchOffset(0.5, 10)).toEqual(FALLBACK);
++  });
++
++  it('AC-19-03 NaN and Infinity give (60, 0)', () => {
++    expect(branchOffset(NaN, 5)).toEqual(FALLBACK);
++    expect(branchOffset(2, NaN)).toEqual(FALLBACK);
++    expect(branchOffset(Infinity, 5)).toEqual(FALLBACK);
++    expect(branchOffset(-Infinity, 5)).toEqual(FALLBACK);
++    expect(branchOffset(2, Infinity)).toEqual(FALLBACK);
++    expect(branchOffset(NaN, NaN)).toEqual(FALLBACK);
++  });
++});
++
++// ---------- branchOffsets ----------
++
++describe('branchOffsets', () => {
++  // Community 0: topics t:a (rank 1), t:b (rank 5) -> cell body t:b.
++  // Community 1: topics t:x -> cell body t:x.
++  // Community 2: no topics -> no cell body.
++  function sample(): Analysis {
++    return mkAnalysis({
++      communities: [comm(0, ['t:a', 't:b']), comm(1, ['t:x']), comm(2, [])],
++      rank: new Map([
++        ['t:a', 1],
++        ['t:b', 5],
++        ['t:x', 2],
++      ]),
++      communityOf: new Map<string, number>([
++        ['t:a', 0],
++        ['t:b', 0],
++        ['s1', 0],
++        ['s10', 0],
++        ['s2', 0],
++        ['t:x', 1],
++        ['s3', 1],
++        ['s4', 1],
++        ['n1', 2],
++        ['n2', 2],
++      ]),
++    });
++  }
++
++  it('AC-19-04 skips the cell body of each community', () => {
++    const out = branchOffsets(sample(), ['t:b', 't:x', 't:a', 's3']);
++    expect(out.has('t:b')).toBe(false);
++    expect(out.has('t:x')).toBe(false);
++    expect(out.has('t:a')).toBe(true);
++    expect(out.has('s3')).toBe(true);
++  });
++
++  it('AC-19-04 skips ids with no community and ids unknown to the analysis', () => {
++    const out = branchOffsets(sample(), ['s1', 'orphan', 'ghost', 's2']);
++    expect(out.has('orphan')).toBe(false);
++    expect(out.has('ghost')).toBe(false);
++    expect([...out.keys()].sort()).toEqual(['s1', 's2']);
++  });
++
++  it('AC-19-04 only returns ids that were asked for', () => {
++    const out = branchOffsets(sample(), ['s1']);
++    expect([...out.keys()]).toEqual(['s1']);
++    expect(out.has('s2')).toBe(false);
++  });
++
++  it('AC-19-04 spots follow sorted id order within a community (plain string order)', () => {
++    // Qualifying ids of community 0 (cell body t:b removed): s1, s10, s2, t:a
++    // sorted by plain < order: s1 < s10 < s2 < t:a.
++    const out = branchOffsets(sample(), ['t:a', 's2', 's10', 's1', 't:b']);
++    const expected = ['s1', 's10', 's2', 't:a'];
++    expect(out.size).toBe(4);
++    expected.forEach((id, k) => {
++      const want = branchOffset(k, expected.length);
++      expect(out.get(id)?.x).toBeCloseTo(want.x, 9);
++      expect(out.get(id)?.y).toBeCloseTo(want.y, 9);
++    });
++  });
++
++  it('AC-19-04 the count is the number of qualifying ids, so a subset gets spots from its own list', () => {
++    const out = branchOffsets(sample(), ['s2', 's1']);
++    expect(out.get('s1')?.x).toBeCloseTo(branchOffset(0, 2).x, 9);
++    expect(out.get('s1')?.y).toBeCloseTo(branchOffset(0, 2).y, 9);
++    expect(out.get('s2')?.x).toBeCloseTo(branchOffset(1, 2).x, 9);
++    expect(out.get('s2')?.y).toBeCloseTo(branchOffset(1, 2).y, 9);
++  });
++
++  it('AC-19-04 each community is numbered on its own', () => {
++    const out = branchOffsets(sample(), ['s3', 's4', 's1', 's2', 's10', 't:a']);
++    // Community 1 has s3, s4 -> indexes 0, 1
++    expect(out.get('s3')?.x).toBeCloseTo(branchOffset(0, 2).x, 9);
++    expect(out.get('s3')?.y).toBeCloseTo(branchOffset(0, 2).y, 9);
++    expect(out.get('s4')?.x).toBeCloseTo(branchOffset(1, 2).x, 9);
++    expect(out.get('s4')?.y).toBeCloseTo(branchOffset(1, 2).y, 9);
++    // Community 0 has s1, s10, s2, t:a -> indexes 0..3
++    expect(out.get('s1')?.x).toBeCloseTo(branchOffset(0, 4).x, 9);
++    expect(out.get('t:a')?.y).toBeCloseTo(branchOffset(3, 4).y, 9);
++  });
++
++  it('AC-19-04 a community with no cell body gives every member a spot', () => {
++    const out = branchOffsets(sample(), ['n2', 'n1']);
++    expect(out.size).toBe(2);
++    expect(out.get('n1')?.x).toBeCloseTo(branchOffset(0, 2).x, 9);
++    expect(out.get('n1')?.y).toBeCloseTo(branchOffset(0, 2).y, 9);
++    expect(out.get('n2')?.x).toBeCloseTo(branchOffset(1, 2).x, 9);
++    expect(out.get('n2')?.y).toBeCloseTo(branchOffset(1, 2).y, 9);
++  });
++
++  it('AC-19-04 the order of the input ids does not change the result', () => {
++    const a = branchOffsets(sample(), ['s1', 's10', 's2', 't:a', 's3', 's4']);
++    const b = branchOffsets(sample(), ['s4', 't:a', 's3', 's2', 's10', 's1']);
++    expect(b.size).toBe(a.size);
++    for (const [id, pos] of a) {
++      expect(b.get(id)).toEqual(pos);
++    }
++  });
++
++  it('AC-19-04 an id repeated in the input is counted once', () => {
++    const once = branchOffsets(sample(), ['s1', 's2']);
++    const dup = branchOffsets(sample(), ['s2', 's1', 's2', 's1', 's2']);
++    expect(dup.size).toBe(2);
++    expect(dup.get('s1')).toEqual(once.get('s1'));
++    expect(dup.get('s2')).toEqual(once.get('s2'));
++    expect(dup.get('s2')?.x).toBeCloseTo(branchOffset(1, 2).x, 9);
++  });
++
++  it('AC-19-04 an empty id list or empty analysis gives an empty map', () => {
++    const empty = branchOffsets(sample(), []);
++    expect(empty).toBeInstanceOf(Map);
++    expect(empty.size).toBe(0);
++    const none = branchOffsets(mkAnalysis(), ['s1', 's2']);
++    expect(none).toBeInstanceOf(Map);
++    expect(none.size).toBe(0);
++  });
++
++  it('AC-19-04 a list with only the cell body gives an empty map', () => {
++    expect(branchOffsets(sample(), ['t:b']).size).toBe(0);
++  });
++
++  it('AC-19-04 the spots of one community are all different, even across several rings', () => {
++    const ids: string[] = [];
++    const communityOf = new Map<string, number>();
++    for (let i = 0; i < 40; i++) {
++      const id = `n${String(i).padStart(3, '0')}`;
++      ids.push(id);
++      communityOf.set(id, 5);
++    }
++    const a = mkAnalysis({ communities: [comm(5, [])], communityOf });
++    const out = branchOffsets(a, ids);
++    expect(out.size).toBe(40);
++    const seen = new Set<string>();
++    for (const pos of out.values()) {
++      seen.add(`${pos.x.toFixed(6)},${pos.y.toFixed(6)}`);
++    }
++    expect(seen.size).toBe(40);
++    // First ring is at radius 60, the 4th ring (ids 36..39) at radius 72.
++    expect(Math.hypot(out.get('n000')!.x, out.get('n000')!.y)).toBeCloseTo(60, 9);
++    expect(Math.hypot(out.get('n039')!.x, out.get('n039')!.y)).toBeCloseTo(72, 9);
++  });
++
++  it('AC-19-04 two calls give equal results', () => {
++    const ids = ['s1', 's10', 's2', 't:a', 's3', 's4', 'n1', 'n2', 'orphan'];
++    const first = branchOffsets(sample(), ids);
++    const second = branchOffsets(sample(), ids);
++    expect(second).toEqual(first);
++    expect([...second.entries()]).toEqual([...first.entries()]);
++  });
++
++  it('AC-19-04 does not modify its inputs', () => {
++    const a = deepFreeze(sample());
++    const ids = Object.freeze(['s2', 's1', 't:b']) as readonly string[];
++    const out = branchOffsets(a, ids);
++    expect(out.get('s1')).toBeDefined();
++    expect([...ids]).toEqual(['s2', 's1', 't:b']);
++  });
++});
++
++// ---------- axonCurve ----------
++
++describe('axonCurve', () => {
++  function themes(): Analysis {
++    return mkAnalysis({
++      communities: [comm(0, ['a1']), comm(1, ['b1'])],
++      communityOf: new Map<string, number>([
++        ['a1', 0],
++        ['a2', 0],
++        ['b1', 1],
++        ['b2', 1],
++      ]),
++    });
++  }
++
++  it('AC-19-05 a link between two themes has curvature 0.3 and a rotation in [0, 2*PI)', () => {
++    const c = axonCurve(lk('a1', 'b1'), themes());
++    expect(c.curvature).toBe(0.3);
++    expect(c.curvature).toBe(AXON_CURVATURE);
++    expect(c.rotation).toBeGreaterThanOrEqual(0);
++    expect(c.rotation).toBeLessThan(2 * Math.PI);
++    expect(Number.isFinite(c.rotation)).toBe(true);
++  });
++
++  it('AC-19-05 the same link twice gives the same rotation', () => {
++    const a = themes();
++    const first = axonCurve(lk('a1', 'b1'), a);
++    const second = axonCurve(lk('a1', 'b1'), a);
++    expect(second).toEqual(first);
++    expect(axonCurve(lk('a2', 'b2'), a)).toEqual(axonCurve(lk('a2', 'b2'), a));
++  });
++
++  it('AC-19-05 the rotation depends only on source and target, not on link type', () => {
++    const a = themes();
++    expect(axonCurve(lk('a1', 'b2', 'has_topic'), a).rotation).toBe(axonCurve(lk('a1', 'b2', 'other'), a).rotation);
++  });
++
++  it('AC-19-05 rotations stay in range and are not all equal across many links', () => {
++    const communityOf = new Map<string, number>();
++    const ids: string[] = [];
++    for (let i = 0; i < 12; i++) {
++      const id = `node-${i}`;
++      ids.push(id);
++      communityOf.set(id, i % 2);
++    }
++    const a = mkAnalysis({ communityOf });
++    const rotations = new Set<number>();
++    for (let i = 0; i < ids.length; i++) {
++      for (let j = i + 1; j < ids.length; j++) {
++        if (i % 2 === j % 2) continue;
++        const c = axonCurve(lk(ids[i], ids[j]), a);
++        expect(c.curvature).toBe(0.3);
++        expect(c.rotation).toBeGreaterThanOrEqual(0);
++        expect(c.rotation).toBeLessThan(2 * Math.PI);
++        rotations.add(c.rotation);
++      }
++    }
++    expect(rotations.size).toBeGreaterThan(5);
++  });
++
++  it('AC-19-05 a link inside one theme is flat', () => {
++    expect(axonCurve(lk('a1', 'a2'), themes())).toEqual({ curvature: 0, rotation: 0 });
++  });
++
++  it('AC-19-05 a link from a node to itself is flat', () => {
++    expect(axonCurve(lk('a1', 'a1'), themes())).toEqual({ curvature: 0, rotation: 0 });
++  });
++
++  it('AC-19-05 an end with no theme makes the link flat', () => {
++    const a = themes();
++    expect(axonCurve(lk('a1', 'loose'), a)).toEqual({ curvature: 0, rotation: 0 });
++    expect(axonCurve(lk('loose', 'b1'), a)).toEqual({ curvature: 0, rotation: 0 });
++    expect(axonCurve(lk('loose', 'also-loose'), a)).toEqual({ curvature: 0, rotation: 0 });
++  });
++
++  it('AC-19-05 an empty analysis makes every link flat', () => {
++    expect(axonCurve(lk('a1', 'b1'), mkAnalysis())).toEqual({ curvature: 0, rotation: 0 });
++  });
++
++  it('AC-19-05 theme id 0 counts as a theme', () => {
++    // a1 is in community 0 (falsy id), b1 in community 1: still a curved link.
++    const c = axonCurve(lk('a1', 'b1'), themes());
++    expect(c.curvature).toBe(0.3);
++  });
++
++  it('AC-19-05 link ends given as { id } objects work like strings', () => {
++    const a = themes();
++    const asStrings = axonCurve(lk('a1', 'b1'), a);
++    const asObjects = axonCurve(lk({ id: 'a1' }, { id: 'b1' }), a);
++    expect(asObjects).toEqual(asStrings);
++    expect(asObjects.curvature).toBe(0.3);
++
++    const mixed = axonCurve(lk({ id: 'a1' }, 'b1'), a);
++    expect(mixed).toEqual(asStrings);
++
++    expect(axonCurve(lk({ id: 'a1' }, { id: 'a2' }), a)).toEqual({ curvature: 0, rotation: 0 });
++    expect(axonCurve(lk({ id: 'a1' }, { id: 'loose' }), a)).toEqual({ curvature: 0, rotation: 0 });
++  });
++
++  it('AC-19-05 does not modify the link or analysis', () => {
++    const a = deepFreeze(themes());
++    const link = deepFreeze(lk({ id: 'a1' }, { id: 'b2' }));
++    const c = axonCurve(link, a);
++    expect(c.curvature).toBe(0.3);
++  });
++});
+diff --git a/specs/phase-19.md b/specs/phase-19.md
+new file mode 100644
+index 0000000..1e6602b
+--- /dev/null
++++ b/specs/phase-19.md
+@@ -0,0 +1,45 @@
++# Phase 19: Neuron maths - cell per theme, branch spots, axon curves
++
++## Intent
++Pure functions that decide which node is the cell body of each theme, where the other nodes of a
++theme sit around it, and how links between themes curve, so the 3D view can look like neurons.
++
++## Complexity
++M - small pure maths with ties, empty inputs and determinism to get right.
++
++## Scope
++- In scope: add to `explorer/src/scene3d.ts` (pure, unit-tested).
++- Out of scope: rendering, DOM, `three`, forces (phase 20).
++
++## Interface contract
++Tests import from `../src/scene3d`. No DOM, no `three`. `Analysis`, `GraphLink` are the existing types (`communities[].id/topics`, `rank: Map<string, number>`, `communityOf: Map<string, number>`); link ends are read with the existing `linkEnd`.
++
++| Item | Location | Signature or shape | Errors |
++|---|---|---|---|
++| `CELL_SCALE` | `scene3d.ts` | `export const CELL_SCALE = 2.2` | - |
++| `AXON_CURVATURE` | same | `export const AXON_CURVATURE = 0.3` | - |
++| `BRANCH_BASE_RADIUS` | same | `export const BRANCH_BASE_RADIUS = 60` | - |
++| `BRANCH_RADIUS_STEP` | same | `export const BRANCH_RADIUS_STEP = 4` | - |
++| `cellBodies` | same | `export function cellBodies(a: Analysis): Map<number, string>` (community id -> cell node id) | - |
++| `branchOffset` | same | `export function branchOffset(index: number, count: number): { x: number; y: number }` | - |
++| `branchOffsets` | same | `export function branchOffsets(a: Analysis, nodeIds: readonly string[]): Map<string, { x: number; y: number }>` | - |
++| `axonCurve` | same | `export function axonCurve(link: GraphLink, a: Analysis): { curvature: number; rotation: number }` | - |
++
++## Behaviour
++1. `cellBodies`: for each community in `a.communities` with at least one entry in `topics`, the topic with the highest `a.rank` value (missing rank = 0); ties go to the smaller id (plain `<` string order). Communities with no topics are absent from the map.
++2. `branchOffset(i, n)`: position of branch `i` of `n` around a cell, in x/y. Ring `r = floor(i / 12)`, slot `s = i % 12`; radius = `BRANCH_BASE_RADIUS + BRANCH_RADIUS_STEP * r`; angle = `2 * PI * s / 12 + r * PI / 12` (each outer ring is turned half a slot). Result `{ x: radius * cos(angle), y: radius * sin(angle) }`. If `i` or `n` is not a finite integer, `i < 0` or `i >= n`, the result is `{ x: BRANCH_BASE_RADIUS, y: 0 }`.
++3. `branchOffsets(a, ids)`: for every id in `ids` that has a community in `a.communityOf` and is not that community's cell body, a spot `branchOffset(k, count)`, where the qualifying ids of one community are sorted by id (plain `<` order) and `k` is the position in that sorted list and `count` its length. Cell bodies, ids with no community and ids repeated in `ids` (counted once) behave as stated; no entry for cell bodies or ids without a community. The same call gives the same result; no two entries of one community are equal.
++4. `axonCurve(link, a)`: if both ends have a community in `a.communityOf` and the communities differ: `{ curvature: AXON_CURVATURE, rotation }`, where `rotation` is in `[0, 2*PI)` and comes from a deterministic hash of `source + '>' + target` (same link -> same rotation). Otherwise (same community, or an end without a community) `{ curvature: 0, rotation: 0 }`.
++
++## Acceptance criteria
++- AC-19-01: `cellBodies` picks the highest-ranked topic of each community and, on equal rank, the smaller id; a community with no topics has no entry; an empty analysis gives an empty map.
++- AC-19-02: `branchOffset(0, 5)` is `{ x: 60, y: 0 }`; `branchOffset(3, 20)` is at radius 60 and angle PI/2; `branchOffset(12, 20)` is at radius 64 and angle PI/12.
++- AC-19-03: `branchOffset` with `i` negative, `i >= n`, a fraction, `NaN` or `Infinity` gives `{ x: 60, y: 0 }`.
++- AC-19-04: `branchOffsets` skips the cell body, ids with no community and unknown ids; gives every other node of a community its spot by sorted id order; the spots of one community are all different; two calls give equal results.
++- AC-19-05: `axonCurve` gives curvature 0.3 and a rotation in `[0, 2*PI)` for a link between two themes, the same rotation for the same link twice, and `{ curvature: 0, rotation: 0 }` for a link inside one theme or with an end that has no theme; link ends given as objects `{ id }` work like strings.
++
++## External systems to mock
++- None (pure functions).
++
++## Dependencies on earlier phases
++- Phase 13 (same module `scene3d.ts`), phase 10 (`Analysis`).
+diff --git a/specs/phase-20.md b/specs/phase-20.md
+new file mode 100644
+index 0000000..c6ae846
+--- /dev/null
++++ b/specs/phase-20.md
+@@ -0,0 +1,41 @@
++# Phase 20: 3D neuron look - cells, branches, axons
++
++## Intent
++Use the neuron maths in the 3D view: each theme gets a bigger glowing cell body, its other nodes
++branch around it, and links between themes are long curves, with a tick box to switch the look off.
++
++## Complexity
++M - rendering and force changes that interact with filters, selection, layers and the time-lapse, checked in the browser.
++
++## Scope
++- In scope: `explorer/src/main.ts`, `explorer/index.html`, using `cellBodies`, `branchOffsets`, `axonCurve`, `CELL_SCALE` from `scene3d.ts`.
++- Out of scope: `scene3d.ts` behaviour, 2D drawing, new packages, pulse animation.
++
++## Interface contract
++App shell, not unit-tested. Checked by `npm run build`, `npx tsc --noEmit`, the existing tests and a browser run.
++
++| Item | Location | Shape | Errors |
++|---|---|---|---|
++| Neuron tick box | `index.html` | `<input type="checkbox" id="neuron-look" checked />` with the text "Neuron look", next to the "Layers" tick box (id `layers-mode`) | - |
++| Neuron state | `main.ts` | a boolean read from `#neuron-look`; changing it re-applies the 3D forces and styles and reheats the layout | - |
++
++## Behaviour
++- With the box ticked (default), in 3D only:
++  - Cell bodies (from `cellBodies`) are drawn `CELL_SCALE` times larger than their normal size and their halo is always shown; the selected-state glow caps from `glowLevels` still apply (no brighter than before).
++  - The x/y island force pulls each branch node toward its island centre plus its `branchOffsets` spot; cell bodies and nodes without a spot go to the island centre as today. Depth (time or layers) is unchanged.
++  - Links get `linkCurvature` and `linkCurveRotation` from `axonCurve`; links inside a theme stay straight.
++- With the box unticked, nodes, forces and links are exactly as before this phase.
++- Toggling rebuilds the node objects and forces and reheats the layout; the 2D map is not touched.
++- Selection, path, time-lapse, layers, orbit and hover keep working with the look on.
++
++## Acceptance criteria
++- AC-20-01: `npm run build` and `npx tsc --noEmit` pass and the existing tests still pass.
++- AC-20-02: In the browser, with the look on, each theme shows one larger cell with its other nodes in rings around it, and links between themes are curved.
++- AC-20-03: Unticking "Neuron look" gives the previous picture (no curved links, no bigger cells).
++- AC-20-04: Selecting a node, running the path tool and layers mode still work with the look on, and the picture is not brighter than before.
++
++## External systems to mock
++- None; visual check in the browser preview.
++
++## Dependencies on earlier phases
++- Phase 19 (neuron maths). Phases 15-18 (3D look, wiring, glow).

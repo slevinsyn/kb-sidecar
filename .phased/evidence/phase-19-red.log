@@ -1,0 +1,163 @@
+== core-rust (run 1): cargo test --quiet -> exit 0
+1213 | fn test_AC_01_09_unreadable_path_is_io_error() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_09_unreadable_path_is_io_error`
+
+warning: function `test_AC_01_09_kb_error_from_io_error_and_display` should have a snake case name
+    --> tests/phase01_claude_code.rs:1223:4
+     |
+1223 | fn test_AC_01_09_kb_error_from_io_error_and_display() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_09_kb_error_from_io_error_and_display`
+
+warning: function `test_AC_01_10_parse_transcript_uses_file_stem_when_no_session_id` should have a snake case name
+    --> tests/phase01_claude_code.rs:1245:4
+     |
+1245 | fn test_AC_01_10_parse_transcript_uses_file_stem_when_no_session_id() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_10_parse_transcript_uses_file_stem_when_no_session_id`
+
+warning: function `test_AC_01_10_session_id_in_records_beats_file_stem` should have a snake case name
+    --> tests/phase01_claude_code.rs:1262:4
+     |
+1262 | fn test_AC_01_10_session_id_in_records_beats_file_stem() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_10_session_id_in_records_beats_file_stem`
+
+warning: function `test_AC_01_10_parse_transcript_str_uses_fallback_id_when_no_session_id` should have a snake case name
+    --> tests/phase01_claude_code.rs:1273:4
+     |
+1273 | fn test_AC_01_10_parse_transcript_str_uses_fallback_id_when_no_session_id() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_10_parse_transcript_str_uses_fallback_id_when_no_session_id`
+
+warning: function `test_AC_01_10_first_record_with_session_id_wins` should have a snake case name
+    --> tests/phase01_claude_code.rs:1283:4
+     |
+1283 | fn test_AC_01_10_first_record_with_session_id_wins() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_10_first_record_with_session_id_wins`
+
+warning: function `test_AC_01_11_discover_returns_project_level_jsonl_sorted` should have a snake case name
+    --> tests/phase01_claude_code.rs:1302:4
+     |
+1302 | fn test_AC_01_11_discover_returns_project_level_jsonl_sorted() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_11_discover_returns_project_level_jsonl_sorted`
+
+warning: function `test_AC_01_11_discover_ignores_subagents_deeper_files_other_extensions_and_top_level` should have a snake case name
+    --> tests/phase01_claude_code.rs:1325:4
+     |
+1325 | fn test_AC_01_11_discover_ignores_subagents_deeper_files_other_extensions_and_top_level() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_11_discover_ignores_subagents_deeper_files_other_extensions_and_top_level`
+
+warning: function `test_AC_01_11_discover_missing_dir_is_empty` should have a snake case name
+    --> tests/phase01_claude_code.rs:1349:4
+     |
+1349 | fn test_AC_01_11_discover_missing_dir_is_empty() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_11_discover_missing_dir_is_empty`
+
+warning: function `test_AC_01_11_discover_empty_dir_is_empty` should have a snake case name
+    --> tests/phase01_claude_code.rs:1356:4
+     |
+1356 | fn test_AC_01_11_discover_empty_dir_is_empty() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_11_discover_empty_dir_is_empty`
+
+warning: function `test_AC_01_11_discovered_files_can_be_parsed` should have a snake case name
+    --> tests/phase01_claude_code.rs:1362:4
+     |
+1362 | fn test_AC_01_11_discovered_files_can_be_parsed() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_11_discovered_files_can_be_parsed`
+
+warning: function `test_AC_01_12_parsed_session_round_trips_through_serde_json` should have a snake case name
+    --> tests/phase01_claude_code.rs:1380:4
+     |
+1380 | fn test_AC_01_12_parsed_session_round_trips_through_serde_json() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_12_parsed_session_round_trips_through_serde_json`
+
+warning: function `test_AC_01_12_hand_built_session_with_every_block_variant_round_trips` should have a snake case name
+    --> tests/phase01_claude_code.rs:1388:4
+     |
+1388 | fn test_AC_01_12_hand_built_session_with_every_block_variant_round_trips() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_12_hand_built_session_with_every_block_variant_round_trips`
+
+warning: function `test_AC_01_12_none_fields_and_enums_round_trip` should have a snake case name
+    --> tests/phase01_claude_code.rs:1441:4
+     |
+1441 | fn test_AC_01_12_none_fields_and_enums_round_trip() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_12_none_fields_and_enums_round_trip`
+== explorer-javascript (run 1): npx vitest run --exclude 'tests/holdout/**' -> exit 1
+    515|
+    516|   it('AC-19-05 a link inside one theme is flat', () => {
+    517|     expect(axonCurve(lk('a1', 'a2'), themes())).toEqual({ curvature: 0…
+       |            ^
+    518|   });
+    519|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[44/50]⎯
+
+ FAIL  tests/neuron_maths.test.ts > axonCurve > AC-19-05 a link from a node to itself is flat
+TypeError: axonCurve is not a function
+ ❯ tests/neuron_maths.test.ts:521:12
+    519|
+    520|   it('AC-19-05 a link from a node to itself is flat', () => {
+    521|     expect(axonCurve(lk('a1', 'a1'), themes())).toEqual({ curvature: 0…
+       |            ^
+    522|   });
+    523|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[45/50]⎯
+
+ FAIL  tests/neuron_maths.test.ts > axonCurve > AC-19-05 an end with no theme makes the link flat
+TypeError: axonCurve is not a function
+ ❯ tests/neuron_maths.test.ts:526:12
+    524|   it('AC-19-05 an end with no theme makes the link flat', () => {
+    525|     const a = themes();
+    526|     expect(axonCurve(lk('a1', 'loose'), a)).toEqual({ curvature: 0, ro…
+       |            ^
+    527|     expect(axonCurve(lk('loose', 'b1'), a)).toEqual({ curvature: 0, ro…
+    528|     expect(axonCurve(lk('loose', 'also-loose'), a)).toEqual({ curvatur…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[46/50]⎯
+
+ FAIL  tests/neuron_maths.test.ts > axonCurve > AC-19-05 an empty analysis makes every link flat
+TypeError: axonCurve is not a function
+ ❯ tests/neuron_maths.test.ts:532:12
+    530|
+    531|   it('AC-19-05 an empty analysis makes every link flat', () => {
+    532|     expect(axonCurve(lk('a1', 'b1'), mkAnalysis())).toEqual({ curvatur…
+       |            ^
+    533|   });
+    534|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[47/50]⎯
+
+ FAIL  tests/neuron_maths.test.ts > axonCurve > AC-19-05 theme id 0 counts as a theme
+TypeError: axonCurve is not a function
+ ❯ tests/neuron_maths.test.ts:537:15
+    535|   it('AC-19-05 theme id 0 counts as a theme', () => {
+    536|     // a1 is in community 0 (falsy id), b1 in community 1: still a cur…
+    537|     const c = axonCurve(lk('a1', 'b1'), themes());
+       |               ^
+    538|     expect(c.curvature).toBe(0.3);
+    539|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[48/50]⎯
+
+ FAIL  tests/neuron_maths.test.ts > axonCurve > AC-19-05 link ends given as { id } objects work like strings
+TypeError: axonCurve is not a function
+ ❯ tests/neuron_maths.test.ts:543:23
+    541|   it('AC-19-05 link ends given as { id } objects work like strings', (…
+    542|     const a = themes();
+    543|     const asStrings = axonCurve(lk('a1', 'b1'), a);
+       |                       ^
+    544|     const asObjects = axonCurve(lk({ id: 'a1' }, { id: 'b1' }), a);
+    545|     expect(asObjects).toEqual(asStrings);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[49/50]⎯
+
+ FAIL  tests/neuron_maths.test.ts > axonCurve > AC-19-05 does not modify the link or analysis
+TypeError: axonCurve is not a function
+ ❯ tests/neuron_maths.test.ts:558:15
+    556|     const a = deepFreeze(themes());
+    557|     const link = deepFreeze(lk({ id: 'a1' }, { id: 'b2' }));
+    558|     const c = axonCurve(link, a);
+       |               ^
+    559|     expect(c.curvature).toBe(0.3);
+    560|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[50/50]⎯
+== explorer-javascript hidden tests -> exit 1:       Tests  8 failed | 100 passed (108) (details hidden)

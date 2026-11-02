@@ -1,0 +1,1371 @@
+diff --git a/explorer/index.html b/explorer/index.html
+index 2555c14..88138b3 100644
+--- a/explorer/index.html
++++ b/explorer/index.html
+@@ -58,6 +58,10 @@
+       #details a { color: #7fb2ff; cursor: pointer; }
+       #error { position: absolute; bottom: 12px; right: 12px; max-width: 420px; border-color: #7a2b2b; }
+       #error p { margin: 0 0 8px; color: #ff9b9b; }
++      .scene-tooltip { background: rgba(15, 18, 26, 0.88) !important; color: #e8ecf4 !important;
++        font-size: 12px !important; line-height: 1.4; padding: 4px 8px; border-radius: 4px;
++        border: 1px solid #2a3142; white-space: nowrap !important;
++        max-width: 280px; overflow: hidden; text-overflow: ellipsis; pointer-events: none !important; }
+       [hidden] { display: none !important; }
+     </style>
+   </head>
+diff --git a/explorer/src/main.ts b/explorer/src/main.ts
+index da9d837..3130efd 100644
+--- a/explorer/src/main.ts
++++ b/explorer/src/main.ts
+@@ -29,6 +29,7 @@ import {
+   brightnessMap,
+   clusterBounds,
+   defaultLinkFilter,
++  glowLevels,
+   islandCenters,
+   layerZ,
+   linkRgba,
+@@ -38,7 +39,7 @@ import {
+   shortestPath,
+   timeAxis,
+ } from './scene3d';
+-import type { Point3 } from './scene3d';
++import type { NodeState, Point3 } from './scene3d';
+ 
+ const DIM_COLOR = '#2b3040';
+ const TOP_LABEL_COUNT = 30;
+@@ -55,13 +56,15 @@ const NODE_SCALE = 0.6;
+ const FALLBACK_NODE_SIZE = 3;
+ /** Alpha of a link that does not touch the selected node while something is selected. */
+ const DIM_LINK_ALPHA = 0.04;
+-const SELECTED_PARTICLES = 4;
+-const PARTICLE_WIDTH = 2;
++const SELECTED_PARTICLES = 2;
++const PARTICLE_WIDTH = 1.2;
++/** Links touching the selected node: a soft white that does not pile into the bloom. */
++const SELECTED_LINK_COLOR = 'rgba(255, 255, 255, 0.55)';
+ const AUTO_ROTATE_SPEED = 0.5;
+ const IDLE_RESUME_MS = 5000;
+-const BLOOM_STRENGTH = 0.9;
++const BLOOM_STRENGTH = 0.35;
+ const BLOOM_RADIUS = 0.4;
+-const BLOOM_THRESHOLD = 0.15;
++const BLOOM_THRESHOLD = 0.6;
+ /** Fog starts a little in front of the graph centre and ends well behind it. */
+ const FOG_NEAR_FACTOR = 0.25;
+ const FOG_FAR_FACTOR = 1.5;
+@@ -335,6 +338,8 @@ interface NodeLook {
+   node: GraphNode;
+   body: THREE.MeshLambertMaterial;
+   ring: THREE.MeshBasicMaterial | null;
++  /** The halo mesh: shown for bridge nodes and for the selected node only. */
++  halo: THREE.Mesh | null;
+   /** The floating theme name, on theme anchor nodes only. */
+   label: THREE.SpriteMaterial | null;
+ }
+@@ -351,14 +356,17 @@ function styleNode(look: NodeLook): void {
+   const dim = isDimmed(look.node);
+   const color = dim ? DIM_COLOR : colorOf(look.node);
+   const b = brightness.get(look.node.id) ?? 0.5;
++  const state: NodeState = look.node.id === selectedId ? 'selected' : dim ? 'dim' : 'normal';
++  const glow = glowLevels(b, state);
+   look.body.color.set(color);
+   look.body.emissive.set(color);
+-  look.body.emissiveIntensity = dim ? 0 : 0.15 + 0.6 * b;
+-  look.body.opacity = dim ? 0.3 : 0.4 + 0.6 * b;
++  look.body.emissiveIntensity = glow.emissive;
++  look.body.opacity = glow.opacity;
+   if (look.ring) {
+     look.ring.color.set(dim ? DIM_COLOR : '#ffffff');
+-    look.ring.opacity = dim ? 0.2 : 0.45 + 0.4 * b;
++    look.ring.opacity = glow.ring;
+   }
++  if (look.halo) look.halo.visible = bridges.has(look.node.id) || look.node.id === selectedId;
+   if (look.label) look.label.opacity = dim ? 0.25 : 1;
+ }
+ 
+@@ -367,16 +375,15 @@ function nodeObject3d(obj: object): THREE.Object3D {
+   const group = new THREE.Group();
+   const body = new THREE.MeshLambertMaterial({ transparent: true });
+   group.add(new THREE.Mesh(geometryFor(node.type), body));
+-  let ring: THREE.MeshBasicMaterial | null = null;
+-  if (bridges.has(node.id)) {
+-    ring = new THREE.MeshBasicMaterial({ transparent: true });
+-    const halo = new THREE.Mesh(RING, ring);
+-    // Keep the halo facing the camera (the parent group is never rotated).
+-    halo.onBeforeRender = (_renderer, _scene, camera) => {
+-      halo.quaternion.copy(camera.quaternion);
+-    };
+-    group.add(halo);
+-  }
++  // Every node owns a halo so the selected node can show its white ring; styleNode hides it
++  // unless the node is a bridge or the selected node.
++  const ring = new THREE.MeshBasicMaterial({ transparent: true });
++  const halo = new THREE.Mesh(RING, ring);
++  // Keep the halo facing the camera (the parent group is never rotated).
++  halo.onBeforeRender = (_renderer, _scene, camera) => {
++    halo.quaternion.copy(camera.quaternion);
++  };
++  group.add(halo);
+   const scale = (sizes.get(node.id) ?? FALLBACK_NODE_SIZE) * NODE_SCALE;
+   group.scale.setScalar(scale);
+   let label: THREE.SpriteMaterial | null = null;
+@@ -388,7 +395,7 @@ function nodeObject3d(obj: object): THREE.Object3D {
+       label = sprite.material;
+     }
+   }
+-  const look: NodeLook = { node, body, ring, label };
++  const look: NodeLook = { node, body, ring, halo, label };
+   styleNode(look);
+   nodeLooks.set(node.id, look);
+   return group;
+@@ -397,7 +404,7 @@ function nodeObject3d(obj: object): THREE.Object3D {
+ function linkColor3d(l: GraphLink): string {
+   if (pathLinks !== null) return onPath(l) ? PATH_COLOR : linkRgba(l.type, DIM_LINK_ALPHA);
+   if (selectedId === null && clusterIds === null) return linkRgba(l.type);
+-  if (touchesSelected(l)) return '#ffffff';
++  if (touchesSelected(l)) return SELECTED_LINK_COLOR;
+   return inCluster(l) ? linkRgba(l.type) : linkRgba(l.type, DIM_LINK_ALPHA);
+ }
+ 
+@@ -641,7 +648,7 @@ function makeGraph3d(): Graph3D {
+     .nodeId('id')
+     .width(graphWidth())
+     .height(window.innerHeight)
+-    .nodeLabel((n) => escapeHtml((n as GraphNode).label))
++    .nodeLabel((n) => `${escapeHtml((n as GraphNode).label)}<br>${escapeHtml((n as GraphNode).type)}`)
+     .linkLabel(() => '')
+     .nodeThreeObject(nodeObject3d)
+     // linkRgba carries the opacity; keep the library from scaling it down further.
+diff --git a/explorer/tests/glare_shell.test.ts b/explorer/tests/glare_shell.test.ts
+new file mode 100644
+index 0000000..c0b2c62
+--- /dev/null
++++ b/explorer/tests/glare_shell.test.ts
+@@ -0,0 +1,722 @@
++import { describe, it, expect } from 'vitest';
++import { readFileSync } from 'node:fs';
++import { fileURLToPath } from 'node:url';
++
++// Phase 18 is an app-shell phase (explorer/src/main.ts and explorer/index.html): the look is
++// checked in the browser. These tests pin what can be read from the text of those files:
++// the named constants, the use of glowLevels in styleNode, the soft selection white in
++// linkColor3d, the particle settings, the 3D nodeLabel and the .scene-tooltip CSS rule.
++// Comments are stripped before matching and function bodies are found by brace matching.
++
++// ---------- source scanning helpers ----------
++
++interface Src {
++  /** Source with comments blanked out (same length as the original). */
++  code: string;
++  /** Like `code`, but string, template and regex contents are blanked too (for brackets). */
++  masked: string;
++}
++
++function blank(s: string): string {
++  return s.replace(/[^\n]/g, ' ');
++}
++
++function skipTemplate(src: string, start: number): number {
++  // `start` is the index of the opening backtick; returns the index after the closing one.
++  let j = start + 1;
++  while (j < src.length) {
++    const ch = src[j];
++    if (ch === '\\') {
++      j += 2;
++    } else if (ch === '`') {
++      return j + 1;
++    } else if (ch === '$' && src[j + 1] === '{') {
++      j = skipExpression(src, j + 2);
++    } else {
++      j += 1;
++    }
++  }
++  return src.length;
++}
++
++function skipExpression(src: string, start: number): number {
++  // `start` is just after "${"; returns the index after the matching "}".
++  let depth = 1;
++  let j = start;
++  while (j < src.length) {
++    const ch = src[j];
++    if (ch === '`') {
++      j = skipTemplate(src, j);
++      continue;
++    }
++    if (ch === "'" || ch === '"') {
++      j += 1;
++      while (j < src.length && src[j] !== ch && src[j] !== '\n') j += src[j] === '\\' ? 2 : 1;
++      j += 1;
++      continue;
++    }
++    if (ch === '{') depth += 1;
++    if (ch === '}') {
++      depth -= 1;
++      if (depth === 0) return j + 1;
++    }
++    j += 1;
++  }
++  return src.length;
++}
++
++function scan(src: string): Src {
++  let code = '';
++  let masked = '';
++  const n = src.length;
++  let i = 0;
++  let prev = '';
++  while (i < n) {
++    const c = src[i];
++    const d = src[i + 1];
++    if (c === '/' && d === '/') {
++      let j = src.indexOf('\n', i);
++      if (j < 0) j = n;
++      code += blank(src.slice(i, j));
++      masked += blank(src.slice(i, j));
++      i = j;
++      continue;
++    }
++    if (c === '/' && d === '*') {
++      let j = src.indexOf('*/', i + 2);
++      j = j < 0 ? n : j + 2;
++      code += blank(src.slice(i, j));
++      masked += blank(src.slice(i, j));
++      i = j;
++      continue;
++    }
++    if (c === '`') {
++      const end = skipTemplate(src, i);
++      code += src.slice(i, end);
++      masked += '`' + blank(src.slice(i + 1, Math.max(i + 1, end - 1))) + '`';
++      i = end;
++      prev = 'a';
++      continue;
++    }
++    if (c === "'" || c === '"') {
++      let j = i + 1;
++      while (j < n && src[j] !== c && src[j] !== '\n') j += src[j] === '\\' ? 2 : 1;
++      j = Math.min(j, n);
++      const closed = src[j] === c;
++      const end = closed ? j + 1 : j;
++      code += src.slice(i, end);
++      masked += c + blank(src.slice(i + 1, j)) + (closed ? c : '');
++      i = end;
++      prev = 'a';
++      continue;
++    }
++    if (c === '/' && (prev === '' || '(,=:[!&|?{};'.includes(prev))) {
++      let j = i + 1;
++      let inClass = false;
++      let ok = false;
++      while (j < n) {
++        const ch = src[j];
++        if (ch === '\\') {
++          j += 2;
++          continue;
++        }
++        if (ch === '\n') break;
++        if (ch === '[') inClass = true;
++        else if (ch === ']') inClass = false;
++        else if (ch === '/' && !inClass) {
++          ok = true;
++          break;
++        }
++        j += 1;
++      }
++      if (ok) {
++        let end = j + 1;
++        while (end < n && /[a-z]/i.test(src[end])) end += 1;
++        code += src.slice(i, end);
++        masked += '/' + blank(src.slice(i + 1, j)) + '/' + blank(src.slice(j + 1, end));
++        i = end;
++        prev = 'a';
++        continue;
++      }
++    }
++    code += c;
++    masked += c;
++    if (!/\s/.test(c)) prev = c;
++    i += 1;
++  }
++  return { code, masked };
++}
++
++function load(relative: string): Src {
++  return scan(readFileSync(fileURLToPath(new URL(relative, import.meta.url)), 'utf8'));
++}
++
++const CLOSERS: Record<string, string> = { '(': ')', '{': '}', '[': ']' };
++
++function matchClose(masked: string, open: number): number {
++  const o = masked[open];
++  const c = CLOSERS[o];
++  let depth = 0;
++  for (let i = open; i < masked.length; i++) {
++    if (masked[i] === o) depth += 1;
++    else if (masked[i] === c) {
++      depth -= 1;
++      if (depth === 0) return i;
++    }
++  }
++  return -1;
++}
++
++function escapeRe(s: string): string {
++  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
++}
++
++/** Argument text of every call matching `<callee>(`, callee being a regex source. */
++function calls(src: Src, callee: string): string[] {
++  const re = new RegExp(`${callee}\\s*\\(`, 'g');
++  const out: string[] = [];
++  let m: RegExpExecArray | null;
++  while ((m = re.exec(src.masked)) !== null) {
++    const open = m.index + m[0].length - 1;
++    const close = matchClose(src.masked, open);
++    if (close > open) out.push(src.code.slice(open + 1, close));
++  }
++  return out;
++}
++
++/** Top-level, comma separated argument list of one call, trimmed. */
++function splitArgs(src: Src, callee: string): string[][] {
++  const re = new RegExp(`${callee}\\s*\\(`, 'g');
++  const out: string[][] = [];
++  let m: RegExpExecArray | null;
++  while ((m = re.exec(src.masked)) !== null) {
++    const open = m.index + m[0].length - 1;
++    const close = matchClose(src.masked, open);
++    if (close <= open) continue;
++    const parts: string[] = [];
++    let depth = 0;
++    let from = open + 1;
++    for (let i = open + 1; i < close; i++) {
++      const ch = src.masked[i];
++      if (ch === '(' || ch === '{' || ch === '[') depth += 1;
++      else if (ch === ')' || ch === '}' || ch === ']') depth -= 1;
++      else if (ch === ',' && depth === 0) {
++        parts.push(src.code.slice(from, i).trim());
++        from = i + 1;
++      }
++    }
++    parts.push(src.code.slice(from, close).trim());
++    out.push(parts.filter((p) => p.length > 0));
++  }
++  return out;
++}
++
++/** Whole text (parameters and body) of `function name` or `const name = (...) =>`. */
++function functionText(src: Src, name: string): string | null {
++  const id = escapeRe(name);
++  const decl = new RegExp(`\\b(?:function\\s+${id}\\b|(?:const|let|var)\\s+${id}\\b)`).exec(src.masked);
++  if (!decl) return null;
++  const after = decl.index + decl[0].length;
++  const blockFrom = (from: number): string | null => {
++    const open = src.masked.indexOf('(', from);
++    if (open < 0) return null;
++    const close = matchClose(src.masked, open);
++    const brace = src.masked.indexOf('{', close);
++    if (close < 0 || brace < 0) return null;
++    const end = matchClose(src.masked, brace);
++    return end < 0 ? null : src.code.slice(decl.index, end + 1);
++  };
++  if (decl[0].startsWith('function')) return blockFrom(after);
++
++  const rel = src.masked.slice(after).search(/=(?!>)/);
++  if (rel < 0) return null;
++  const eq = after + rel;
++  const rest = src.masked.slice(eq + 1);
++  const head =
++    /^\s*(?:async\s+)?(?:function\b[^(]*\(|\([^;]*?\)\s*(?::[^=;]*?)?=>|[A-Za-z_$][\w$]*\s*=>)/.exec(rest);
++  if (!head) return null;
++  if (/^\s*(?:async\s+)?function\b/.test(head[0])) return blockFrom(eq + 1);
++  let bodyAt = eq + 1 + head[0].length;
++  while (bodyAt < src.masked.length && /\s/.test(src.masked[bodyAt])) bodyAt += 1;
++  if (src.masked[bodyAt] === '{') {
++    const end = matchClose(src.masked, bodyAt);
++    return end < 0 ? null : src.code.slice(decl.index, end + 1);
++  }
++  let depth = 0;
++  let end = bodyAt;
++  for (; end < src.masked.length; end++) {
++    const ch = src.masked[end];
++    if (ch === '(' || ch === '{' || ch === '[') depth += 1;
++    else if (ch === ')' || ch === '}' || ch === ']') depth -= 1;
++    else if (ch === ';' && depth <= 0) break;
++    if (depth < 0) break;
++  }
++  return src.code.slice(decl.index, end);
++}
++
++function mustFunction(src: Src, name: string): string {
++  const text = functionText(src, name);
++  expect(text, `function ${name} not found in main.ts`).not.toBeNull();
++  return text as string;
++}
++
++/** `text` plus the text of every function declared in `src` whose name occurs in `text`. */
++function reach(src: Src, text: string, skip?: RegExp): string {
++  let out = text;
++  const seen = new Set<string>();
++  for (const id of text.match(/[A-Za-z_$][\w$]*/g) ?? []) {
++    if (seen.has(id)) continue;
++    if (skip && skip.test(id)) continue;
++    seen.add(id);
++    const fn = functionText(src, id);
++    if (fn) out += '\n' + fn;
++  }
++  return out;
++}
++
++function stringConsts(src: Src): Map<string, string> {
++  const out = new Map<string, string>();
++  const re = /\bconst\s+([A-Za-z_$][\w$]*)\s*(?::\s*string\s*)?=\s*(['"`])((?:(?!\2)[^\\\n]|\\.)*)\2/g;
++  let m: RegExpExecArray | null;
++  while ((m = re.exec(src.code)) !== null) out.set(m[1], m[3]);
++  return out;
++}
++
++/** `text` plus the value of every string constant it names. */
++function withConstValues(src: Src, text: string): string {
++  const consts = stringConsts(src);
++  let out = text;
++  for (const id of new Set(text.match(/[A-Za-z_$][\w$]*/g) ?? [])) {
++    const v = consts.get(id);
++    if (v !== undefined) out += '\n' + v;
++  }
++  return out;
++}
++
++function numberConst(src: Src, name: string): number | null {
++  const re = new RegExp(
++    `\\bconst\\s+${escapeRe(name)}\\s*(?::\\s*number\\s*)?=\\s*([^;\\n]+)`,
++  );
++  const m = re.exec(src.code);
++  if (!m) return null;
++  const raw = m[1].trim().replace(/\s+as\s+const$/, '').replace(/,$/, '').trim();
++  return raw === '' ? null : Number(raw);
++}
++
++function declarationCount(src: Src, name: string): number {
++  return (src.masked.match(new RegExp(`\\b(?:const|let|var)\\s+${escapeRe(name)}\\b`, 'g')) ?? []).length;
++}
++
++function usesOutsideDeclaration(src: Src, name: string): number {
++  const all = (src.masked.match(new RegExp(`\\b${escapeRe(name)}\\b`, 'g')) ?? []).length;
++  return all - declarationCount(src, name);
++}
++
++const main = load('../src/main.ts');
++
++// ---------- AC-18-01 ----------
++
++describe('AC-18-01 build wiring', () => {
++  const pkg = JSON.parse(
++    readFileSync(fileURLToPath(new URL('../package.json', import.meta.url)), 'utf8'),
++  ) as { scripts?: Record<string, string>; dependencies?: Record<string, string> };
++
++  it('AC-18-01 npm run build still type-checks with tsc --noEmit and builds with vite', () => {
++    const build = pkg.scripts?.build ?? '';
++    expect(build).toContain('tsc --noEmit');
++    expect(build).toContain('vite build');
++  });
++
++  it('AC-18-01 no new packages: dependencies stay 3d-force-graph, force-graph and three', () => {
++    expect(Object.keys(pkg.dependencies ?? {}).sort()).toEqual(['3d-force-graph', 'force-graph', 'three']);
++  });
++
++  it('AC-18-01 main.ts imports glowLevels from ./scene3d', () => {
++    expect(main.code).toMatch(
++      /import\s*(?:type\s*)?\{[^}]*\bglowLevels\b[^}]*\}\s*from\s*['"]\.\/scene3d(?:\.js|\.ts)?['"]/,
++    );
++  });
++
++  it('AC-18-01 glowLevels is called (the import is not left unused)', () => {
++    expect(splitArgs(main, '\\bglowLevels').length).toBeGreaterThanOrEqual(1);
++  });
++
++  for (const name of ['BLOOM_STRENGTH', 'BLOOM_RADIUS', 'BLOOM_THRESHOLD', 'SELECTED_PARTICLES', 'PARTICLE_WIDTH']) {
++    it(`AC-18-01 ${name} is declared once and used (nothing unused for tsc)`, () => {
++      expect(declarationCount(main, name)).toBe(1);
++      expect(usesOutsideDeclaration(main, name)).toBeGreaterThanOrEqual(1);
++    });
++  }
++});
++
++// ---------- AC-18-02: gentler bloom ----------
++
++describe('AC-18-02 bloom constants', () => {
++  it('AC-18-02 BLOOM_STRENGTH is 0.35', () => {
++    expect(numberConst(main, 'BLOOM_STRENGTH')).toBe(0.35);
++  });
++
++  it('AC-18-02 BLOOM_RADIUS is 0.4', () => {
++    expect(numberConst(main, 'BLOOM_RADIUS')).toBe(0.4);
++  });
++
++  it('AC-18-02 BLOOM_THRESHOLD is 0.6', () => {
++    expect(numberConst(main, 'BLOOM_THRESHOLD')).toBe(0.6);
++  });
++
++  it('AC-18-02 the UnrealBloomPass is built from strength, radius and threshold constants in that order', () => {
++    const passes = splitArgs(main, 'new\\s+UnrealBloomPass');
++    expect(passes.length).toBeGreaterThanOrEqual(1);
++    for (const args of passes) {
++      expect(args).toHaveLength(4);
++      expect(args[1]).toBe('BLOOM_STRENGTH');
++      expect(args[2]).toBe('BLOOM_RADIUS');
++      expect(args[3]).toBe('BLOOM_THRESHOLD');
++    }
++  });
++
++  it('AC-18-02 the old harsh bloom numbers (threshold 0.15, strength 0.9) are gone from the bloom pass', () => {
++    for (const text of calls(main, 'new\\s+UnrealBloomPass')) {
++      expect(text).not.toMatch(/(?<![\w.])0?\.15\b/);
++      expect(text).not.toMatch(/(?<![\w.])0?\.9\b/);
++    }
++  });
++});
++
++// ---------- AC-18-02 / AC-18-03: node styling ----------
++
++describe('AC-18-03 styleNode takes its light from glowLevels', () => {
++  const styleNodeBody = (): string => mustFunction(main, 'styleNode');
++
++  it('AC-18-03 styleNode calls glowLevels(brightness value, state) with a computed brightness, not a number literal', () => {
++    const body = styleNodeBody();
++    const argLists = splitArgs({ code: body, masked: scan(body).masked }, '\\bglowLevels');
++    expect(argLists).toHaveLength(1);
++    expect(argLists[0]).toHaveLength(2);
++    expect(argLists[0][0]).not.toMatch(/^[-+]?\.?\d/);
++    expect(argLists[0][0]).toMatch(/^[A-Za-z_$]/);
++  });
++
++  it('AC-18-03 styleNode reads the node brightness with brightness.get(', () => {
++    expect(styleNodeBody()).toMatch(/\bbrightness\.get\s*\(/);
++  });
++
++  it('AC-18-03 the body and ring opacity assignments come from the glowLevels result only', () => {
++    const body = styleNodeBody();
++    // The glowLevels result: either `const X = glowLevels(` or `const { opacity, ring } = glowLevels(`.
++    const whole = /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::[^=]+)?=\s*glowLevels\s*\(/.exec(body);
++    const destructured = /\b(?:const|let|var)\s*\{([^}]*)\}\s*=\s*glowLevels\s*\(/.exec(body);
++    expect(whole !== null || destructured !== null, 'glowLevels result must be captured').toBe(true);
++
++    let opacityRef: RegExp;
++    let ringRef: RegExp;
++    if (whole) {
++      const v = escapeRe(whole[1]);
++      opacityRef = new RegExp(`\\b${v}\\s*\\.\\s*opacity\\b`);
++      ringRef = new RegExp(`\\b${v}\\s*\\.\\s*ring\\b`);
++    } else {
++      const local = (key: string): string => {
++        const part = (destructured as RegExpExecArray)[1]
++          .split(',')
++          .map((p) => p.trim())
++          .find((p) => p === key || p.startsWith(`${key}:`) || p.startsWith(`${key} :`));
++        expect(part, `destructured ${key}`).toBeDefined();
++        return escapeRe(((part as string).split(':')[1] ?? key).trim());
++      };
++      opacityRef = new RegExp(`\\b${local('opacity')}\\b`);
++      ringRef = new RegExp(`\\b${local('ring')}\\b`);
++    }
++
++    const rhsOf = (target: RegExp): string => {
++      const m = target.exec(body);
++      expect(m, `assignment ${target}`).not.toBeNull();
++      return (m as RegExpExecArray)[1];
++    };
++    const bodyRhs = rhsOf(/\bbody\s*\.\s*opacity\s*=(?!=)\s*([^;\n]+)/);
++    const ringRhs = rhsOf(/\bring\s*\.\s*opacity\s*=(?!=)\s*([^;\n]+)/);
++
++    expect(bodyRhs).toMatch(opacityRef);
++    expect(ringRhs).toMatch(ringRef);
++    for (const rhs of [bodyRhs, ringRhs]) {
++      expect(rhs, rhs).not.toMatch(/(?<![\w.$])\d/);
++      expect(rhs, rhs).not.toMatch(/brightness/i);
++      expect(rhs, rhs).not.toMatch(/(?<![\w.$])b(?![\w$])/);
++    }
++  });
++
++  it("AC-18-03 styleNode knows the three states 'selected', 'dim' and 'normal'", () => {
++    const body = styleNodeBody();
++    for (const state of ['selected', 'dim', 'normal']) {
++      expect(body, `state '${state}'`).toMatch(new RegExp(`(['"\`])${state}\\1`));
++    }
++  });
++
++  it('AC-18-03 the dim state is chosen with isDimmed', () => {
++    expect(styleNodeBody()).toMatch(/\bisDimmed\b/);
++  });
++
++  it('AC-18-03 the selected state depends on the selected node, not a constant', () => {
++    const body = styleNodeBody();
++    const withoutLiterals = body.replace(/(['"`])(?:selected|dim|normal)\1/g, '');
++    expect(withoutLiterals).toMatch(/select/i);
++  });
++
++  it('AC-18-03 emissive, opacity and ring are read from the glowLevels result', () => {
++    const body = styleNodeBody();
++    const afterCall = body.slice(body.indexOf('glowLevels'));
++    expect(afterCall).toMatch(/\bemissive\b/);
++    expect(afterCall).toMatch(/\bopacity\b/);
++    expect(afterCall).toMatch(/\bring\b/);
++  });
++
++  it('AC-18-03 no emissive line recomputes light from brightness or picks a number for the selected node', () => {
++    const body = styleNodeBody();
++    const lines = body.split('\n').filter((l) => /emissive/i.test(l));
++    expect(lines.length).toBeGreaterThanOrEqual(1);
++    for (const line of lines) {
++      expect(line, line).not.toMatch(/brightness/i);
++      expect(line, line).not.toMatch(/\?[^:]*\d/);
++      expect(line, line).not.toMatch(/\bselect\w*\s*\?/i);
++    }
++  });
++});
++
++// ---------- AC-18-03: selected links and particles ----------
++
++describe('AC-18-03 soft white for links touching the selected node', () => {
++  const SOFT = 'rgba(255,255,255,0.55)';
++  const squash = (s: string): string => s.replace(/\s+/g, '').toLowerCase();
++  const linkBody = (): string => mustFunction(main, 'linkColor3d');
++  const effectiveText = (): string => withConstValues(main, linkBody());
++
++  it("AC-18-03 linkColor3d uses 'rgba(255, 255, 255, 0.55)', as a literal or a named const", () => {
++    expect(squash(effectiveText())).toContain(SOFT);
++  });
++
++  it('AC-18-03 if a named const is used for the soft white, it is defined as that exact literal', () => {
++    const body = linkBody();
++    const consts = stringConsts(main);
++    const named = [...new Set(body.match(/[A-Za-z_$][\w$]*/g) ?? [])].filter((id) => consts.has(id));
++    const softNames = named.filter((id) => squash(consts.get(id) as string).includes('rgba(255,255,255')) ;
++    for (const id of softNames) expect(squash(consts.get(id) as string)).toBe(SOFT);
++  });
++
++  it('AC-18-03 linkColor3d has no pure white (#ffffff, #fff, white, rgb(255,255,255), alpha 1, 0xffffff)', () => {
++    const flat = squash(effectiveText());
++    expect(flat).not.toMatch(/#fff(?:fff)?(?![0-9a-f])/);
++    expect(flat).not.toMatch(/['"`]white['"`]/);
++    expect(flat).not.toContain('rgb(255,255,255)');
++    expect(flat).not.toMatch(/rgba\(255,255,255,1(?:\.0+)?\)/);
++    expect(flat).not.toContain('0xffffff');
++  });
++
++  it('AC-18-03 linkColor3d still handles the shortest-path highlight', () => {
++    expect(linkBody()).toMatch(/path/i);
++  });
++});
++
++describe('AC-18-03 particles on selected links', () => {
++  it('AC-18-03 SELECTED_PARTICLES is 2', () => {
++    expect(numberConst(main, 'SELECTED_PARTICLES')).toBe(2);
++  });
++
++  it('AC-18-03 PARTICLE_WIDTH is 1.2', () => {
++    expect(numberConst(main, 'PARTICLE_WIDTH')).toBe(1.2);
++  });
++
++  it('AC-18-03 a linkDirectionalParticles setting yields SELECTED_PARTICLES and no longer four', () => {
++    const texts = calls(main, '\\.linkDirectionalParticles').map((t) => reach(main, t));
++    expect(texts.length).toBeGreaterThanOrEqual(1);
++    const hit = texts.filter((t) => /\bSELECTED_PARTICLES\b/.test(t));
++    expect(hit.length).toBeGreaterThanOrEqual(1);
++    for (const t of hit) expect(t).not.toMatch(/(?<![\w.])4(?![\w.])/);
++  });
++
++  it('AC-18-03 a linkDirectionalParticleWidth setting uses PARTICLE_WIDTH', () => {
++    const texts = calls(main, '\\.linkDirectionalParticleWidth').map((t) => reach(main, t));
++    expect(texts.length).toBeGreaterThanOrEqual(1);
++    expect(texts.some((t) => /\bPARTICLE_WIDTH\b/.test(t))).toBe(true);
++  });
++
++  it('AC-18-03 link widths are still set for the 3D graph (path widths stay)', () => {
++    expect(calls(main, '\\.linkWidth').length).toBeGreaterThanOrEqual(1);
++  });
++
++  it("AC-18-03 PATH_COLOR is still '#ffd166' and linkColor3d returns it on the on-path branch", () => {
++    expect(stringConsts(main).get('PATH_COLOR')?.toLowerCase()).toBe('#ffd166');
++    expect(mustFunction(main, 'linkColor3d')).toMatch(/(?:return|\?|:|=>)\s*PATH_COLOR\b/);
++  });
++
++  it('AC-18-03 linkWidth3d still uses the path widths 2.5 and 0.5', () => {
++    const fn = mustFunction(main, 'linkWidth3d');
++    expect(fn).toMatch(/(?<![\w.])2\.5(?![\d.])/);
++    expect(fn).toMatch(/(?<![\w.])0\.5(?![\d.])/);
++  });
++});
++
++// ---------- AC-18-04: hover name ----------
++
++describe('AC-18-04 the 3D nodeLabel shows escaped name, a line break, escaped type', () => {
++  const labelCalls = calls(main, '\\.nodeLabel');
++  const last = labelCalls[labelCalls.length - 1] ?? '';
++  // The label text: the call itself plus any helper it names (one level), e.g.
++  // `.nodeLabel((n) => hoverHtml(n))`. The escape helper itself is not appended.
++  const text = reach(main, last, /esc/i);
++  const ARGS = '(?:[^()]|\\([^()]*\\))*';
++  const ESC_CALL = `\\w*[Ee]sc\\w*\\s*\\(${ARGS}\\)`;
++
++  it('AC-18-04 there is a nodeLabel call to check', () => {
++    expect(labelCalls.length).toBeGreaterThanOrEqual(1);
++    expect(last.trim().length).toBeGreaterThan(0);
++  });
++
++  it('AC-18-04 the last nodeLabel has escaped name, then <br>, then escaped type', () => {
++    const re = new RegExp(
++      `\\w*[Ee]sc\\w*\\s*\\(${ARGS}\\b(?:name|label|title)\\b${ARGS}\\)[\\s\\S]*?<br\\s*/?>[\\s\\S]*?\\w*[Ee]sc\\w*\\s*\\(${ARGS}\\btype\\b${ARGS}\\)`,
++    );
++    expect(text).toMatch(re);
++  });
++
++  it('AC-18-04 name and type are never interpolated or concatenated unescaped', () => {
++    const stripped = text.replace(new RegExp(ESC_CALL, 'g'), '');
++    expect(stripped).not.toMatch(/\$\{[^}]*\.(?:name|label|title|type)\b[^}]*\}/);
++    expect(stripped).not.toMatch(/\+\s*[\w$.()]*\.(?:name|label|title|type)\b/);
++  });
++
++  it('AC-18-04 name and type go through the same escape helper, which turns < into &lt;', () => {
++    const names = [...text.matchAll(/(\w*[Ee]sc\w*)\s*\(/g)].map((m) => m[1]);
++    expect(names.length).toBeGreaterThanOrEqual(2);
++    const helper = names[0];
++    expect(new Set(names).size).toBe(1);
++    const def = functionText(main, helper);
++    if (def !== null) {
++      expect(def).toContain('&lt;');
++    } else {
++      expect(main.code).toMatch(new RegExp(`import[^;]*\\b${escapeRe(helper)}\\b[^;]*from`));
++    }
++  });
++});
++
++// ---------- AC-18-04: tooltip panel CSS ----------
++
++interface Rgba {
++  r: number;
++  g: number;
++  b: number;
++  a: number;
++}
++
++const NAMED: Record<string, [number, number, number]> = {
++  white: [255, 255, 255],
++  ghostwhite: [248, 248, 255],
++  whitesmoke: [245, 245, 245],
++  lavender: [230, 230, 250],
++  gainsboro: [220, 220, 220],
++  lightgray: [211, 211, 211],
++  lightgrey: [211, 211, 211],
++  lightsteelblue: [176, 196, 222],
++  silver: [192, 192, 192],
++  black: [0, 0, 0],
++};
++
++function parseColor(raw: string): Rgba | null {
++  const v = raw.replace(/!important/i, '').trim().toLowerCase();
++  const hex = /^#([0-9a-f]{3,8})$/.exec(v);
++  if (hex) {
++    let h = hex[1];
++    if (h.length === 3 || h.length === 4) h = h.split('').map((x) => x + x).join('');
++    if (h.length !== 6 && h.length !== 8) return null;
++    return {
++      r: parseInt(h.slice(0, 2), 16),
++      g: parseInt(h.slice(2, 4), 16),
++      b: parseInt(h.slice(4, 6), 16),
++      a: h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1,
++    };
++  }
++  const fn = /^rgba?\(\s*([\d.]+)\s*[,\s]\s*([\d.]+)\s*[,\s]\s*([\d.]+)\s*(?:[,/]\s*([\d.]+)(%?))?\s*\)$/.exec(v);
++  if (fn) {
++    const alpha = fn[4] === undefined ? 1 : fn[5] === '%' ? Number(fn[4]) / 100 : Number(fn[4]);
++    return { r: Number(fn[1]), g: Number(fn[2]), b: Number(fn[3]), a: alpha };
++  }
++  const named = NAMED[v];
++  return named ? { r: named[0], g: named[1], b: named[2], a: 1 } : null;
++}
++
++function luminance(c: Rgba): number {
++  return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
++}
++
++function tooltipDeclarations(): Map<string, string> {
++  const html = readFileSync(fileURLToPath(new URL('../index.html', import.meta.url)), 'utf8');
++  const css = [...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)]
++    .map((m) => m[1])
++    .join('\n')
++    .replace(/\/\*[\s\S]*?\*\//g, '');
++  const merged = new Map<string, string>();
++  const ruleRe = /([^{}]+)\{([^{}]*)\}/g;
++  let rule: RegExpExecArray | null;
++  while ((rule = ruleRe.exec(css)) !== null) {
++    const targets = rule[1].split(',').some((sel) => /\.scene-tooltip\s*$/.test(sel.trim()));
++    if (!targets) continue;
++    for (const decl of rule[2].split(';')) {
++      const at = decl.indexOf(':');
++      if (at < 0) continue;
++      merged.set(decl.slice(0, at).trim().toLowerCase(), decl.slice(at + 1).trim());
++    }
++  }
++  return merged;
++}
++
++describe('AC-18-04 .scene-tooltip panel in index.html', () => {
++  const css = tooltipDeclarations();
++
++  it('AC-18-04 index.html has a .scene-tooltip rule', () => {
++    expect(css.size).toBeGreaterThan(0);
++  });
++
++  it('AC-18-04 background is dark and semi-opaque (alpha between 0.6 and 1)', () => {
++    const raw = css.get('background-color') ?? css.get('background') ?? '';
++    const colour = parseColor(raw);
++    expect(colour, `background "${raw}"`).not.toBeNull();
++    const c = colour as Rgba;
++    expect(luminance(c)).toBeLessThan(70);
++    expect(c.a).toBeGreaterThanOrEqual(0.6);
++    expect(c.a).toBeLessThan(1);
++  });
++
++  it('AC-18-04 text colour is light', () => {
++    const raw = css.get('color') ?? '';
++    const colour = parseColor(raw);
++    expect(colour, `color "${raw}"`).not.toBeNull();
++    expect(luminance(colour as Rgba)).toBeGreaterThan(170);
++  });
++
++  it('AC-18-04 font size is 12px or 13px', () => {
++    const raw = css.get('font-size') ?? css.get('font') ?? '';
++    const m = /(\d+(?:\.\d+)?)px/.exec(raw);
++    expect(m, `font-size "${raw}"`).not.toBeNull();
++    const size = Number((m as RegExpExecArray)[1]);
++    expect(size).toBeGreaterThanOrEqual(12);
++    expect(size).toBeLessThanOrEqual(13);
++  });
++
++  it('AC-18-04 the panel has padding', () => {
++    const values = [...css.entries()].filter(([k]) => k.startsWith('padding')).map(([, v]) => v);
++    const numbers = values.flatMap((v) => v.match(/\d+(?:\.\d+)?/g) ?? []).map(Number);
++    expect(numbers.some((x) => x > 0)).toBe(true);
++  });
++
++  it('AC-18-04 the panel has a border radius', () => {
++    const raw = css.get('border-radius') ?? '';
++    const numbers = (raw.match(/\d+(?:\.\d+)?/g) ?? []).map(Number);
++    expect(numbers.some((x) => x > 0)).toBe(true);
++  });
++
++  it('AC-18-04 short names do not wrap: white-space is nowrap', () => {
++    expect(css.get('white-space')?.replace(/!important/i, '').trim()).toBe('nowrap');
++  });
++
++  it('AC-18-04 the panel does not catch the mouse: pointer-events is none', () => {
++    expect(css.get('pointer-events')?.replace(/!important/i, '').trim()).toBe('none');
++  });
++});
+diff --git a/explorer/tests/holdout/glare_shell_hidden.test.ts b/explorer/tests/holdout/glare_shell_hidden.test.ts
+new file mode 100644
+index 0000000..10b03fe
+--- /dev/null
++++ b/explorer/tests/holdout/glare_shell_hidden.test.ts
+@@ -0,0 +1,498 @@
++import { describe, it, expect } from 'vitest';
++import { readFileSync } from 'node:fs';
++import { fileURLToPath } from 'node:url';
++
++// Hidden checks for phase 18 (3D glare fix). Self-contained: own small source scanner.
++// They look at the same files as the visible tests but ask different questions
++// (numeric relations, contrast maths, order inside the label, every colour in linkColor3d).
++
++// ---------- tiny scanner ----------
++
++interface Text {
++  code: string; // comments blanked
++  flat: string; // comments, strings and templates blanked (brackets only)
++}
++
++function scanText(raw: string): Text {
++  let code = '';
++  let flat = '';
++  let i = 0;
++  const pad = (s: string): string => s.replace(/[^\n]/g, ' ');
++  while (i < raw.length) {
++    const two = raw.slice(i, i + 2);
++    if (two === '//') {
++      const e = raw.indexOf('\n', i);
++      const end = e < 0 ? raw.length : e;
++      code += pad(raw.slice(i, end));
++      flat += pad(raw.slice(i, end));
++      i = end;
++    } else if (two === '/*') {
++      const e = raw.indexOf('*/', i + 2);
++      const end = e < 0 ? raw.length : e + 2;
++      code += pad(raw.slice(i, end));
++      flat += pad(raw.slice(i, end));
++      i = end;
++    } else if (raw[i] === '"' || raw[i] === "'" || raw[i] === '`') {
++      const q = raw[i];
++      let j = i + 1;
++      while (j < raw.length && raw[j] !== q && (q === '`' || raw[j] !== '\n')) {
++        j += raw[j] === '\\' ? 2 : 1;
++      }
++      const end = Math.min(raw[j] === q ? j + 1 : j, raw.length);
++      code += raw.slice(i, end);
++      flat += pad(raw.slice(i, end));
++      i = end;
++    } else {
++      code += raw[i];
++      flat += raw[i];
++      i += 1;
++    }
++  }
++  return { code, flat };
++}
++
++function closeOf(t: Text, open: number): number {
++  const pairs: Record<string, string> = { '(': ')', '{': '}', '[': ']' };
++  const o = t.flat[open];
++  const c = pairs[o];
++  let depth = 0;
++  for (let i = open; i < t.flat.length; i++) {
++    if (t.flat[i] === o) depth++;
++    if (t.flat[i] === c && --depth === 0) return i;
++  }
++  return -1;
++}
++
++/** Text between the parentheses of every `<head>(` match (head is a regex source). */
++function argTexts(t: Text, head: string): string[] {
++  const out: string[] = [];
++  const re = new RegExp(`${head}\\s*\\(`, 'g');
++  let m: RegExpExecArray | null;
++  while ((m = re.exec(t.flat)) !== null) {
++    const open = m.index + m[0].length - 1;
++    const close = closeOf(t, open);
++    if (close > open) out.push(t.code.slice(open + 1, close));
++  }
++  return out;
++}
++
++/** Top-level comma split of the argument text of the first call matching head. */
++function topLevelArgs(t: Text, head: string): string[][] {
++  const re = new RegExp(`${head}\\s*\\(`, 'g');
++  const lists: string[][] = [];
++  let m: RegExpExecArray | null;
++  while ((m = re.exec(t.flat)) !== null) {
++    const open = m.index + m[0].length - 1;
++    const close = closeOf(t, open);
++    if (close <= open) continue;
++    const parts: string[] = [];
++    let level = 0;
++    let from = open + 1;
++    for (let i = open + 1; i < close; i++) {
++      const ch = t.flat[i];
++      if ('([{'.includes(ch)) level++;
++      else if (')]}'.includes(ch)) level--;
++      else if (ch === ',' && level === 0) {
++        parts.push(t.code.slice(from, i).trim());
++        from = i + 1;
++      }
++    }
++    parts.push(t.code.slice(from, close).trim());
++    lists.push(parts.filter((p) => p !== ''));
++  }
++  return lists;
++}
++
++/** Text of `function name(...) {...}` or `const name = (...) => {...}` / expression form. */
++function definition(t: Text, name: string): string | null {
++  const m = new RegExp(`(?:function\\s+${name}\\b|(?:const|let)\\s+${name}\\b)`).exec(t.flat);
++  if (!m) return null;
++  const start = m.index;
++  const afterName = start + m[0].length;
++  if (m[0].startsWith('function')) {
++    const p = t.flat.indexOf('(', afterName);
++    const pc = closeOf(t, p);
++    const b = t.flat.indexOf('{', pc);
++    const e = closeOf(t, b);
++    return p < 0 || b < 0 || e < 0 ? null : t.code.slice(start, e + 1);
++  }
++  // A const only counts when its value starts an arrow function: `= (...) =>`, `= x =>`,
++  // optionally async, with an optional return type. Plain values (`const n = obj as X;`) do not.
++  const eqRel = t.flat.slice(afterName).search(/=(?!>)/);
++  if (eqRel < 0) return null;
++  const eq = afterName + eqRel;
++  const head = /^\s*(?:async\s+)?(?:\([^;]*?\)\s*(?::[^=;]*?)?=>|[A-Za-z_$][\w$]*\s*=>)/.exec(t.flat.slice(eq + 1));
++  if (!head) return null;
++  const arrow = eq + 1 + head[0].length - 2;
++  let at = arrow + 2;
++  while (/\s/.test(t.flat[at] ?? '')) at++;
++  if (t.flat[at] === '{') {
++    const e = closeOf(t, at);
++    return e < 0 ? null : t.code.slice(start, e + 1);
++  }
++  let level = 0;
++  let k = at;
++  for (; k < t.flat.length; k++) {
++    const ch = t.flat[k];
++    if ('([{'.includes(ch)) level++;
++    else if (')]}'.includes(ch)) {
++      level--;
++      if (level < 0) break;
++    } else if (ch === ';' && level === 0) break;
++  }
++  return t.code.slice(start, k);
++}
++
++function readText(rel: string): string {
++  return readFileSync(fileURLToPath(new URL(rel, import.meta.url)), 'utf8');
++}
++
++const main = scanText(readText('../../src/main.ts'));
++
++function numberValue(name: string): number {
++  const m = new RegExp(`\\bconst\\s+${name}\\b[^=]*=\\s*([-+0-9.eE]+)\\s*(?:as\\s+const\\s*)?[;,\\n]`).exec(main.code);
++  expect(m, `const ${name} = <number>`).not.toBeNull();
++  return Number((m as RegExpExecArray)[1]);
++}
++
++function countWord(t: Text, word: string): number {
++  return (t.flat.match(new RegExp(`\\b${word}\\b`, 'g')) ?? []).length;
++}
++
++// ---------- constants ----------
++
++describe('phase 18 constants (hidden)', () => {
++  const names = ['BLOOM_STRENGTH', 'BLOOM_RADIUS', 'BLOOM_THRESHOLD', 'SELECTED_PARTICLES', 'PARTICLE_WIDTH'];
++
++  it('AC-18-02 each constant is declared exactly once and referenced at least once more', () => {
++    for (const n of names) {
++      const declarations = (main.flat.match(new RegExp(`\\b(?:const|let|var)\\s+${n}\\b`, 'g')) ?? []).length;
++      expect(declarations, `${n} declarations`).toBe(1);
++      expect(countWord(main, n), `${n} mentions`).toBeGreaterThanOrEqual(2);
++    }
++  });
++
++  it('AC-18-02 bloom is gentler than the old glare on every axis', () => {
++    expect(numberValue('BLOOM_THRESHOLD')).toBeGreaterThan(0.15);
++    expect(numberValue('BLOOM_STRENGTH')).toBeLessThan(0.9);
++    expect(numberValue('BLOOM_THRESHOLD')).toBeCloseTo(0.6, 10);
++    expect(numberValue('BLOOM_STRENGTH')).toBeCloseTo(0.35, 10);
++    expect(numberValue('BLOOM_RADIUS')).toBeCloseTo(0.4, 10);
++  });
++
++  it('AC-18-02 the bloom pass receives the three constants in strength, radius, threshold order', () => {
++    const calls = argTexts(main, 'new\\s+UnrealBloomPass');
++    expect(calls.length).toBeGreaterThanOrEqual(1);
++    for (const text of calls) {
++      const s = text.indexOf('BLOOM_STRENGTH');
++      const r = text.indexOf('BLOOM_RADIUS');
++      const th = text.indexOf('BLOOM_THRESHOLD');
++      expect(s).toBeGreaterThan(-1);
++      expect(r).toBeGreaterThan(s);
++      expect(th).toBeGreaterThan(r);
++    }
++  });
++
++  it('AC-18-03 selected links get fewer, thinner particles than before', () => {
++    expect(Number.isInteger(numberValue('SELECTED_PARTICLES'))).toBe(true);
++    expect(numberValue('SELECTED_PARTICLES')).toBeLessThan(4);
++    expect(numberValue('SELECTED_PARTICLES')).toBeGreaterThan(0);
++    expect(numberValue('PARTICLE_WIDTH')).toBeCloseTo(1.2, 10);
++  });
++
++  it('AC-18-03 the particle constants are returned by the accessors, not just declared', () => {
++    expect(main.flat).toMatch(/(?:\?|return|=>)\s*SELECTED_PARTICLES\b/);
++    expect(main.flat).toMatch(/(?:\?|return|=>|\()\s*PARTICLE_WIDTH\b/);
++  });
++});
++
++// ---------- styleNode ----------
++
++describe('styleNode (hidden)', () => {
++  const style = (): string => {
++    const d = definition(main, 'styleNode');
++    expect(d, 'styleNode definition').not.toBeNull();
++    return d as string;
++  };
++
++  it('AC-18-03 glowLevels is called exactly once in main.ts and that call is inside styleNode', () => {
++    const calls = (main.flat.match(/\bglowLevels\s*\(/g) ?? []).length;
++    expect(calls).toBe(1);
++    expect(style()).toMatch(/\bglowLevels\s*\(/);
++  });
++
++  it('AC-18-03 the state passed to glowLevels is computed, not a single fixed literal', () => {
++    const lists = topLevelArgs(scanText(style()), '\\bglowLevels');
++    expect(lists).toHaveLength(1);
++    expect(lists[0]).toHaveLength(2);
++    expect(lists[0][1]).not.toMatch(/^(['"`])\w+\1$/);
++  });
++
++  it('AC-18-03 the first argument is a looked-up value, not a number, and brightness.get( is read', () => {
++    const text = style();
++    const lists = topLevelArgs(scanText(text), '\\bglowLevels');
++    expect(lists[0][0]).not.toMatch(/^[-+]?\.?\d/);
++    expect(lists[0][0]).toMatch(/^[A-Za-z_$]/);
++    expect(text).toMatch(/\bbrightness\s*\.\s*get\s*\(/);
++  });
++
++  it('AC-18-03 body and ring opacity are assigned straight from the glowLevels result', () => {
++    const text = style();
++    const assigned = /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::[^=]+)?=\s*glowLevels\s*\(/.exec(text);
++    const picked = /\b(?:const|let|var)\s*\{([^}]*)\}\s*=\s*glowLevels\s*\(/.exec(text);
++    expect(assigned !== null || picked !== null).toBe(true);
++    const body = /\bbody\s*\.\s*opacity\s*=(?!=)\s*([^;\n]+)/.exec(text);
++    const ring = /\bring\s*\.\s*opacity\s*=(?!=)\s*([^;\n]+)/.exec(text);
++    expect(body, 'body.opacity assignment').not.toBeNull();
++    expect(ring, 'ring.opacity assignment').not.toBeNull();
++    const rhsBody = (body as RegExpExecArray)[1].trim();
++    const rhsRing = (ring as RegExpExecArray)[1].trim();
++    if (assigned) {
++      expect(rhsBody).toBe(`${assigned[1]}.opacity`);
++      expect(rhsRing).toBe(`${assigned[1]}.ring`);
++    } else {
++      const names = (picked as RegExpExecArray)[1].split(',').map((p) => p.trim());
++      const localOf = (key: string): string => {
++        const hit = names.find((p) => p === key || p.startsWith(`${key}:`));
++        return hit === undefined ? '' : (hit.split(':')[1] ?? key).trim();
++      };
++      expect(rhsBody).toBe(localOf('opacity'));
++      expect(rhsRing).toBe(localOf('ring'));
++    }
++  });
++
++  it('AC-18-03 all three node states are named, and each only as a string', () => {
++    const text = style();
++    for (const state of ['selected', 'dim', 'normal']) {
++      expect(text.split(new RegExp(`['"\`]${state}['"\`]`)).length - 1, state).toBeGreaterThanOrEqual(1);
++    }
++  });
++
++  it('AC-18-03 nothing in styleNode multiplies or caps emissive by hand', () => {
++    for (const line of style().split('\n')) {
++      if (!/emissive/i.test(line)) continue;
++      expect(line).not.toMatch(/Math\.(?:min|max)/);
++      expect(line).not.toMatch(/[*+\-/]\s*\d/);
++    }
++  });
++
++  it('AC-18-02 the opacity and ring of a node come from the glow result as well', () => {
++    const text = style();
++    const afterCall = text.slice(text.search(/\bglowLevels\b/));
++    expect(afterCall).toMatch(/\bopacity\b/);
++    expect(afterCall).toMatch(/\bring\b/);
++    expect(afterCall).toMatch(/\bemissive\b/);
++  });
++});
++
++// ---------- linkColor3d ----------
++
++describe('linkColor3d (hidden)', () => {
++  function everyColourText(): string {
++    const body = definition(main, 'linkColor3d');
++    expect(body, 'linkColor3d definition').not.toBeNull();
++    let out = body as string;
++    // add the value of any string constant the body names
++    const known = new Map<string, string>();
++    const re = /\bconst\s+([A-Za-z_$][\w$]*)\s*(?::\s*string)?\s*=\s*(['"`])([^'"`\n]*)\2/g;
++    let m: RegExpExecArray | null;
++    while ((m = re.exec(main.code)) !== null) known.set(m[1], m[3]);
++    for (const id of new Set(out.match(/[A-Za-z_$][\w$]*/g) ?? [])) {
++      if (known.has(id)) out += `\n"${known.get(id)}"`;
++    }
++    return out;
++  }
++
++  it('AC-18-03 every white rgba used for selected links has alpha 0.55, none is opaque', () => {
++    const text = everyColourText();
++    const found = [...text.matchAll(/rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*([\d.]+)\s*\)/g)].map((m) => Number(m[1]));
++    expect(found.length).toBeGreaterThanOrEqual(1);
++    expect(found).toContain(0.55);
++    for (const alpha of found) expect(alpha).toBeLessThan(1);
++  });
++
++  it('AC-18-03 no hex colour in linkColor3d is white or near white', () => {
++    const text = everyColourText();
++    for (const m of text.matchAll(/#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})\b/g)) {
++      const h = m[1].length === 3 ? m[1].split('').map((c) => c + c).join('') : m[1];
++      const channels = [0, 2, 4].map((k) => parseInt(h.slice(k, k + 2), 16));
++      expect(Math.min(...channels), `#${m[1]}`).toBeLessThan(240);
++    }
++  });
++
++  it('AC-18-03 linkColor3d does not use the keyword white or an opaque rgb()', () => {
++    const text = everyColourText();
++    expect(text).not.toMatch(/\bwhite\b/i);
++    expect(text).not.toMatch(/\brgb\(\s*255\s*,\s*255\s*,\s*255\s*\)/);
++  });
++});
++
++// ---------- nodeLabel ----------
++
++describe('3D nodeLabel (hidden)', () => {
++  const all = argTexts(main, '\\.nodeLabel');
++  const lastCall = all[all.length - 1] ?? '';
++  // The call plus the helpers it names (one level); the escape helper itself is left out.
++  let label = lastCall;
++  for (const id of new Set(lastCall.match(/[A-Za-z_$][\w$]*/g) ?? [])) {
++    if (/esc/i.test(id)) continue;
++    const def = definition(main, id);
++    if (def) label += '\n' + def;
++  }
++
++  it('AC-18-04 the label has exactly one line break', () => {
++    expect(all.length).toBeGreaterThanOrEqual(1);
++    expect((label.match(/<br\s*\/?>/gi) ?? []).length).toBe(1);
++  });
++
++  it('AC-18-04 the first escaped value comes before the break, the second one after it', () => {
++    const br = label.search(/<br\s*\/?>/i);
++    const before = label.slice(0, br);
++    const after = label.slice(br);
++    expect(before).toMatch(/[Ee]sc\w*\s*\(/);
++    expect(after).toMatch(/[Ee]sc\w*\s*\(/);
++    expect(before).toMatch(/\b(?:name|label|title)\b/);
++    expect(after).toMatch(/\btype\b/);
++  });
++
++  it('AC-18-04 every ${...} piece of a template label is a call (an escape), never a bare property', () => {
++    const pieces = [...label.matchAll(/\$\{([^}]*)\}/g)].map((m) => m[1].trim());
++    for (const piece of pieces) {
++      expect(piece, piece).toMatch(/^[A-Za-z_$][\w$]*\s*\(/);
++    }
++  });
++
++  it('AC-18-04 the label never injects markup through innerHTML or a raw <b> of its own', () => {
++    expect(label).not.toMatch(/innerHTML/);
++    expect(label).not.toMatch(/<b>/i);
++  });
++});
++
++// ---------- tooltip CSS ----------
++
++function tooltipRule(): Map<string, string> {
++  const html = readText('../../index.html');
++  const css = [...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)]
++    .map((m) => m[1])
++    .join('\n')
++    .replace(/\/\*[\s\S]*?\*\//g, '');
++  const props = new Map<string, string>();
++  for (const block of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
++    const selectors = block[1].split(',').map((s) => s.trim());
++    if (!selectors.some((s) => s.endsWith('.scene-tooltip'))) continue;
++    for (const piece of block[2].split(';')) {
++      const colon = piece.indexOf(':');
++      if (colon > 0) props.set(piece.slice(0, colon).trim().toLowerCase(), piece.slice(colon + 1).trim());
++    }
++  }
++  return props;
++}
++
++function toRgba(v: string): [number, number, number, number] {
++  const s = v.replace(/!important/i, '').trim().toLowerCase();
++  const fn = /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:[\s,/]+([\d.]+))?\s*\)$/.exec(s);
++  if (fn) return [Number(fn[1]), Number(fn[2]), Number(fn[3]), fn[4] === undefined ? 1 : Number(fn[4])];
++  const hex = /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/.exec(s);
++  if (hex) {
++    let h = hex[1];
++    if (h.length === 3) h = h.split('').map((c) => c + c).join('');
++    const a = h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1;
++    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16), a];
++  }
++  if (s === 'white') return [255, 255, 255, 1];
++  if (s === 'lavender') return [230, 230, 250, 1];
++  if (s === 'lightsteelblue') return [176, 196, 222, 1];
++  throw new Error(`unrecognised colour "${v}"`);
++}
++
++function relative([r, g, b]: [number, number, number, number]): number {
++  const lin = (x: number): number => {
++    const c = x / 255;
++    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
++  };
++  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
++}
++
++describe('.scene-tooltip panel (hidden)', () => {
++  const rule = tooltipRule();
++
++  it('AC-18-04 light text on the dark panel reaches contrast 7:1 over the page background #0b0e14', () => {
++    const bg = toRgba(rule.get('background-color') ?? rule.get('background') ?? '');
++    const fg = toRgba(rule.get('color') ?? '');
++    const page: [number, number, number] = [11, 14, 20];
++    const mixed: [number, number, number, number] = [
++      bg[0] * bg[3] + page[0] * (1 - bg[3]),
++      bg[1] * bg[3] + page[1] * (1 - bg[3]),
++      bg[2] * bg[3] + page[2] * (1 - bg[3]),
++      1,
++    ];
++    const l1 = relative(fg);
++    const l2 = relative(mixed);
++    const contrast = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
++    expect(contrast).toBeGreaterThanOrEqual(7);
++  });
++
++  it('AC-18-04 the panel background is see-through a little but not faint', () => {
++    const bg = toRgba(rule.get('background-color') ?? rule.get('background') ?? '');
++    expect(bg[3]).toBeGreaterThan(0.5);
++    expect(bg[3]).toBeLessThan(1);
++  });
++
++  it('AC-18-04 text size is a readable 12 to 13 px, in font-size or the font shorthand', () => {
++    const raw = `${rule.get('font-size') ?? ''} ${rule.get('font') ?? ''}`;
++    const px = [...raw.matchAll(/(\d+(?:\.\d+)?)px/g)].map((m) => Number(m[1]));
++    expect(px.length).toBeGreaterThanOrEqual(1);
++    expect(px[0]).toBeGreaterThanOrEqual(12);
++    expect(px[0]).toBeLessThanOrEqual(13);
++  });
++
++  it('AC-18-04 padding is at least 2px and radius at least 2px', () => {
++    const pad = [...rule.entries()]
++      .filter(([k]) => k.startsWith('padding'))
++      .flatMap(([, v]) => [...v.matchAll(/(\d+(?:\.\d+)?)px/g)].map((m) => Number(m[1])));
++    const radius = [...(rule.get('border-radius') ?? '').matchAll(/(\d+(?:\.\d+)?)px/g)].map((m) => Number(m[1]));
++    expect(Math.max(0, ...pad)).toBeGreaterThanOrEqual(2);
++    expect(Math.max(0, ...radius)).toBeGreaterThanOrEqual(2);
++  });
++
++  it('AC-18-04 the panel stays visible, on one line and out of the way of the mouse', () => {
++    const clean = (k: string): string => (rule.get(k) ?? '').replace(/!important/i, '').trim().toLowerCase();
++    expect(clean('white-space')).toBe('nowrap');
++    expect(clean('pointer-events')).toBe('none');
++    expect(clean('display')).not.toBe('none');
++    expect(clean('visibility')).not.toBe('hidden');
++    if (rule.has('opacity')) expect(Number(clean('opacity'))).toBeGreaterThanOrEqual(0.8);
++  });
++});
++
++// ---------- build ----------
++
++describe('build and packages (hidden)', () => {
++  const pkg = JSON.parse(readText('../../package.json')) as {
++    scripts?: Record<string, string>;
++    dependencies?: Record<string, string>;
++    devDependencies?: Record<string, string>;
++  };
++
++  it('AC-18-01 the build script runs the type check before vite and the test script is vitest', () => {
++    const build = pkg.scripts?.build ?? '';
++    expect(build.indexOf('tsc --noEmit')).toBeGreaterThan(-1);
++    expect(build.indexOf('vite build')).toBeGreaterThan(build.indexOf('tsc --noEmit'));
++    expect(pkg.scripts?.test).toContain('vitest');
++  });
++
++  it('AC-18-01 no package was added to dependencies or devDependencies', () => {
++    expect(Object.keys(pkg.dependencies ?? {}).sort()).toEqual(['3d-force-graph', 'force-graph', 'three']);
++    expect(Object.keys(pkg.devDependencies ?? {}).sort()).toEqual([
++      '@types/node',
++      '@types/three',
++      'typescript',
++      'vite',
++      'vitest',
++    ]);
++  });
++
++  it('AC-18-01 main.ts imports glowLevels from the scene3d module', () => {
++    expect(main.code).toMatch(/import[^;]*\bglowLevels\b[^;]*from\s*['"][^'"]*scene3d/);
++  });
++});

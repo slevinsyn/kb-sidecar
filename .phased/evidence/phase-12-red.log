@@ -1,0 +1,163 @@
+== core-rust (run 1): cargo test --quiet -> exit 0
+1213 | fn test_AC_01_09_unreadable_path_is_io_error() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_09_unreadable_path_is_io_error`
+
+warning: function `test_AC_01_09_kb_error_from_io_error_and_display` should have a snake case name
+    --> tests/phase01_claude_code.rs:1223:4
+     |
+1223 | fn test_AC_01_09_kb_error_from_io_error_and_display() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_09_kb_error_from_io_error_and_display`
+
+warning: function `test_AC_01_10_parse_transcript_uses_file_stem_when_no_session_id` should have a snake case name
+    --> tests/phase01_claude_code.rs:1245:4
+     |
+1245 | fn test_AC_01_10_parse_transcript_uses_file_stem_when_no_session_id() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_10_parse_transcript_uses_file_stem_when_no_session_id`
+
+warning: function `test_AC_01_10_session_id_in_records_beats_file_stem` should have a snake case name
+    --> tests/phase01_claude_code.rs:1262:4
+     |
+1262 | fn test_AC_01_10_session_id_in_records_beats_file_stem() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_10_session_id_in_records_beats_file_stem`
+
+warning: function `test_AC_01_10_parse_transcript_str_uses_fallback_id_when_no_session_id` should have a snake case name
+    --> tests/phase01_claude_code.rs:1273:4
+     |
+1273 | fn test_AC_01_10_parse_transcript_str_uses_fallback_id_when_no_session_id() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_10_parse_transcript_str_uses_fallback_id_when_no_session_id`
+
+warning: function `test_AC_01_10_first_record_with_session_id_wins` should have a snake case name
+    --> tests/phase01_claude_code.rs:1283:4
+     |
+1283 | fn test_AC_01_10_first_record_with_session_id_wins() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_10_first_record_with_session_id_wins`
+
+warning: function `test_AC_01_11_discover_returns_project_level_jsonl_sorted` should have a snake case name
+    --> tests/phase01_claude_code.rs:1302:4
+     |
+1302 | fn test_AC_01_11_discover_returns_project_level_jsonl_sorted() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_11_discover_returns_project_level_jsonl_sorted`
+
+warning: function `test_AC_01_11_discover_ignores_subagents_deeper_files_other_extensions_and_top_level` should have a snake case name
+    --> tests/phase01_claude_code.rs:1325:4
+     |
+1325 | fn test_AC_01_11_discover_ignores_subagents_deeper_files_other_extensions_and_top_level() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_11_discover_ignores_subagents_deeper_files_other_extensions_and_top_level`
+
+warning: function `test_AC_01_11_discover_missing_dir_is_empty` should have a snake case name
+    --> tests/phase01_claude_code.rs:1349:4
+     |
+1349 | fn test_AC_01_11_discover_missing_dir_is_empty() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_11_discover_missing_dir_is_empty`
+
+warning: function `test_AC_01_11_discover_empty_dir_is_empty` should have a snake case name
+    --> tests/phase01_claude_code.rs:1356:4
+     |
+1356 | fn test_AC_01_11_discover_empty_dir_is_empty() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_11_discover_empty_dir_is_empty`
+
+warning: function `test_AC_01_11_discovered_files_can_be_parsed` should have a snake case name
+    --> tests/phase01_claude_code.rs:1362:4
+     |
+1362 | fn test_AC_01_11_discovered_files_can_be_parsed() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_11_discovered_files_can_be_parsed`
+
+warning: function `test_AC_01_12_parsed_session_round_trips_through_serde_json` should have a snake case name
+    --> tests/phase01_claude_code.rs:1380:4
+     |
+1380 | fn test_AC_01_12_parsed_session_round_trips_through_serde_json() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_12_parsed_session_round_trips_through_serde_json`
+
+warning: function `test_AC_01_12_hand_built_session_with_every_block_variant_round_trips` should have a snake case name
+    --> tests/phase01_claude_code.rs:1388:4
+     |
+1388 | fn test_AC_01_12_hand_built_session_with_every_block_variant_round_trips() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_12_hand_built_session_with_every_block_variant_round_trips`
+
+warning: function `test_AC_01_12_none_fields_and_enums_round_trip` should have a snake case name
+    --> tests/phase01_claude_code.rs:1441:4
+     |
+1441 | fn test_AC_01_12_none_fields_and_enums_round_trip() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_12_none_fields_and_enums_round_trip`
+== explorer-javascript (run 1): npx vitest run --exclude 'tests/holdout/**' -> exit 1
+ ❯ tests/view.test.ts:453:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[38/44]⎯
+
+ FAIL  tests/view.test.ts > clusterLabels > AC-12-05 works on a real analysis of a parsed graph
+Error: not implemented
+ ❯ clusterLabels src/view.ts:31:9
+     29|
+     30| export function clusterLabels(_a: Analysis, _limit?: number): ClusterL…
+     31|   throw new Error('not implemented');
+       |         ^
+     32| }
+     33|
+ ❯ tests/view.test.ts:471:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[39/44]⎯
+
+ FAIL  tests/view.test.ts > monthRange > AC-12-06 returns the timeline months in order
+Error: not implemented
+ ❯ monthRange src/view.ts:35:9
+     33|
+     34| export function monthRange(_a: Analysis): string[] {
+     35|   throw new Error('not implemented');
+       |         ^
+     36| }
+     37|
+ ❯ tests/view.test.ts:490:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[40/44]⎯
+
+ FAIL  tests/view.test.ts > monthRange > AC-12-06 returns an empty array when the timeline is empty
+Error: not implemented
+ ❯ monthRange src/view.ts:35:9
+     33|
+     34| export function monthRange(_a: Analysis): string[] {
+     35|   throw new Error('not implemented');
+       |         ^
+     36| }
+     37|
+ ❯ tests/view.test.ts:494:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[41/44]⎯
+
+ FAIL  tests/view.test.ts > monthRange > AC-12-06 returns [] for the analysis of an empty graph
+Error: not implemented
+ ❯ monthRange src/view.ts:35:9
+     33|
+     34| export function monthRange(_a: Analysis): string[] {
+     35|   throw new Error('not implemented');
+       |         ^
+     36| }
+     37|
+ ❯ tests/view.test.ts:498:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[42/44]⎯
+
+ FAIL  tests/view.test.ts > monthRange > AC-12-06 matches the months of a real analysis, skipping undated sessions
+Error: not implemented
+ ❯ monthRange src/view.ts:35:9
+     33|
+     34| export function monthRange(_a: Analysis): string[] {
+     35|   throw new Error('not implemented');
+       |         ^
+     36| }
+     37|
+ ❯ tests/view.test.ts:511:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[43/44]⎯
+
+ FAIL  tests/view.test.ts > dependencies > AC-12-07 package.json lists force-graph in dependencies
+AssertionError: expected [ '3d-force-graph' ] to include 'force-graph'
+ ❯ tests/view.test.ts:523:49
+    521|   it('AC-12-07 package.json lists force-graph in dependencies', () => {
+    522|     expect(pkg.dependencies).toBeDefined();
+    523|     expect(Object.keys(pkg.dependencies ?? {})).toContain('force-graph…
+       |                                                 ^
+    524|     expect(typeof pkg.dependencies?.['force-graph']).toBe('string');
+    525|     expect((pkg.dependencies?.['force-graph'] ?? '').length).toBeGreat…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[44/44]⎯
+== explorer-javascript hidden tests -> exit 1:       Tests  16 failed | 29 passed (45) (details hidden)

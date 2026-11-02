@@ -1,0 +1,163 @@
+== core-rust (run 1): cargo test --quiet -> exit 0
+
+warning: function `test_AC_05_06_nodes_and_links_are_sorted` should have a snake case name
+   --> tests/phase05_graph.rs:389:4
+    |
+389 | fn test_AC_05_06_nodes_and_links_are_sorted() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_05_06_nodes_and_links_are_sorted`
+
+warning: function `test_AC_05_06_to_json_is_deterministic_and_uses_type_key` should have a snake case name
+   --> tests/phase05_graph.rs:438:4
+    |
+438 | fn test_AC_05_06_to_json_is_deterministic_and_uses_type_key() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_05_06_to_json_is_deterministic_and_uses_type_key`
+
+warning: function `test_AC_05_06_link_json_shape` should have a snake case name
+   --> tests/phase05_graph.rs:483:4
+    |
+483 | fn test_AC_05_06_link_json_shape() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_05_06_link_json_shape`
+
+warning: function `test_AC_05_07_empty_input_gives_empty_graph` should have a snake case name
+   --> tests/phase05_graph.rs:496:4
+    |
+496 | fn test_AC_05_07_empty_input_gives_empty_graph() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_05_07_empty_input_gives_empty_graph`
+
+warning: function `hidden_AC_09_01_scoring_weights_and_ordering` should have a snake case name
+   --> tests/phase09_context_hidden.rs:121:4
+    |
+121 | fn hidden_AC_09_01_scoring_weights_and_ordering() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `hidden_ac_09_01_scoring_weights_and_ordering`
+    |
+    = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+warning: function `hidden_AC_09_02_tie_order` should have a snake case name
+   --> tests/phase09_context_hidden.rs:143:4
+    |
+143 | fn hidden_AC_09_02_tie_order() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `hidden_ac_09_02_tie_order`
+
+warning: function `hidden_AC_09_03_exact_layout` should have a snake case name
+   --> tests/phase09_context_hidden.rs:159:4
+    |
+159 | fn hidden_AC_09_03_exact_layout() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `hidden_ac_09_03_exact_layout`
+
+warning: function `hidden_AC_09_04_caps_and_exclusions` should have a snake case name
+   --> tests/phase09_context_hidden.rs:188:4
+    |
+188 | fn hidden_AC_09_04_caps_and_exclusions() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `hidden_ac_09_04_caps_and_exclusions`
+
+warning: function `hidden_AC_09_05_limit_and_hand_computed_truncation` should have a snake case name
+   --> tests/phase09_context_hidden.rs:243:4
+    |
+243 | fn hidden_AC_09_05_limit_and_hand_computed_truncation() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `hidden_ac_09_05_limit_and_hand_computed_truncation`
+
+warning: function `hidden_AC_09_06_no_match_forms` should have a snake case name
+   --> tests/phase09_context_hidden.rs:275:4
+    |
+275 | fn hidden_AC_09_06_no_match_forms() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `hidden_ac_09_06_no_match_forms`
+
+warning: function `hidden_AC_09_07_parse_errors` should have a snake case name
+   --> tests/phase09_context_hidden.rs:284:4
+    |
+284 | fn hidden_AC_09_07_parse_errors() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `hidden_ac_09_07_parse_errors`
+
+warning: function `hidden_AC_09_08_cli_end_to_end` should have a snake case name
+   --> tests/phase09_context_hidden.rs:314:4
+    |
+314 | fn hidden_AC_09_08_cli_end_to_end() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `hidden_ac_09_08_cli_end_to_end`
+
+warning: function `hidden_AC_09_09_cli_errors` should have a snake case name
+   --> tests/phase09_context_hidden.rs:334:4
+    |
+334 | fn hidden_AC_09_09_cli_errors() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `hidden_ac_09_09_cli_errors`
+== explorer-javascript (run 1): npx vitest run --exclude 'tests/holdout/**' -> exit 1
+ FAIL  tests/neuron_shell.test.ts > AC-20-03 the neuron state is read from #neuron-look > AC-20-03 the element found by id neuron-look has its .checked read
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/neuron_shell.test.ts:540:29
+    538|       /\.\s*checked\b/.test(statementOf(m.index as number)),
+    539|     );
+    540|     expect(named || inline).toBe(true);
+       |                             ^
+    541|   });
+    542| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/26]⎯
+
+ FAIL  tests/neuron_shell.test.ts > AC-20-03 the change listener rebuilds and reheats > AC-20-03 the #neuron-look element has a change listener
+AssertionError: expected 0 to be greater than or equal to 1
+ ❯ tests/neuron_shell.test.ts:565:35
+    563|
+    564|   it('AC-20-03 the #neuron-look element has a change listener', () => {
+    565|     expect(handlerTexts().length).toBeGreaterThanOrEqual(1);
+       |                                   ^
+    566|   });
+    567|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/26]⎯
+
+ FAIL  tests/neuron_shell.test.ts > AC-20-03 the change listener rebuilds and reheats > AC-20-03 the listener (followed through helpers, up to 3 levels) reheats the layout with d3ReheatSimulation
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/neuron_shell.test.ts:570:68
+    568|   it('AC-20-03 the listener (followed through helpers, up to 3 levels)…
+    569|     const texts = handlerTexts().map((t) => reach(main, t, 3));
+    570|     expect(texts.some((t) => /\bd3ReheatSimulation\s*\(/.test(t))).toB…
+       |                                                                    ^
+    571|   });
+    572|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/26]⎯
+
+ FAIL  tests/neuron_shell.test.ts > AC-20-03 the change listener rebuilds and reheats > AC-20-03 the listener rebuilds the node objects or re-installs a d3 force
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/neuron_shell.test.ts:575:86
+    573|   it('AC-20-03 the listener rebuilds the node objects or re-installs a…
+    574|     const texts = handlerTexts().map((t) => reach(main, t, 3));
+    575|     expect(texts.some((t) => /\bnodeThreeObject\b|rebuild|\bd3Force\s*…
+       |                                                                                      ^
+    576|   });
+    577| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22/26]⎯
+
+ FAIL  tests/neuron_shell.test.ts > AC-20-04 glow, selection and the 2D map > AC-20-04 the curve settings are made on the 3D graph, not on the 2D one
+AssertionError: expected 0 to be greater than or equal to 2
+ ❯ tests/neuron_shell.test.ts:597:26
+    595|   it('AC-20-04 the curve settings are made on the 3D graph, not on the…
+    596|     const calls = [...sites(main, '\\.\\s*linkCurvature'), ...sites(ma…
+    597|     expect(calls.length).toBeGreaterThanOrEqual(2);
+       |                          ^
+    598|     for (const c of calls) expect(receiverIs3d(main, c.start), chainPr…
+    599|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[23/26]⎯
+== explorer-javascript hidden tests -> exit 1:       Tests  4 failed | 110 passed (114) (details hidden)

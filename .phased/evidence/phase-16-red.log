@@ -1,0 +1,163 @@
+== core-rust (run 1): cargo test --quiet -> exit 0
+
+warning: function `test_AC_01_12_hand_built_session_with_every_block_variant_round_trips` should have a snake case name
+    --> tests/phase01_claude_code.rs:1388:4
+     |
+1388 | fn test_AC_01_12_hand_built_session_with_every_block_variant_round_trips() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_12_hand_built_session_with_every_block_variant_round_trips`
+
+warning: function `test_AC_01_12_none_fields_and_enums_round_trip` should have a snake case name
+    --> tests/phase01_claude_code.rs:1441:4
+     |
+1441 | fn test_AC_01_12_none_fields_and_enums_round_trip() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_01_12_none_fields_and_enums_round_trip`
+
+warning: function `test_AC_05_01_shared_project_topic_and_tool_have_size_two` should have a snake case name
+   --> tests/phase05_graph.rs:128:4
+    |
+128 | fn test_AC_05_01_shared_project_topic_and_tool_have_size_two() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_05_01_shared_project_topic_and_tool_have_size_two`
+    |
+    = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+warning: function `test_AC_05_02_ids_kinds_labels_and_file_meta` should have a snake case name
+   --> tests/phase05_graph.rs:172:4
+    |
+172 | fn test_AC_05_02_ids_kinds_labels_and_file_meta() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_05_02_ids_kinds_labels_and_file_meta`
+
+warning: function `test_AC_05_02_session_size_is_at_least_one_and_file_size_counts_sessions` should have a snake case name
+   --> tests/phase05_graph.rs:233:4
+    |
+233 | fn test_AC_05_02_session_size_is_at_least_one_and_file_size_counts_sessions() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_05_02_session_size_is_at_least_one_and_file_size_counts_sessions`
+
+warning: function `test_AC_05_03_session_meta_contains_all_fields` should have a snake case name
+   --> tests/phase05_graph.rs:262:4
+    |
+262 | fn test_AC_05_03_session_meta_contains_all_fields() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_05_03_session_meta_contains_all_fields`
+
+warning: function `test_AC_05_04_claude_ai_session_has_topic_links_only` should have a snake case name
+   --> tests/phase05_graph.rs:297:4
+    |
+297 | fn test_AC_05_04_claude_ai_session_has_topic_links_only() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_05_04_claude_ai_session_has_topic_links_only`
+
+warning: function `test_AC_05_05_no_duplicate_nodes_or_links` should have a snake case name
+   --> tests/phase05_graph.rs:320:4
+    |
+320 | fn test_AC_05_05_no_duplicate_nodes_or_links() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_05_05_no_duplicate_nodes_or_links`
+
+warning: function `test_AC_05_05_duplicate_session_id_keeps_later_session` should have a snake case name
+   --> tests/phase05_graph.rs:352:4
+    |
+352 | fn test_AC_05_05_duplicate_session_id_keeps_later_session() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_05_05_duplicate_session_id_keeps_later_session`
+
+warning: function `test_AC_05_06_nodes_and_links_are_sorted` should have a snake case name
+   --> tests/phase05_graph.rs:389:4
+    |
+389 | fn test_AC_05_06_nodes_and_links_are_sorted() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_05_06_nodes_and_links_are_sorted`
+
+warning: function `test_AC_05_06_to_json_is_deterministic_and_uses_type_key` should have a snake case name
+   --> tests/phase05_graph.rs:438:4
+    |
+438 | fn test_AC_05_06_to_json_is_deterministic_and_uses_type_key() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_05_06_to_json_is_deterministic_and_uses_type_key`
+
+warning: function `test_AC_05_06_link_json_shape` should have a snake case name
+   --> tests/phase05_graph.rs:483:4
+    |
+483 | fn test_AC_05_06_link_json_shape() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_05_06_link_json_shape`
+
+warning: function `test_AC_05_07_empty_input_gives_empty_graph` should have a snake case name
+   --> tests/phase05_graph.rs:496:4
+    |
+496 | fn test_AC_05_07_empty_input_gives_empty_graph() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_05_07_empty_input_gives_empty_graph`
+== explorer-javascript (run 1): npx vitest run --exclude 'tests/holdout/**' -> exit 1
+
+ FAIL  tests/shell3d.test.ts > Path picker > AC-16-06 #path-from and #path-to are select elements
+AssertionError: expected exactly one element with id="path-from": expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ only tests/shell3d.test.ts:60:65
+     58| function only(html: string, id: string): StartTag {
+     59|   const found = byId(html, id);
+     60|   expect(found, `expected exactly one element with id="${id}"`).toHave…
+       |                                                                 ^
+     61|   return found[0];
+     62| }
+ ❯ tests/shell3d.test.ts:169:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/17]⎯
+
+ FAIL  tests/shell3d.test.ts > Path picker > AC-16-06 the two topic selects pick a single topic each
+AssertionError: expected exactly one element with id="path-from": expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ only tests/shell3d.test.ts:60:65
+     58| function only(html: string, id: string): StartTag {
+     59|   const found = byId(html, id);
+     60|   expect(found, `expected exactly one element with id="${id}"`).toHave…
+       |                                                                 ^
+     61|   return found[0];
+     62| }
+ ❯ tests/shell3d.test.ts:174:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/17]⎯
+
+ FAIL  tests/shell3d.test.ts > Path picker > AC-16-06 #path-go is a button labelled "Find path"
+AssertionError: expected exactly one element with id="path-go": expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ only tests/shell3d.test.ts:60:65
+     58| function only(html: string, id: string): StartTag {
+     59|   const found = byId(html, id);
+     60|   expect(found, `expected exactly one element with id="${id}"`).toHave…
+       |                                                                 ^
+     61|   return found[0];
+     62| }
+ ❯ tests/shell3d.test.ts:179:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/17]⎯
+
+ FAIL  tests/shell3d.test.ts > Path picker > AC-16-06 #path-result is a div that starts without the no-path message
+AssertionError: expected exactly one element with id="path-result": expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ only tests/shell3d.test.ts:60:65
+     58| function only(html: string, id: string): StartTag {
+     59|   const found = byId(html, id);
+     60|   expect(found, `expected exactly one element with id="${id}"`).toHave…
+       |                                                                 ^
+     61|   return found[0];
+     62| }
+ ❯ tests/shell3d.test.ts:185:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/17]⎯
+== explorer-javascript hidden tests -> exit 1:       Tests  4 failed | 64 passed (68) (details hidden)

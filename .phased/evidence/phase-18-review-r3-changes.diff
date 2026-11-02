@@ -1,0 +1,43 @@
+diff --git a/explorer/src/main.ts b/explorer/src/main.ts
+index 3130efd..5b551a5 100644
+--- a/explorer/src/main.ts
++++ b/explorer/src/main.ts
+@@ -337,9 +337,9 @@ const RING = new THREE.TorusGeometry(1.75, 0.08, 8, 40);
+ interface NodeLook {
+   node: GraphNode;
+   body: THREE.MeshLambertMaterial;
+-  ring: THREE.MeshBasicMaterial | null;
++  ring: THREE.MeshBasicMaterial;
+   /** The halo mesh: shown for bridge nodes and for the selected node only. */
+-  halo: THREE.Mesh | null;
++  halo: THREE.Mesh;
+   /** The floating theme name, on theme anchor nodes only. */
+   label: THREE.SpriteMaterial | null;
+ }
+@@ -362,11 +362,9 @@ function styleNode(look: NodeLook): void {
+   look.body.emissive.set(color);
+   look.body.emissiveIntensity = glow.emissive;
+   look.body.opacity = glow.opacity;
+-  if (look.ring) {
+-    look.ring.color.set(dim ? DIM_COLOR : '#ffffff');
+-    look.ring.opacity = glow.ring;
+-  }
+-  if (look.halo) look.halo.visible = bridges.has(look.node.id) || look.node.id === selectedId;
++  look.ring.color.set(dim ? DIM_COLOR : '#ffffff');
++  look.ring.opacity = glow.ring;
++  look.halo.visible = bridges.has(look.node.id) || look.node.id === selectedId;
+   if (look.label) look.label.opacity = dim ? 0.25 : 1;
+ }
+ 
+@@ -379,6 +377,11 @@ function nodeObject3d(obj: object): THREE.Object3D {
+   // unless the node is a bridge or the selected node.
+   const ring = new THREE.MeshBasicMaterial({ transparent: true });
+   const halo = new THREE.Mesh(RING, ring);
++  // three.js raycasting ignores .visible: only let a shown halo be hovered or clicked.
++  const pickHalo = THREE.Mesh.prototype.raycast;
++  halo.raycast = (raycaster, hits) => {
++    if (halo.visible) pickHalo.call(halo, raycaster, hits);
++  };
+   // Keep the halo facing the camera (the parent group is never rotated).
+   halo.onBeforeRender = (_renderer, _scene, camera) => {
+     halo.quaternion.copy(camera.quaternion);
