@@ -3,7 +3,7 @@
   "self_test_passed": true,
   "phase": "20",
   "title": "3D neuron look - cells, branches, axons",
-  "stage": "implementing",
+  "stage": "done",
   "history": [
     {
       "event": "self-test",
@@ -1548,6 +1548,22 @@
       "round": 1,
       "verdict": "PASS",
       "important": 0
+    },
+    {
+      "at": "2026-11-02T17:55:49+05:30",
+      "event": "finish",
+      "phase": "20",
+      "commit": "6629192075d2a3cf3ef7728eec32be5d2b966dba"
+    },
+    {
+      "at": "2026-11-02T17:55:54+05:30",
+      "event": "report",
+      "phase": "20"
+    },
+    {
+      "at": "2026-11-02T17:55:54+05:30",
+      "event": "kba-facts",
+      "phase": "20"
     }
   ],
   "change_dir": "changes/2026-11-02-graph-neurons",
@@ -2035,6 +2051,11 @@
       "phase": "19",
       "level": "M",
       "minutes": 5.4
+    },
+    {
+      "phase": "20",
+      "level": "M",
+      "minutes": 19.8
     }
   ]
 }
