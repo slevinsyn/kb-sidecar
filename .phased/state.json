@@ -3,7 +3,7 @@
   "self_test_passed": true,
   "phase": "16",
   "title": "3D wiring - time and island forces, labels, layers, time-lapse, path, camera",
-  "stage": "implementing",
+  "stage": "done",
   "history": [
     {
       "event": "self-test",
@@ -1238,6 +1238,22 @@
       "round": 1,
       "verdict": "PASS",
       "important": 0
+    },
+    {
+      "at": "2026-11-02T11:47:57+05:30",
+      "event": "finish",
+      "phase": "16",
+      "commit": "f308bdd233263958935671ef0dfee246a8c10135"
+    },
+    {
+      "at": "2026-11-02T11:48:02+05:30",
+      "event": "report",
+      "phase": "16"
+    },
+    {
+      "at": "2026-11-02T11:48:04+05:30",
+      "event": "kba-facts",
+      "phase": "16"
     }
   ],
   "change_dir": "changes/2026-11-02-graph-3d",
@@ -1644,6 +1660,11 @@
       "phase": "15",
       "level": "L",
       "minutes": 18.7
+    },
+    {
+      "phase": "16",
+      "level": "L",
+      "minutes": 19.7
     }
   ]
 }
