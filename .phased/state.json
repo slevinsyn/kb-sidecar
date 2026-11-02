@@ -1,9 +1,9 @@
 {
   "initialized": true,
   "self_test_passed": true,
-  "phase": "12",
-  "title": "Explorer UI - 2D labelled community map, insights panel, month filter",
-  "stage": "done",
+  "phase": "13",
+  "title": "3D layout maths - time axis, islands, layers, size, brightness",
+  "stage": "implementing",
   "history": [
     {
       "event": "self-test",
@@ -956,11 +956,100 @@
       "at": "2026-11-02T00:50:09+05:30",
       "event": "kba-facts",
       "phase": "12"
+    },
+    {
+      "at": "2026-11-02T10:36:47+05:30",
+      "event": "plan",
+      "phase": "12",
+      "change": "changes/2026-11-02-graph-3d"
+    },
+    {
+      "at": "2026-11-02T10:41:39+05:30",
+      "event": "approve-plan",
+      "phase": "12",
+      "phases": [
+        "13",
+        "14",
+        "15",
+        "16"
+      ]
+    },
+    {
+      "at": "2026-11-02T10:43:38+05:30",
+      "event": "prefetch",
+      "phase": "12",
+      "phases": [
+        "13",
+        "14",
+        "15",
+        "16"
+      ]
+    },
+    {
+      "at": "2026-11-02T10:47:40+05:30",
+      "event": "prefetch-done",
+      "phase": "12",
+      "ready": [
+        "13",
+        "14",
+        "15",
+        "16"
+      ],
+      "dropped": []
+    },
+    {
+      "at": "2026-11-02T10:47:40+05:30",
+      "event": "start",
+      "phase": "13",
+      "title": "3D layout maths - time axis, islands, layers, size, brightness"
+    },
+    {
+      "at": "2026-11-02T10:47:40+05:30",
+      "event": "approve-spec",
+      "phase": "13",
+      "criteria": [
+        "AC-13-01",
+        "AC-13-02",
+        "AC-13-03",
+        "AC-13-04",
+        "AC-13-05",
+        "AC-13-06",
+        "AC-13-07",
+        "AC-13-08",
+        "AC-13-09"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-02T10:47:40+05:30",
+      "event": "tests-moved-in",
+      "phase": "13",
+      "files": 2
+    },
+    {
+      "at": "2026-11-02T10:47:58+05:30",
+      "event": "red",
+      "phase": "13",
+      "tests": 2
+    },
+    {
+      "at": "2026-11-02T10:49:23+05:30",
+      "event": "review-prep",
+      "phase": "13",
+      "round": 1
+    },
+    {
+      "at": "2026-11-02T10:49:57+05:30",
+      "event": "review",
+      "phase": "13",
+      "round": 1,
+      "verdict": "PASS",
+      "important": 0
     }
   ],
-  "change_dir": "changes/2026-11-01-graph-map",
-  "base_commit": "5335c0da85b68a9462e2495c0731c5b4db31c1ac",
-  "change_sha256": "a53dd91aece87d4d86505ceb792d8f06a7edfa292d303f1349873b51696a38db",
+  "change_dir": "changes/2026-11-02-graph-3d",
+  "base_commit": "1f96150b92c610e6932288255a6a8097dcc10395",
+  "change_sha256": "f5c2b51921d0510b1fcf065e063375bf18f63a1a9c6ccb3e9dc59f7e69a36216",
   "approved_specs": {
     "01": "01527e477aa90e33e8bb613e55b1396690ec40feae5f8c7c307d20e0abc62f70",
     "02": "d1083c8313f6c92a4b22916064d84005ca65389623c38fe5a37ac1b4ed1f8c47",
@@ -973,26 +1062,44 @@
     "09": "ee26e597b1a04a07840b9384d34393490f9cc8e94be8c8b84bd9aeca0bc9a117",
     "10": "115921bb49d2ce5e7c20882049cea7adc1be1654e7a402e044b6cebc765a55f3",
     "11": "817ec346cc5605055e98a145d0b033917ddbe8a469c95188bf044e41f4395fa0",
-    "12": "a860d89a6e367dcd3530d110190f5aaa0ae963cbb40e9b5cb4fc4784dfa3072a"
+    "12": "a860d89a6e367dcd3530d110190f5aaa0ae963cbb40e9b5cb4fc4784dfa3072a",
+    "13": "84fbb60d86a871006bd93b964c6b2cb9a2b13e0c62b11b9944ccd689bc892715",
+    "14": "6c893a50b4bdfc951fc65f430f93a3e7e15f6c71baf7c7138dac4ee507d0b797",
+    "15": "85097673d02fd58d2e700f6f5a84bc171fedf06b8a30c9ab72acd14cf3921d2f",
+    "16": "ea26eda3e2454db327eb7ab8c32d36a93cfffd4b8dee3baeede10b7dac6abbf1"
   },
   "change_phases": [
-    "10",
-    "11",
-    "12"
+    "13",
+    "14",
+    "15",
+    "16"
   ],
-  "pending_tests": {},
+  "pending_tests": {
+    "14": {
+      "explorer/tests/holdout/scene3d_hidden.test.ts": "5deca9d768dbe9137c6ce1068826724cf7a2d8bc0c636753fdb7b86381471836",
+      "explorer/tests/scene3d-logic.test.ts": "89e736b87cc8cae90f06115adf3be9934f78c6ee04dc83d8c792e02faad39c67"
+    },
+    "15": {
+      "explorer/tests/app3d.test.ts": "91efcc2d988f64b9668cfe72abd6b75e7bdfe49da6a3f1fc8f978656cb589dbe",
+      "explorer/tests/holdout/app3d_hidden.test.ts": "350b57c94a16d2e5a31558280240474c18ea4dbb4c41ba2c497f955c2a3ad5b1"
+    },
+    "16": {
+      "explorer/tests/holdout/shell3d_hidden.test.ts": "94ab0a944f5c6f34f59bca3f1a1db93f676bbb1946ebb20d42f65a0eddf9d645",
+      "explorer/tests/shell3d.test.ts": "76a42f98f56f3f07eb19600602a727c3ce34f28ae8fa69c2dddb480359ec43ca"
+    }
+  },
   "review": {
     "verdict": "PASS",
-    "lock_digest": "e51260afb964e4043677362385a3c8bd76fec7196bd891622d38216ef4f1a984",
-    "at": "2026-11-02T00:42:06+05:30",
+    "lock_digest": "1af0256fc59840f4e675f08a508e5e4d045313e5fe2ad3f06ec7715be57b614f",
+    "at": "2026-11-02T10:47:40+05:30",
     "prefetched": true
   },
   "red": {
     "ok": true,
-    "lock_digest": "e51260afb964e4043677362385a3c8bd76fec7196bd891622d38216ef4f1a984",
-    "evidence": ".phased/evidence/phase-12-red.log"
+    "lock_digest": "1af0256fc59840f4e675f08a508e5e4d045313e5fe2ad3f06ec7715be57b614f",
+    "evidence": ".phased/evidence/phase-13-red.log"
   },
-  "spec_sha256": "a860d89a6e367dcd3530d110190f5aaa0ae963cbb40e9b5cb4fc4784dfa3072a",
+  "spec_sha256": "84fbb60d86a871006bd93b964c6b2cb9a2b13e0c62b11b9944ccd689bc892715",
   "code_reviews": {
     "01": {
       "rounds": [
@@ -1205,6 +1312,21 @@
           "verdict": "PASS",
           "important": 0,
           "nits": 4,
+          "preexisting": 0,
+          "classes": [
+            "none"
+          ]
+        }
+      ]
+    },
+    "13": {
+      "rounds": [
+        {
+          "tree": "469466f886689e96c4d196a0a62ddbc85d4f81f0",
+          "at": "2026-11-02T10:49:23+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 3,
           "preexisting": 0,
           "classes": [
             "none"

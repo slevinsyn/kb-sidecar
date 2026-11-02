@@ -75,6 +75,14 @@
     "explorer/tests/view.test.ts": {
       "sha256": "026b4f8062460e62176d04f4b4bc6c7e1482a8f2e8cd7fb8bf3ab169b5626c01",
       "phase": "12"
+    },
+    "explorer/tests/holdout/scene3d_hidden.test.ts": {
+      "sha256": "5bc1c07a40821494d922d1604e5d02c4e933a2525c828dd2a873415b0dd87dc7",
+      "phase": "13"
+    },
+    "explorer/tests/scene3d.test.ts": {
+      "sha256": "7b9365c5c87bfc2892c68baf9f2ef9e98512528e1e37ffffbf1a6439ff014c5d",
+      "phase": "13"
     }
   }
 }

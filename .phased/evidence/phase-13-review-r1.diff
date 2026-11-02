@@ -1,0 +1,1455 @@
+diff --git a/changes/2026-11-02-graph-3d/change.md b/changes/2026-11-02-graph-3d/change.md
+new file mode 100644
+index 0000000..01e4486
+--- /dev/null
++++ b/changes/2026-11-02-graph-3d/change.md
+@@ -0,0 +1,62 @@
++# Change: Give the third dimension a job - time, themes, layers, paths in the 3D map
++
++Date: 2026-11-02 · Requested by: Sarthak Bhatt · Status: draft
++Client: Internal
++Linked: changes/2026-11-01-graph-map/change.md (the 2D map, merged then reverted on the base branch)
++
++## Why
++Today 3D is just a worse 2D. Sarthak wants depth to carry meaning: sessions placed by date so
++flying through the graph reads as a history, themes as separate islands with names floating above,
++size and brightness that carry data, a layers mode, a time-lapse, insights tabs that steer the
++camera, and a path between two topics ("how did X lead to Y?"). The look also needs work: shapes
++per type, fog, glow, faint coloured links, less clutter, and a view that starts to the right of the panels.
++
++## Must work
++- Time as depth: sessions get z from `started_at` (earliest at -300, latest at +300, all same date
++  or one dated session -> 0); a topic or project floats at the average z of its dated sessions;
++  undated sessions are left free.
++- Islands: each theme gets a centre on a circle (radius 200, one theme -> centre); nodes are pulled
++  towards their theme centre; theme names float above each island using `clusterLabels()`.
++- Size and glow: session size from turns, other nodes from rank (3 to 15); brightness from how
++  recent the work is (1 for the newest, down to 0.25 after 180 days); bridge topics get a ring.
++- Layers mode (optional switch): projects at z -200, sessions 0, topics +200, overriding the time axis.
++- Time-lapse: a button steps the month filter from the first month to the last, one month per step,
++  then stops; pressing it again while running stops it.
++- Insights tabs: clicking a theme, bridge or roadmap item selects the node, orbits the camera
++  around that cluster and fades everything else.
++- Path: pick two topics and the shortest chain topic - session - topic ... is highlighted; no
++  route -> a plain message "No path between these topics".
++- Look: sphere for sessions, cube for projects, octahedron for topics; depth fog; soft bloom; links
++  at about 15% opacity coloured by link type; particles flow along the selected node's links;
++  session-tool and session-file links hidden by default; camera fitted after loading, slow
++  auto-rotate when idle; legend of shapes and colours; the 3D view starts 324 px from the left.
++- 2D map and insights panel (restored from the reverted part) keep working.
++
++## Steps
++| Phase | What it delivers | Size |
++|---|---|---|
++| 13 | `explorer/src/scene3d.ts` layout maths: time axis, island centres, layer z, size, brightness, bridge set | M |
++| 14 | Same module, graph logic: link filter and colours, shortest path, time-lapse stepping, cluster orbit maths | M |
++| 15 | 3D look in the app shell: shapes, fog, bloom, particles, legend, fit and auto-rotate, width fix; add `three` | L |
++| 16 | Wiring: time and island forces, theme labels, layers switch, time-lapse button, path picker, tabs drive the camera | L |
++
++## Risk: Medium
++Normal product change to the explorer, runs only in the browser on private data and sends nothing
++out. Adds one dependency (`three`, already installed through `3d-force-graph`), so `package.json` changes.
++
++## Undo
++Revert the phase commits. The 2D map comes back with the first commit on this branch; revert that too to drop it.
++
++## Not in this change
++- Changing graph.json, `kb ingest`, `kb context`, `analysis.ts` or `insights.ts`.
++- Any other new package, any online service, saving camera views.
++
++## Assumptions
++- This branch undoes the revert on the base branch, so the pull request also restores the 2D map (answered: "Bring 2D back too").
++- `three` is added at the version `3d-force-graph` already uses (>=0.179, installed 0.187). Theme labels are drawn on canvas sprites, no font package.
++- The new logic is pure and unit-tested in `scene3d.ts`; rendering and wiring in `main.ts` and `index.html` are checked by `npm run build`, `tsc --noEmit` and a look in the browser.
++- "Recent" is measured from the latest session in the graph, not the clock.
++- Link types are the ones graph.json already has: `in_project`, `has_topic`, `touched_file`, `used_tool`.
++- One change with four phases (answered).
++
++## Still open
+diff --git a/explorer/src/scene3d.ts b/explorer/src/scene3d.ts
+new file mode 100644
+index 0000000..c43a032
+--- /dev/null
++++ b/explorer/src/scene3d.ts
+@@ -0,0 +1,167 @@
++import type { Analysis } from './analysis';
++import { linkEnd } from './graph';
++import type { GraphData, GraphNode, NodeType } from './graph';
++
++export const Z_SPAN = 600;
++export const ISLAND_RADIUS = 200;
++export const LAYER_Z: Readonly<Record<NodeType, number>> = {
++  project: -200,
++  session: 0,
++  topic: 200,
++  file: 0,
++  tool: 0,
++};
++
++const DAY_MS = 86_400_000;
++const RECENCY_DAYS = 180;
++const MIN_SIZE = 3;
++const MAX_SIZE = 15;
++
++function parseTime(value: unknown): number | null {
++  if (typeof value !== 'string') return null;
++  const t = Date.parse(value);
++  return Number.isNaN(t) ? null : t;
++}
++
++function sessionTimes(g: GraphData): Map<string, number> {
++  const times = new Map<string, number>();
++  for (const n of g.nodes) {
++    if (n.type !== 'session') continue;
++    const t = parseTime(n.meta?.started_at);
++    if (t !== null) times.set(n.id, t);
++  }
++  return times;
++}
++
++// For every topic/project, the set of session ids it is linked to (any direction).
++function linkedSessions(g: GraphData): Map<string, Set<string>> {
++  const type = new Map<string, NodeType>();
++  for (const n of g.nodes) type.set(n.id, n.type);
++  const out = new Map<string, Set<string>>();
++  const add = (owner: string, session: string): void => {
++    let set = out.get(owner);
++    if (!set) {
++      set = new Set();
++      out.set(owner, set);
++    }
++    set.add(session);
++  };
++  const isGroup = (t: NodeType | undefined): boolean => t === 'topic' || t === 'project';
++  for (const l of g.links) {
++    const a = linkEnd(l.source);
++    const b = linkEnd(l.target);
++    const ta = type.get(a);
++    const tb = type.get(b);
++    if (ta === 'session' && isGroup(tb)) add(b, a);
++    else if (tb === 'session' && isGroup(ta)) add(a, b);
++  }
++  return out;
++}
++
++export function timeAxis(g: GraphData): Map<string, number> {
++  const times = sessionTimes(g);
++  const z = new Map<string, number>();
++  if (times.size === 0) return z;
++  let tmin = Infinity;
++  let tmax = -Infinity;
++  for (const t of times.values()) {
++    if (t < tmin) tmin = t;
++    if (t > tmax) tmax = t;
++  }
++  const range = tmax - tmin;
++  for (const [id, t] of times) {
++    z.set(id, range > 0 ? ((t - tmin) / range - 0.5) * Z_SPAN : 0);
++  }
++  for (const [owner, sessions] of linkedSessions(g)) {
++    let sum = 0;
++    let count = 0;
++    for (const s of sessions) {
++      const v = z.get(s);
++      if (v === undefined) continue;
++      sum += v;
++      count += 1;
++    }
++    if (count > 0) z.set(owner, sum / count);
++  }
++  return z;
++}
++
++export function islandCenters(a: Analysis): Map<number, { x: number; y: number }> {
++  const out = new Map<number, { x: number; y: number }>();
++  const n = a.communities.length;
++  if (n === 1) {
++    out.set(a.communities[0].id, { x: 0, y: 0 });
++    return out;
++  }
++  a.communities.forEach((c, i) => {
++    const angle = (2 * Math.PI * i) / n;
++    out.set(c.id, { x: ISLAND_RADIUS * Math.cos(angle), y: ISLAND_RADIUS * Math.sin(angle) });
++  });
++  return out;
++}
++
++export function layerZ(type: NodeType): number {
++  return LAYER_Z[type];
++}
++
++export function nodeSize(n: GraphNode, a: Analysis): number {
++  if (n.type === 'session') {
++    const turns = n.meta?.turns;
++    if (typeof turns === 'number' && Number.isFinite(turns) && turns > 0) {
++      return Math.min(MAX_SIZE, MIN_SIZE + 2 * Math.log2(1 + turns));
++    }
++  }
++  let m = 0;
++  for (const v of a.rank.values()) if (v > m) m = v;
++  if (!(m > 0)) return MIN_SIZE;
++  const r = a.rank.get(n.id) ?? 0;
++  const size = MIN_SIZE + (12 * r) / m;
++  return Math.max(MIN_SIZE, Math.min(MAX_SIZE, size));
++}
++
++export function recency(date: string | undefined, latestAt: string | null): number {
++  const d = parseTime(date);
++  const latest = parseTime(latestAt);
++  if (d === null || latest === null) return 0.5;
++  const age = Math.max(0, (latest - d) / DAY_MS);
++  return 1 - 0.75 * Math.min(1, age / RECENCY_DAYS);
++}
++
++export function brightnessMap(g: GraphData, a: Analysis): Map<string, number> {
++  const out = new Map<string, number>();
++  const dates = new Map<string, string>();
++  const times = new Map<string, number>();
++  for (const n of g.nodes) {
++    if (n.type !== 'session') continue;
++    const started = n.meta?.started_at;
++    const t = parseTime(started);
++    if (t !== null && typeof started === 'string') {
++      dates.set(n.id, started);
++      times.set(n.id, t);
++    }
++  }
++  const linked = linkedSessions(g);
++  for (const n of g.nodes) {
++    if (n.type === 'session') {
++      out.set(n.id, recency(dates.get(n.id), a.latestAt));
++    } else if (n.type === 'topic' || n.type === 'project') {
++      let best: string | undefined;
++      let bestT = -Infinity;
++      for (const s of linked.get(n.id) ?? []) {
++        const t = times.get(s);
++        if (t !== undefined && t > bestT) {
++          bestT = t;
++          best = dates.get(s);
++        }
++      }
++      out.set(n.id, recency(best, a.latestAt));
++    } else {
++      out.set(n.id, 0.5);
++    }
++  }
++  return out;
++}
++
++export function bridgeIds(a: Analysis): Set<string> {
++  return new Set(a.bridges.map((b) => b.id));
++}
+diff --git a/explorer/tests/holdout/scene3d_hidden.test.ts b/explorer/tests/holdout/scene3d_hidden.test.ts
+new file mode 100644
+index 0000000..8e035ef
+--- /dev/null
++++ b/explorer/tests/holdout/scene3d_hidden.test.ts
+@@ -0,0 +1,258 @@
++import { describe, it, expect } from 'vitest';
++import {
++  LAYER_Z,
++  bridgeIds,
++  brightnessMap,
++  islandCenters,
++  layerZ,
++  nodeSize,
++  recency,
++  timeAxis,
++} from '../../src/scene3d';
++import { analyzeGraph } from '../../src/analysis';
++import type { Analysis, Community } from '../../src/analysis';
++import { parseGraph } from '../../src/graph';
++import type { GraphData, GraphNode, NodeType } from '../../src/graph';
++
++type Raw = { id: string; type: NodeType; label: string; meta?: Record<string, unknown> };
++type RawLink = { source: string; target: string; type: string };
++
++const sess = (id: string, meta: Record<string, unknown> = {}): Raw => ({
++  id,
++  type: 'session',
++  label: id.toUpperCase(),
++  meta,
++});
++const top = (id: string, label: string): Raw => ({ id, type: 'topic', label });
++const proj = (id: string, label: string): Raw => ({ id, type: 'project', label });
++const other = (id: string, type: NodeType): Raw => ({ id, type, label: id });
++const ln = (source: string, target: string): RawLink => ({ source, target, type: 'x' });
++
++function g(nodes: Raw[], links: RawLink[]): GraphData {
++  return parseGraph({ nodes, links });
++}
++
++function node(id: string, type: NodeType, meta: Record<string, unknown> = {}): GraphNode {
++  return { id, type, label: id, size: 1, meta };
++}
++
++function comm(id: number): Community {
++  return {
++    id,
++    label: `C${id}`,
++    topics: [],
++    sessions: [],
++    size: 0,
++    projects: [],
++    firstAt: null,
++    lastAt: null,
++  };
++}
++
++function an(over: Partial<Analysis> = {}): Analysis {
++  return {
++    communityOf: new Map(),
++    communities: [],
++    rank: new Map(),
++    bridges: [],
++    oneOffTopics: [],
++    looseEnds: [],
++    timeline: [],
++    latestAt: null,
++    ...over,
++  };
++}
++
++describe('hidden scene3d tests', () => {
++  it('AC-13-01 AC-13-03 time axis with other dates, offsets and project/topic means', () => {
++    const graph: GraphData = {
++      nodes: [
++        node('x3', 'session', { started_at: '2025-03-11T00:00:00Z' }),
++        node('x1', 'session', { started_at: '2025-03-01T00:00:00Z' }),
++        node('x2', 'session', { started_at: '2025-03-04T00:00:00Z' }),
++        node('x4', 'session', { started_at: '2025-03-06T02:00:00+02:00' }),
++        node('tp', 'topic'),
++        node('pr', 'project'),
++        node('ta', 'topic'),
++        node('fl', 'file'),
++      ],
++      links: [
++        { source: { id: 'x2' }, target: 'tp', type: 'a' },
++        { source: 'tp', target: { id: 'x3' }, type: 'a' },
++        { source: 'x2', target: { id: 'tp' }, type: 'b' },
++        { source: 'pr', target: 'x1', type: 'in' },
++        { source: { id: 'x4' }, target: { id: 'pr' }, type: 'in' },
++        { source: 'x3', target: 'pr', type: 'in' },
++        { source: 'ta', target: 'fl', type: 'in' },
++        { source: 'tp', target: 'ta', type: 'rel' },
++      ],
++    };
++    const z = timeAxis(graph);
++    expect(z.get('x1')).toBeCloseTo(-300, 9);
++    expect(z.get('x3')).toBeCloseTo(300, 9);
++    expect(z.get('x2')).toBeCloseTo((0.3 - 0.5) * 600, 9);
++    expect(z.get('x4')).toBeCloseTo((0.5 - 0.5) * 600, 9);
++    expect(z.get('tp')).toBeCloseTo((-120 + 300) / 2, 9);
++    expect(z.get('pr')).toBeCloseTo((-300 + 0 + 300) / 3, 9);
++    expect(z.has('ta')).toBe(false);
++    expect(z.has('fl')).toBe(false);
++    expect(z.size).toBe(6);
++  });
++
++  it('AC-13-02 equal dates and a single dated session both collapse to z = 0', () => {
++    const same = g(
++      [
++        sess('q1', { started_at: '2024-02-29T12:00:00Z' }),
++        sess('q2', { started_at: '2024-02-29T12:00:00Z' }),
++        sess('q3'),
++        top('tq', 'Q'),
++        proj('pq', 'PQ'),
++        other('fq', 'file'),
++        other('xq', 'tool'),
++      ],
++      [ln('q1', 'tq'), ln('pq', 'q2'), ln('q3', 'tq'), ln('q1', 'fq'), ln('q2', 'xq')],
++    );
++    const z = timeAxis(same);
++    expect([...z.keys()].sort()).toEqual(['pq', 'q1', 'q2', 'tq']);
++    for (const v of z.values()) expect(v).toBeCloseTo(0, 9);
++
++    const one = g([sess('only', { started_at: '2023-05-05T05:05:05Z' }), sess('nodate')], []);
++    const z1 = timeAxis(one);
++    expect([...z1.keys()]).toEqual(['only']);
++    expect(z1.get('only')).toBeCloseTo(0, 9);
++  });
++
++  it('AC-13-04 islands are keyed by community id in order of a.communities', () => {
++    const c = islandCenters(an({ communities: [comm(7), comm(3)] }));
++    expect([...c.keys()].sort()).toEqual([3, 7]);
++    expect(c.get(7)?.x).toBeCloseTo(200, 6);
++    expect(c.get(7)?.y).toBeCloseTo(0, 6);
++    expect(c.get(3)?.x).toBeCloseTo(-200, 6);
++    expect(c.get(3)?.y).toBeCloseTo(0, 6);
++
++    const six = islandCenters(an({ communities: [0, 1, 2, 3, 4, 5].map(comm) }));
++    expect(six.get(1)?.x).toBeCloseTo(100, 6);
++    expect(six.get(1)?.y).toBeCloseTo(200 * Math.sin(Math.PI / 3), 6);
++    expect(six.get(4)?.x).toBeCloseTo(-100, 6);
++    expect(six.get(4)?.y).toBeCloseTo(-200 * Math.sin(Math.PI / 3), 6);
++
++    const solo = islandCenters(an({ communities: [comm(4)] }));
++    expect(solo.get(4)?.x).toBeCloseTo(0, 9);
++    expect(solo.get(4)?.y).toBeCloseTo(0, 9);
++    expect(islandCenters(an()).size).toBe(0);
++  });
++
++  it('AC-13-05 layerZ agrees with LAYER_Z for every node type', () => {
++    const expected: Record<NodeType, number> = {
++      project: -200,
++      session: 0,
++      topic: 200,
++      file: 0,
++      tool: 0,
++    };
++    for (const t of Object.keys(expected) as NodeType[]) {
++      expect(layerZ(t)).toBe(expected[t]);
++      expect(LAYER_Z[t]).toBe(expected[t]);
++    }
++  });
++
++  it('AC-13-06 nodeSize log scale, cap boundary and rank fallback with other numbers', () => {
++    const a = an({ rank: new Map([['hi', 0.5], ['mid', 0.125], ['sess', 0.25]]) });
++    expect(nodeSize(node('s', 'session', { turns: 2 }), a)).toBeCloseTo(3 + 2 * Math.log2(3), 9);
++    expect(nodeSize(node('s', 'session', { turns: 63 }), a)).toBeCloseTo(15, 9);
++    expect(nodeSize(node('s', 'session', { turns: 64 }), a)).toBe(15);
++    expect(nodeSize(node('s', 'session', { turns: 31 }), a)).toBeCloseTo(13, 9);
++    expect(nodeSize(node('hi', 'topic'), a)).toBeCloseTo(15, 9);
++    expect(nodeSize(node('mid', 'project'), a)).toBeCloseTo(6, 9);
++    expect(nodeSize(node('sess', 'session', { turns: 0 }), a)).toBeCloseTo(9, 9);
++    expect(nodeSize(node('sess', 'session'), a)).toBeCloseTo(9, 9);
++    expect(nodeSize(node('nowhere', 'topic'), a)).toBe(3);
++    expect(nodeSize(node('hi', 'topic'), an({ rank: new Map([['hi', 0]]) }))).toBe(3);
++  });
++
++  it('AC-13-07 recency with a different anchor date', () => {
++    const latest = '2025-12-31T12:00:00Z';
++    expect(recency('2025-12-31T12:00:00Z', latest)).toBeCloseTo(1, 9);
++    expect(recency('2025-10-02T12:00:00Z', latest)).toBeCloseTo(1 - 0.75 * (90 / 180), 9);
++    expect(recency('2025-12-01T12:00:00Z', latest)).toBeCloseTo(1 - 0.75 * (30 / 180), 9);
++    expect(recency('2025-07-04T12:00:00Z', latest)).toBeCloseTo(0.25, 9);
++    expect(recency('1999-12-31T12:00:00Z', latest)).toBeCloseTo(0.25, 9);
++    expect(recency('2026-02-01T12:00:00Z', latest)).toBeCloseTo(1, 9);
++    expect(recency('nonsense', latest)).toBe(0.5);
++    expect(recency(undefined, latest)).toBe(0.5);
++    expect(recency(latest, null)).toBe(0.5);
++    expect(recency(latest, 'nonsense')).toBe(0.5);
++  });
++
++  it('AC-13-08 brightness of topics, projects and unlinked nodes with other dates', () => {
++    const graph = g(
++      [
++        sess('n', { started_at: '2025-12-31T12:00:00Z' }),
++        sess('m', { started_at: '2025-10-02T12:00:00Z' }),
++        sess('o', { started_at: '2024-01-01T00:00:00Z' }),
++        sess('u'),
++        top('tn', 'TN'),
++        top('tm', 'TM'),
++        top('to', 'TO'),
++        top('tu', 'TU'),
++        top('tz', 'TZ'),
++        proj('pm', 'PM'),
++        proj('pu', 'PU'),
++        other('fi', 'file'),
++        other('to1', 'tool'),
++      ],
++      [
++        ln('tn', 'o'),
++        ln('n', 'tn'),
++        ln('m', 'tm'),
++        ln('o', 'to'),
++        ln('u', 'tu'),
++        ln('pm', 'u'),
++        ln('o', 'pm'),
++        ln('m', 'pm'),
++        ln('u', 'pu'),
++        ln('n', 'fi'),
++        ln('n', 'to1'),
++        ln('tz', 'tu'),
++      ],
++    );
++    const analysis = analyzeGraph(graph);
++    expect(analysis.latestAt).toBe('2025-12-31T12:00:00Z');
++    const b = brightnessMap(graph, analysis);
++    expect(b.size).toBe(graph.nodes.length);
++    const mid = 1 - 0.75 * 0.5;
++    expect(b.get('n')).toBeCloseTo(1, 9);
++    expect(b.get('m')).toBeCloseTo(mid, 9);
++    expect(b.get('o')).toBeCloseTo(0.25, 9);
++    expect(b.get('u')).toBe(0.5);
++    expect(b.get('tn')).toBeCloseTo(1, 9);
++    expect(b.get('tm')).toBeCloseTo(mid, 9);
++    expect(b.get('to')).toBeCloseTo(0.25, 9);
++    expect(b.get('pm')).toBeCloseTo(mid, 9);
++    for (const id of ['tu', 'tz', 'pu', 'fi', 'to1']) expect(b.get(id)).toBe(0.5);
++  });
++
++  it('AC-13-09 bridgeIds picks exactly the bridge ids from a three-theme analysis', () => {
++    const links: RawLink[] = [];
++    for (const s of ['a1', 'a2', 'a3']) for (const t of ['ta1', 'ta2']) links.push(ln(s, t));
++    for (const s of ['b1', 'b2', 'b3']) for (const t of ['tb1', 'tb2']) links.push(ln(s, t));
++    links.push(ln('a1', 'hx'), ln('b1', 'hx'));
++    links.push(ln('pj', 'a2'), ln('b2', 'pj'));
++    links.push(ln('b1', 'pin'), ln('pin', 'b3'));
++    const graph = g(
++      [
++        sess('a1'), sess('a2'), sess('a3'), sess('b1'), sess('b2'), sess('b3'),
++        top('ta1', 'TA1'), top('ta2', 'TA2'), top('tb1', 'TB1'), top('tb2', 'TB2'),
++        top('hx', 'HX'),
++        proj('pj', 'PJ'),
++        proj('pin', 'PIN'),
++      ],
++      links,
++    );
++    const analysis = analyzeGraph(graph);
++    const ids = bridgeIds(analysis);
++    expect([...ids].sort()).toEqual(['hx', 'pj']);
++    expect(ids.size).toBe(analysis.bridges.length);
++    expect(bridgeIds(an()).size).toBe(0);
++  });
++});
+diff --git a/explorer/tests/scene3d.test.ts b/explorer/tests/scene3d.test.ts
+new file mode 100644
+index 0000000..402ccf6
+--- /dev/null
++++ b/explorer/tests/scene3d.test.ts
+@@ -0,0 +1,692 @@
++import { describe, it, expect } from 'vitest';
++import {
++  ISLAND_RADIUS,
++  LAYER_Z,
++  Z_SPAN,
++  bridgeIds,
++  brightnessMap,
++  islandCenters,
++  layerZ,
++  nodeSize,
++  recency,
++  timeAxis,
++} from '../src/scene3d';
++import { analyzeGraph } from '../src/analysis';
++import type { Analysis, Bridge, Community } from '../src/analysis';
++import { linkEnd, parseGraph } from '../src/graph';
++import type { GraphData, GraphNode, NodeType } from '../src/graph';
++
++// ---------- helpers ----------
++
++interface RawNode {
++  id: string;
++  type: NodeType;
++  label: string;
++  meta?: Record<string, unknown>;
++}
++
++interface RawLink {
++  source: string;
++  target: string;
++  type: string;
++}
++
++function S(id: string, meta: Record<string, unknown> = {}): RawNode {
++  return { id, type: 'session', label: `Session ${id}`, meta };
++}
++
++function T(id: string, label: string): RawNode {
++  return { id, type: 'topic', label };
++}
++
++function P(id: string, label: string): RawNode {
++  return { id, type: 'project', label };
++}
++
++function F(id: string): RawNode {
++  return { id, type: 'file', label: id };
++}
++
++function X(id: string): RawNode {
++  return { id, type: 'tool', label: id };
++}
++
++function L(source: string, target: string, type = 'rel'): RawLink {
++  return { source, target, type };
++}
++
++function build(nodes: RawNode[], links: RawLink[]): GraphData {
++  return parseGraph({ nodes, links });
++}
++
++// ISO date `n` days after 2026-01-01T00:00:00Z.
++function day(n: number): string {
++  return new Date(Date.UTC(2026, 0, 1 + n)).toISOString();
++}
++
++function withObjectEndpoints(g: GraphData): GraphData {
++  return {
++    nodes: g.nodes,
++    links: g.links.map((l) => ({
++      source: { id: linkEnd(l.source) },
++      target: { id: linkEnd(l.target) },
++      type: l.type,
++    })),
++  };
++}
++
++function deepFreeze<T>(value: T): T {
++  if (value !== null && typeof value === 'object') {
++    Object.freeze(value);
++    for (const key of Object.keys(value as Record<string, unknown>)) {
++      deepFreeze((value as Record<string, unknown>)[key]);
++    }
++  }
++  return value;
++}
++
++function gn(id: string, type: NodeType, meta: Record<string, unknown> = {}): GraphNode {
++  return { id, type, label: id, size: 1, meta };
++}
++
++function comm(id: number): Community {
++  return {
++    id,
++    label: `Community ${id + 1}`,
++    topics: [],
++    sessions: [],
++    size: 0,
++    projects: [],
++    firstAt: null,
++    lastAt: null,
++  };
++}
++
++function mkAnalysis(over: Partial<Analysis> = {}): Analysis {
++  return {
++    communityOf: new Map(),
++    communities: [],
++    rank: new Map(),
++    bridges: [],
++    oneOffTopics: [],
++    looseEnds: [],
++    timeline: [],
++    latestAt: null,
++    ...over,
++  };
++}
++
++// ---------- constants ----------
++
++describe('scene3d constants', () => {
++  it('AC-13-05 Z_SPAN is 600 and ISLAND_RADIUS is 200', () => {
++    expect(Z_SPAN).toBe(600);
++    expect(ISLAND_RADIUS).toBe(200);
++  });
++});
++
++// ---------- timeAxis ----------
++
++describe('timeAxis', () => {
++  it('AC-13-01 puts the earliest session at -300, the latest at +300 and others proportionally', () => {
++    const g = build(
++      [
++        S('late', { started_at: day(20) }),
++        S('early', { started_at: day(0) }),
++        S('mid', { started_at: day(10) }),
++        S('quarter', { started_at: day(5) }),
++      ],
++      [],
++    );
++    const z = timeAxis(g);
++    expect(z).toBeInstanceOf(Map);
++    expect(z.get('early')).toBeCloseTo(-300, 9);
++    expect(z.get('late')).toBeCloseTo(300, 9);
++    expect(z.get('mid')).toBeCloseTo(0, 9);
++    expect(z.get('quarter')).toBeCloseTo(-150, 9);
++    expect(z.size).toBe(4);
++  });
++
++  it('AC-13-01 spacing follows real time, not rank order', () => {
++    const g = build(
++      [
++        S('a', { started_at: day(0) }),
++        S('b', { started_at: day(1) }),
++        S('c', { started_at: day(100) }),
++      ],
++      [],
++    );
++    const z = timeAxis(g);
++    expect(z.get('a')).toBeCloseTo(-300, 9);
++    expect(z.get('b')).toBeCloseTo((1 / 100 - 0.5) * 600, 9);
++    expect(z.get('c')).toBeCloseTo(300, 9);
++  });
++
++  it('AC-13-02 gives 0 to every session when all dates are equal', () => {
++    const g = build(
++      [
++        S('a', { started_at: day(3) }),
++        S('b', { started_at: day(3) }),
++        S('c', { started_at: day(3) }),
++        T('t', 'Topic'),
++      ],
++      [L('a', 't'), L('b', 't')],
++    );
++    const z = timeAxis(g);
++    expect(z.get('a')).toBeCloseTo(0, 9);
++    expect(z.get('b')).toBeCloseTo(0, 9);
++    expect(z.get('c')).toBeCloseTo(0, 9);
++    expect(z.get('t')).toBeCloseTo(0, 9);
++  });
++
++  it('AC-13-02 gives 0 when only one session is dated and leaves the rest absent', () => {
++    const g = build(
++      [S('dated', { started_at: day(7) }), S('none'), S('bad', { started_at: 'not a date' })],
++      [],
++    );
++    const z = timeAxis(g);
++    expect(z.get('dated')).toBeCloseTo(0, 9);
++    expect(z.has('none')).toBe(false);
++    expect(z.has('bad')).toBe(false);
++    expect(z.size).toBe(1);
++  });
++
++  it('AC-13-02 undated sessions, files and tools are absent from the map', () => {
++    const g = build(
++      [
++        S('s1', { started_at: day(0) }),
++        S('s2', { started_at: day(4) }),
++        S('missing'),
++        S('garbage', { started_at: 'garbage' }),
++        S('numeric', { started_at: 12345 }),
++        F('f:main'),
++        X('tool:Read'),
++      ],
++      [L('s1', 'f:main'), L('s2', 'tool:Read'), L('missing', 'f:main')],
++    );
++    const z = timeAxis(g);
++    expect([...z.keys()].sort()).toEqual(['s1', 's2']);
++  });
++
++  it('AC-13-02 an undated session does not stretch the range', () => {
++    const g = build(
++      [S('a', { started_at: day(0) }), S('b', { started_at: day(2) }), S('u', {})],
++      [],
++    );
++    const z = timeAxis(g);
++    expect(z.get('a')).toBeCloseTo(-300, 9);
++    expect(z.get('b')).toBeCloseTo(300, 9);
++  });
++
++  it('AC-13-02 an empty graph gives an empty map', () => {
++    const z = timeAxis(parseGraph({ nodes: [], links: [] }));
++    expect(z).toBeInstanceOf(Map);
++    expect(z.size).toBe(0);
++  });
++
++  function topicGraph(): GraphData {
++    return build(
++      [
++        S('s1', { started_at: day(0) }),
++        S('s2', { started_at: day(5) }),
++        S('s3', { started_at: day(20) }),
++        S('su'),
++        T('t:both', 'Both'),
++        T('t:once', 'Once'),
++        T('t:mixed', 'Mixed'),
++        T('t:undated', 'Undated only'),
++        T('t:none', 'No links'),
++        P('p:a', 'Project A'),
++        P('p:b', 'Project B'),
++      ],
++      [
++        // t:both: s1 (-300) three times in different shapes, s3 (+300) once -> mean 0
++        L('s1', 't:both', 'about'),
++        L('s1', 't:both', 'again'),
++        L('t:both', 's1', 'reverse'),
++        L('t:both', 's3', 'about'),
++        // t:once: s2 only
++        L('t:once', 's2'),
++        // t:mixed: s2 (-150) and s3 (300), plus an undated session
++        L('s2', 't:mixed'),
++        L('s3', 't:mixed'),
++        L('su', 't:mixed'),
++        // t:undated: only an undated session
++        L('su', 't:undated'),
++        // projects
++        L('s1', 'p:a', 'in_project'),
++        L('p:a', 's2', 'in_project'),
++        L('s3', 'p:b', 'in_project'),
++        L('t:both', 'p:b'),
++      ],
++    );
++  }
++
++  it('AC-13-03 places a topic at the mean z of its dated sessions, each counted once', () => {
++    const z = timeAxis(topicGraph());
++    expect(z.get('t:both')).toBeCloseTo(0, 9);
++    expect(z.get('t:once')).toBeCloseTo(-150, 9);
++    expect(z.get('t:mixed')).toBeCloseTo(75, 9);
++  });
++
++  it('AC-13-03 places a project at the mean z of its dated sessions in either link direction', () => {
++    const z = timeAxis(topicGraph());
++    expect(z.get('p:a')).toBeCloseTo(-225, 9);
++    expect(z.get('p:b')).toBeCloseTo(300, 9);
++  });
++
++  it('AC-13-03 a topic with no dated session, or no links at all, is absent', () => {
++    const z = timeAxis(topicGraph());
++    expect(z.has('t:undated')).toBe(false);
++    expect(z.has('t:none')).toBe(false);
++    expect(z.has('su')).toBe(false);
++  });
++
++  it('AC-13-03 {id} link ends give the same result as string ends', () => {
++    const g = topicGraph();
++    const a = timeAxis(g);
++    const b = timeAxis(withObjectEndpoints(g));
++    expect([...b.keys()].sort()).toEqual([...a.keys()].sort());
++    for (const [id, v] of a) expect(b.get(id)).toBeCloseTo(v, 9);
++  });
++
++  it('AC-13-03 does not mutate the input graph', () => {
++    const g = topicGraph();
++    const before = JSON.stringify(g);
++    deepFreeze(g);
++    const z = timeAxis(g);
++    expect(z.size).toBeGreaterThan(0);
++    expect(JSON.stringify(g)).toBe(before);
++  });
++});
++
++// ---------- islandCenters ----------
++
++describe('islandCenters', () => {
++  it('AC-13-04 places 4 communities on a circle of radius 200 in order', () => {
++    const c = islandCenters(mkAnalysis({ communities: [comm(0), comm(1), comm(2), comm(3)] }));
++    expect(c.size).toBe(4);
++    const expected: Array<[number, number]> = [
++      [200, 0],
++      [0, 200],
++      [-200, 0],
++      [0, -200],
++    ];
++    expected.forEach(([x, y], i) => {
++      const p = c.get(i);
++      expect(p).toBeDefined();
++      expect(p?.x).toBeCloseTo(x, 6);
++      expect(p?.y).toBeCloseTo(y, 6);
++    });
++  });
++
++  it('AC-13-04 places 3 communities 120 degrees apart', () => {
++    const c = islandCenters(mkAnalysis({ communities: [comm(0), comm(1), comm(2)] }));
++    expect(c.get(0)?.x).toBeCloseTo(200, 6);
++    expect(c.get(0)?.y).toBeCloseTo(0, 6);
++    expect(c.get(1)?.x).toBeCloseTo(-100, 6);
++    expect(c.get(1)?.y).toBeCloseTo(200 * Math.sin((2 * Math.PI) / 3), 6);
++    expect(c.get(2)?.x).toBeCloseTo(-100, 6);
++    expect(c.get(2)?.y).toBeCloseTo(-200 * Math.sin((2 * Math.PI) / 3), 6);
++  });
++
++  it('AC-13-04 every centre lies exactly on the circle', () => {
++    const comms = Array.from({ length: 7 }, (_, i) => comm(i));
++    const c = islandCenters(mkAnalysis({ communities: comms }));
++    expect(c.size).toBe(7);
++    for (const p of c.values()) {
++      expect(Math.hypot(p.x, p.y)).toBeCloseTo(200, 6);
++    }
++  });
++
++  it('AC-13-04 a single community sits at the origin', () => {
++    const c = islandCenters(mkAnalysis({ communities: [comm(0)] }));
++    expect(c.size).toBe(1);
++    expect(c.get(0)?.x).toBeCloseTo(0, 9);
++    expect(c.get(0)?.y).toBeCloseTo(0, 9);
++  });
++
++  it('AC-13-04 no communities gives an empty map', () => {
++    const c = islandCenters(mkAnalysis());
++    expect(c).toBeInstanceOf(Map);
++    expect(c.size).toBe(0);
++  });
++
++  it('AC-13-04 works on a real analysis: one centre per community, keyed by id', () => {
++    const g = build(
++      [
++        S('a1'), S('a2'), S('b1'), S('b2'), S('c1'),
++        T('ta', 'A'), T('tb', 'B'), T('tc', 'C'),
++      ],
++      [L('a1', 'ta'), L('a2', 'ta'), L('b1', 'tb'), L('b2', 'tb'), L('c1', 'tc')],
++    );
++    const a = analyzeGraph(g);
++    expect(a.communities).toHaveLength(3);
++    const c = islandCenters(a);
++    expect([...c.keys()].sort()).toEqual(a.communities.map((x) => x.id).sort());
++    expect(c.get(a.communities[0].id)?.x).toBeCloseTo(200, 6);
++  });
++});
++
++// ---------- layerZ ----------
++
++describe('layerZ', () => {
++  it('AC-13-05 returns -200 for project, 0 for session, 200 for topic', () => {
++    expect(layerZ('project')).toBe(-200);
++    expect(layerZ('session')).toBe(0);
++    expect(layerZ('topic')).toBe(200);
++  });
++
++  it('AC-13-05 files and tools sit on the session layer', () => {
++    expect(layerZ('file')).toBe(0);
++    expect(layerZ('tool')).toBe(0);
++  });
++
++  it('AC-13-05 LAYER_Z holds the same values for all five types', () => {
++    expect(LAYER_Z.project).toBe(-200);
++    expect(LAYER_Z.session).toBe(0);
++    expect(LAYER_Z.topic).toBe(200);
++    expect(LAYER_Z.file).toBe(0);
++    expect(LAYER_Z.tool).toBe(0);
++    const types: NodeType[] = ['project', 'session', 'topic', 'file', 'tool'];
++    for (const t of types) expect(layerZ(t)).toBe(LAYER_Z[t]);
++  });
++});
++
++// ---------- nodeSize ----------
++
++describe('nodeSize', () => {
++  const ranks = new Map<string, number>([
++    ['top', 0.4],
++    ['half', 0.2],
++    ['low', 0.1],
++    ['zero', 0],
++  ]);
++  const a = mkAnalysis({ rank: ranks });
++
++  it('AC-13-06 a session with turns uses a log scale: 3 + 2*log2(1+turns)', () => {
++    expect(nodeSize(gn('s', 'session', { turns: 1 }), a)).toBeCloseTo(5, 9);
++    expect(nodeSize(gn('s', 'session', { turns: 3 }), a)).toBeCloseTo(7, 9);
++    expect(nodeSize(gn('s', 'session', { turns: 7 }), a)).toBeCloseTo(9, 9);
++    expect(nodeSize(gn('s', 'session', { turns: 15 }), a)).toBeCloseTo(11, 9);
++  });
++
++  it('AC-13-06 session size from turns ignores its rank', () => {
++    const withRank = mkAnalysis({ rank: new Map([['s', 0.9], ['other', 0.1]]) });
++    expect(nodeSize(gn('s', 'session', { turns: 3 }), withRank)).toBeCloseTo(7, 9);
++  });
++
++  it('AC-13-06 turns are capped at 15', () => {
++    expect(nodeSize(gn('s', 'session', { turns: 1023 }), a)).toBe(15);
++    expect(nodeSize(gn('s', 'session', { turns: 1e9 }), a)).toBe(15);
++    expect(nodeSize(gn('s', 'session', { turns: 4095 }), a)).toBe(15);
++  });
++
++  it('AC-13-06 a topic uses rank relative to the largest rank', () => {
++    expect(nodeSize(gn('top', 'topic'), a)).toBeCloseTo(15, 9);
++    expect(nodeSize(gn('half', 'topic'), a)).toBeCloseTo(9, 9);
++    expect(nodeSize(gn('low', 'topic'), a)).toBeCloseTo(6, 9);
++    expect(nodeSize(gn('zero', 'topic'), a)).toBeCloseTo(3, 9);
++  });
++
++  it('AC-13-06 a node missing from rank counts as rank 0', () => {
++    expect(nodeSize(gn('unknown', 'topic'), a)).toBeCloseTo(3, 9);
++    expect(nodeSize(gn('f', 'file'), a)).toBeCloseTo(3, 9);
++  });
++
++  it('AC-13-06 a session without usable turns falls back to rank', () => {
++    expect(nodeSize(gn('half', 'session'), a)).toBeCloseTo(9, 9);
++    expect(nodeSize(gn('half', 'session', { turns: 0 }), a)).toBeCloseTo(9, 9);
++    expect(nodeSize(gn('half', 'session', { turns: -4 }), a)).toBeCloseTo(9, 9);
++    expect(nodeSize(gn('half', 'session', { turns: 'many' }), a)).toBeCloseTo(9, 9);
++    expect(nodeSize(gn('half', 'session', { turns: '7' }), a)).toBeCloseTo(9, 9);
++    expect(nodeSize(gn('half', 'session', { turns: null }), a)).toBeCloseTo(9, 9);
++    expect(nodeSize(gn('half', 'session', { turns: NaN }), a)).toBeCloseTo(9, 9);
++    expect(nodeSize(gn('half', 'session', { turns: Infinity }), a)).toBeCloseTo(9, 9);
++  });
++
++  it('AC-13-06 turns on a non-session node are ignored', () => {
++    expect(nodeSize(gn('half', 'topic', { turns: 3 }), a)).toBeCloseTo(9, 9);
++  });
++
++  it('AC-13-06 is 3 when every rank is 0 or the rank map is empty', () => {
++    const allZero = mkAnalysis({ rank: new Map([['x', 0], ['y', 0]]) });
++    expect(nodeSize(gn('x', 'topic'), allZero)).toBe(3);
++    expect(nodeSize(gn('x', 'session'), allZero)).toBe(3);
++    expect(nodeSize(gn('x', 'topic'), mkAnalysis())).toBe(3);
++  });
++
++  it('AC-13-06 always stays within 3..15', () => {
++    const nodes: GraphNode[] = [
++      gn('top', 'topic'),
++      gn('zero', 'topic'),
++      gn('nope', 'tool'),
++      gn('s1', 'session', { turns: 0.0001 }),
++      gn('s2', 'session', { turns: 1 }),
++      gn('s3', 'session', { turns: 100000 }),
++      gn('s4', 'session', { turns: -1 }),
++    ];
++    for (const n of nodes) {
++      const v = nodeSize(n, a);
++      expect(v).toBeGreaterThanOrEqual(3);
++      expect(v).toBeLessThanOrEqual(15);
++    }
++  });
++
++  it('AC-13-06 works with a real analysis and parsed nodes', () => {
++    const g = build(
++      [S('s1', { turns: 3 }), S('s2'), T('t1', 'One'), T('t2', 'Two')],
++      [L('s1', 't1'), L('s2', 't1'), L('s2', 't2')],
++    );
++    const an = analyzeGraph(g);
++    const s1 = g.nodes.find((n) => n.id === 's1') as GraphNode;
++    expect(nodeSize(s1, an)).toBeCloseTo(7, 9);
++    const m = Math.max(...an.rank.values());
++    const t1 = g.nodes.find((n) => n.id === 't1') as GraphNode;
++    expect(nodeSize(t1, an)).toBeCloseTo(3 + (12 * (an.rank.get('t1') as number)) / m, 9);
++  });
++});
++
++// ---------- recency ----------
++
++describe('recency', () => {
++  const latest = '2026-06-30T00:00:00Z';
++
++  it('AC-13-07 is 1 for the latest date itself', () => {
++    expect(recency(latest, latest)).toBeCloseTo(1, 9);
++  });
++
++  it('AC-13-07 is 0.25 at exactly 180 days and beyond', () => {
++    expect(recency('2026-01-01T00:00:00Z', latest)).toBeCloseTo(0.25, 9);
++    expect(recency('2025-06-30T00:00:00Z', latest)).toBeCloseTo(0.25, 9);
++    expect(recency('2000-01-01T00:00:00Z', latest)).toBeCloseTo(0.25, 9);
++  });
++
++  it('AC-13-07 is linear between: 90 days gives 0.625, 18 days gives 0.925', () => {
++    expect(recency('2026-04-01T00:00:00Z', latest)).toBeCloseTo(0.625, 9);
++    expect(recency('2026-06-12T00:00:00Z', latest)).toBeCloseTo(0.925, 9);
++    expect(recency('2026-01-02T00:00:00Z', latest)).toBeCloseTo(1 - 0.75 * (179 / 180), 9);
++  });
++
++  it('AC-13-07 a date after latestAt counts as age 0', () => {
++    expect(recency('2026-07-15T00:00:00Z', latest)).toBeCloseTo(1, 9);
++  });
++
++  it('AC-13-07 returns 0.5 when the date is missing or invalid', () => {
++    expect(recency(undefined, latest)).toBe(0.5);
++    expect(recency('not a date', latest)).toBe(0.5);
++    expect(recency('', latest)).toBe(0.5);
++  });
++
++  it('AC-13-07 returns 0.5 when latestAt is missing or invalid', () => {
++    expect(recency('2026-06-01T00:00:00Z', null)).toBe(0.5);
++    expect(recency('2026-06-01T00:00:00Z', 'garbage')).toBe(0.5);
++    expect(recency(undefined, null)).toBe(0.5);
++  });
++});
++
++// ---------- brightnessMap ----------
++
++describe('brightnessMap', () => {
++  function brightGraph(): GraphData {
++    return build(
++      [
++        S('new', { started_at: '2026-06-30T00:00:00Z' }),
++        S('mid', { started_at: '2026-04-01T00:00:00Z' }),
++        S('old', { started_at: '2025-01-01T00:00:00Z' }),
++        S('undated'),
++        S('bad', { started_at: 'garbage' }),
++        T('t:newest', 'Newest'),
++        T('t:mid', 'Mid only'),
++        T('t:undated', 'Undated only'),
++        T('t:unlinked', 'Unlinked'),
++        T('t:oldmid', 'Old and mid'),
++        P('p:main', 'Main'),
++        P('p:none', 'No sessions'),
++        F('f:a'),
++        X('tool:Bash'),
++      ],
++      [
++        L('new', 't:newest'),
++        L('t:newest', 'mid'),
++        L('mid', 't:mid'),
++        L('undated', 't:undated'),
++        L('bad', 't:undated'),
++        L('old', 't:oldmid'),
++        L('t:oldmid', 'mid'),
++        L('mid', 'p:main', 'in_project'),
++        L('p:main', 'undated', 'in_project'),
++        L('new', 'f:a', 'touched'),
++        L('new', 'tool:Bash', 'used'),
++        L('t:mid', 'f:a'),
++      ],
++    );
++  }
++
++  it('AC-13-08 has an entry for every node', () => {
++    const g = brightGraph();
++    const b = brightnessMap(g, analyzeGraph(g));
++    expect(b.size).toBe(g.nodes.length);
++    for (const n of g.nodes) expect(b.has(n.id)).toBe(true);
++  });
++
++  it('AC-13-08 sessions use recency of their own date against latestAt', () => {
++    const g = brightGraph();
++    const an = analyzeGraph(g);
++    expect(an.latestAt).toBe('2026-06-30T00:00:00Z');
++    const b = brightnessMap(g, an);
++    expect(b.get('new')).toBeCloseTo(1, 9);
++    expect(b.get('mid')).toBeCloseTo(0.625, 9);
++    expect(b.get('old')).toBeCloseTo(0.25, 9);
++    expect(b.get('undated')).toBe(0.5);
++    expect(b.get('bad')).toBe(0.5);
++  });
++
++  it('AC-13-08 topics take the brightness of their newest linked session', () => {
++    const g = brightGraph();
++    const b = brightnessMap(g, analyzeGraph(g));
++    expect(b.get('t:newest')).toBeCloseTo(1, 9);
++    expect(b.get('t:mid')).toBeCloseTo(0.625, 9);
++    expect(b.get('t:oldmid')).toBeCloseTo(0.625, 9);
++  });
++
++  it('AC-13-08 projects take the newest dated session, ignoring undated ones', () => {
++    const g = brightGraph();
++    const b = brightnessMap(g, analyzeGraph(g));
++    expect(b.get('p:main')).toBeCloseTo(0.625, 9);
++  });
++
++  it('AC-13-08 undated-only, unlinked, file and tool nodes get 0.5', () => {
++    const g = brightGraph();
++    const b = brightnessMap(g, analyzeGraph(g));
++    expect(b.get('t:undated')).toBe(0.5);
++    expect(b.get('t:unlinked')).toBe(0.5);
++    expect(b.get('p:none')).toBe(0.5);
++    expect(b.get('f:a')).toBe(0.5);
++    expect(b.get('tool:Bash')).toBe(0.5);
++  });
++
++  it('AC-13-08 {id} link ends give the same result as string ends', () => {
++    const g = brightGraph();
++    const an = analyzeGraph(g);
++    const a = brightnessMap(g, an);
++    const b = brightnessMap(withObjectEndpoints(g), an);
++    expect(b.size).toBe(a.size);
++    for (const [id, v] of a) expect(b.get(id)).toBeCloseTo(v, 9);
++  });
++
++  it('AC-13-08 an empty graph gives an empty map and nothing is mutated', () => {
++    const empty = parseGraph({ nodes: [], links: [] });
++    expect(brightnessMap(empty, analyzeGraph(empty)).size).toBe(0);
++
++    const g = brightGraph();
++    const an = analyzeGraph(g);
++    const before = JSON.stringify(g);
++    deepFreeze(g);
++    const b = brightnessMap(g, an);
++    expect(b.size).toBe(g.nodes.length);
++    expect(JSON.stringify(g)).toBe(before);
++  });
++
++  it('AC-13-08 with no dated session at all, every node is 0.5', () => {
++    const g = build([S('a'), S('b', { started_at: 'x' }), T('t', 'T')], [L('a', 't')]);
++    const b = brightnessMap(g, analyzeGraph(g));
++    expect(b.get('a')).toBe(0.5);
++    expect(b.get('b')).toBe(0.5);
++    expect(b.get('t')).toBe(0.5);
++  });
++});
++
++// ---------- bridgeIds ----------
++
++describe('bridgeIds', () => {
++  function bridge(id: string, type: NodeType, communities: number[]): Bridge {
++    return { id, label: id.toUpperCase(), type, communities };
++  }
++
++  it('AC-13-09 returns exactly the ids of a.bridges', () => {
++    const a = mkAnalysis({
++      bridges: [bridge('t:one', 'topic', [0, 1]), bridge('p:two', 'project', [1, 2]), bridge('t:three', 'topic', [0, 2])],
++    });
++    const ids = bridgeIds(a);
++    expect(ids).toBeInstanceOf(Set);
++    expect([...ids].sort()).toEqual(['p:two', 't:one', 't:three']);
++    expect(ids.has('t:one')).toBe(true);
++    expect(ids.has('t:other')).toBe(false);
++  });
++
++  it('AC-13-09 an empty analysis gives an empty set', () => {
++    const ids = bridgeIds(mkAnalysis());
++    expect(ids).toBeInstanceOf(Set);
++    expect(ids.size).toBe(0);
++  });
++
++  it('AC-13-09 matches the bridges of a real analysis and excludes non-bridges', () => {
++    const links: RawLink[] = [];
++    for (const s of ['a1', 'a2', 'a3']) for (const t of ['ta1', 'ta2']) links.push(L(s, t));
++    for (const s of ['b1', 'b2', 'b3']) for (const t of ['tb1', 'tb2']) links.push(L(s, t));
++    links.push(L('a1', 'tx'), L('b1', 'tx'));
++    links.push(L('a2', 'p:shared', 'in_project'), L('b2', 'p:shared', 'in_project'));
++    links.push(L('a1', 'p:solo', 'in_project'), L('a3', 'p:solo', 'in_project'));
++    const g = build(
++      [
++        S('a1'), S('a2'), S('a3'), S('b1'), S('b2'), S('b3'),
++        T('ta1', 'A one'), T('ta2', 'A two'), T('tb1', 'B one'), T('tb2', 'B two'),
++        T('tx', 'Cross'),
++        P('p:shared', 'Shared'), P('p:solo', 'Solo'),
++      ],
++      links,
++    );
++    const an = analyzeGraph(g);
++    const ids = bridgeIds(an);
++    expect([...ids].sort()).toEqual(an.bridges.map((b) => b.id).sort());
++    expect([...ids].sort()).toEqual(['p:shared', 'tx']);
++    expect(ids.has('ta1')).toBe(false);
++    expect(ids.has('p:solo')).toBe(false);
++  });
++
++  it('AC-13-09 an empty parsed graph has no bridge ids', () => {
++    const an = analyzeGraph(parseGraph({ nodes: [], links: [] }));
++    expect(bridgeIds(an).size).toBe(0);
++  });
++});
+diff --git a/specs/phase-13.md b/specs/phase-13.md
+new file mode 100644
+index 0000000..656c5ae
+--- /dev/null
++++ b/specs/phase-13.md
+@@ -0,0 +1,71 @@
++# Phase 13: 3D layout maths - time axis, islands, layers, size, brightness
++
++## Intent
++Pure functions that decide where each node sits and how it looks in 3D, so depth carries meaning:
++time along Z, one island per theme, optional layers, size and brightness that carry data.
++
++## Complexity
++M - several small formulas with edge cases (undated, empty, single item), no algorithms.
++
++## Scope
++- In scope: new `explorer/src/scene3d.ts` (pure, unit-tested).
++- Out of scope: rendering, forces, DOM, `three`, link filtering and paths (phase 14).
++
++## Interface contract
++Tests import from `../src/scene3d` and may use `parseGraph` (`../src/graph`) and `analyzeGraph`
++(`../src/analysis`). No DOM, no `three`, no `3d-force-graph`.
++Session dates are `meta.started_at` ISO strings; unparseable or missing = undated. Links may use
++string or `{id}` ends (`linkEnd` from `../src/graph`).
++
++| Item | Location | Signature or shape | Errors |
++|---|---|---|---|
++| `Z_SPAN` | `explorer/src/scene3d.ts` | `export const Z_SPAN = 600` | - |
++| `ISLAND_RADIUS` | same | `export const ISLAND_RADIUS = 200` | - |
++| `LAYER_Z` | same | `export const LAYER_Z: Readonly<Record<NodeType, number>>` = project -200, session 0, topic 200, file 0, tool 0 | - |
++| `timeAxis` | same | `export function timeAxis(g: GraphData): Map<string, number>` | - |
++| `islandCenters` | same | `export function islandCenters(a: Analysis): Map<number, { x: number; y: number }>` | - |
++| `layerZ` | same | `export function layerZ(type: NodeType): number` | - |
++| `nodeSize` | same | `export function nodeSize(n: GraphNode, a: Analysis): number` | - |
++| `recency` | same | `export function recency(date: string \| undefined, latestAt: string \| null): number` | - |
++| `brightnessMap` | same | `export function brightnessMap(g: GraphData, a: Analysis): Map<string, number>` | - |
++| `bridgeIds` | same | `export function bridgeIds(a: Analysis): Set<string>` | - |
++
++## Behaviour
++1. `timeAxis(g)`: for each session with a valid `started_at`, `t` = its time in ms. With `tmin`,
++   `tmax` over those sessions, `z = ((t - tmin) / (tmax - tmin) - 0.5) * Z_SPAN` (so earliest
++   -300, latest +300); if `tmax === tmin` (or only one dated session) every z is 0. A topic or
++   project gets the mean z of the dated sessions it is linked to (any link direction; each
++   session counted once); with none it is absent from the map. Undated sessions, files and tools
++   are absent. Input not mutated.
++2. `islandCenters(a)`: for the communities in `a.communities` order, index `i` of `n`:
++   `x = ISLAND_RADIUS * cos(2*PI*i/n)`, `y = ISLAND_RADIUS * sin(2*PI*i/n)`. `n === 1` ->
++   `{x: 0, y: 0}`; no communities -> empty map. Keyed by community id.
++3. `layerZ(type)` returns `LAYER_Z[type]`.
++4. `nodeSize(n, a)`: a session whose `meta.turns` is a finite number `> 0` ->
++   `min(15, 3 + 2 * log2(1 + turns))`. Anything else -> `3 + 12 * r / m` where `r` is
++   `a.rank.get(n.id) ?? 0` and `m` is the largest rank in `a.rank` (`m <= 0` -> result 3).
++   Result always in `[3, 15]`.
++5. `recency(date, latestAt)`: `date` or `latestAt` missing/invalid -> `0.5`. Otherwise `age` in
++   days = `(latestAt - date)` (negative -> 0); result `1 - 0.75 * min(1, age / 180)`. So newest
++   = 1, 180 days or older = 0.25.
++6. `brightnessMap(g, a)`: sessions use `recency` of their own date against `a.latestAt`; topics
++   and projects use the most recent date of the sessions linked to them; nodes with no dated
++   session (and files/tools) get 0.5. Every node in `g` has an entry.
++7. `bridgeIds(a)`: the ids of `a.bridges`.
++
++## Acceptance criteria
++- AC-13-01: `timeAxis` puts the earliest dated session at -300 and the latest at +300, others proportional to time.
++- AC-13-02: `timeAxis` gives 0 to all sessions when dates are equal or only one session is dated; undated sessions, files and tools are absent.
++- AC-13-03: `timeAxis` places a topic or project at the mean z of its dated sessions, counting each session once, with `{id}` link ends handled; a topic with no dated session is absent.
++- AC-13-04: `islandCenters` spreads n communities on a circle of radius 200 in order, one community at the origin, none -> empty.
++- AC-13-05: `layerZ` / `LAYER_Z` return -200 for project, 0 for session, 200 for topic.
++- AC-13-06: `nodeSize` uses turns for sessions (log scale, capped at 15) and rank otherwise, always within 3..15, and 3 when all ranks are 0.
++- AC-13-07: `recency` is 1 for the latest date, 0.25 at 180 days or more, linear between, 0.5 when a date is missing or invalid.
++- AC-13-08: `brightnessMap` covers every node, topics take their newest session's brightness, undated and unlinked nodes get 0.5.
++- AC-13-09: `bridgeIds` returns exactly the bridge node ids; an empty analysis gives an empty set.
++
++## External systems to mock
++- None (pure functions).
++
++## Dependencies on earlier phases
++- Phase 10: `Analysis`, `analyzeGraph`. Phase 07: `graph.ts` types.
+diff --git a/specs/phase-14.md b/specs/phase-14.md
+new file mode 100644
+index 0000000..fb0a13e
+--- /dev/null
++++ b/specs/phase-14.md
+@@ -0,0 +1,63 @@
++# Phase 14: 3D graph logic - link filter and colours, shortest path, time-lapse, orbit maths
++
++## Intent
++Pure helpers behind the clutter-free links, the "how did X lead to Y?" path, the month-by-month
++time-lapse and the camera orbit around a theme.
++
++## Complexity
++M - a BFS with deterministic ties plus small formulas.
++
++## Scope
++- In scope: add to `explorer/src/scene3d.ts` (pure, unit-tested).
++- Out of scope: rendering, DOM, timers, `three`.
++
++## Interface contract
++Tests import from `../src/scene3d` and may use `parseGraph`. No DOM, no `three`.
++Link types in graph.json: `in_project`, `has_topic`, `touched_file`, `used_tool`.
++
++| Item | Location | Signature or shape | Errors |
++|---|---|---|---|
++| `NOISE_LINK_TYPES` | `explorer/src/scene3d.ts` | `export const NOISE_LINK_TYPES: readonly string[] = ['used_tool', 'touched_file']` | - |
++| `defaultLinkFilter` | same | `export function defaultLinkFilter(g: GraphData, showNoise?: boolean): GraphData` | - |
++| `LINK_OPACITY` | same | `export const LINK_OPACITY = 0.15` | - |
++| `linkRgba` | same | `export function linkRgba(type: string, alpha?: number): string` | - |
++| `shortestPath` | same | `export function shortestPath(g: GraphData, from: string, to: string): string[] \| null` | - |
++| `nextMonth` | same | `export function nextMonth(months: readonly string[], current: string \| null): string \| null` | - |
++| `Point3` | same | `export interface Point3 { x: number; y: number; z: number }` | - |
++| `clusterBounds` | same | `export function clusterBounds(points: readonly Point3[]): { center: Point3; radius: number }` | - |
++| `orbitPosition` | same | `export function orbitPosition(center: Point3, radius: number, angle: number): Point3` | - |
++
++## Behaviour
++1. `defaultLinkFilter(g, showNoise = false)`: returns a new graph with the same nodes; unless
++   `showNoise`, links whose `type` is in `NOISE_LINK_TYPES` are removed. Endpoints returned as
++   strings; input not mutated; link order kept.
++2. `linkRgba(type, alpha = LINK_OPACITY)`: `rgba(r, g, b, alpha)` with a fixed colour per type:
++   `in_project` 247,201,107 · `has_topic` 122,162,247 · `touched_file` 158,206,106 ·
++   `used_tool` 187,154,247; any other type 138,143,152. `alpha` printed as given (`0.15`).
++3. `shortestPath(g, from, to)`: breadth-first over undirected links whose two ends are both
++   session or topic nodes (project, file, tool nodes and their links are ignored). Returns the node
++   ids from `from` to `to` inclusive. `from === to` and the node exists -> `[from]`. Either id
++   missing from `g.nodes` -> `null`. Unreachable -> `null`. Neighbours are visited in ascending
++   id order so ties give the same path every time.
++4. `nextMonth(months, current)`: `current === null` -> `months[0]` (or `null` if empty);
++   `current` found -> the following month, `null` at the last one; `current` not found -> `null`.
++5. `clusterBounds(points)`: empty -> `{center: {0,0,0}, radius: 120}`. Otherwise `center` is the
++   mean point and `radius = max(80, farthest distance from center + 40)`.
++6. `orbitPosition(center, radius, angle)`: `{x: cx + radius*sin(angle), y: cy, z: cz + radius*cos(angle)}`.
++
++## Acceptance criteria
++- AC-14-01: `defaultLinkFilter` drops `used_tool` and `touched_file` links by default, keeps all nodes, and keeps them with `showNoise = true`.
++- AC-14-02: `defaultLinkFilter` returns string endpoints, keeps order, and does not mutate the input (`{id}` ends accepted).
++- AC-14-03: `linkRgba` returns the fixed colour per link type with alpha 0.15 by default, the fallback grey for unknown types, and honours an explicit alpha.
++- AC-14-04: `shortestPath` returns the shortest topic-session-topic chain between two topics, inclusive of both ends.
++- AC-14-05: `shortestPath` returns `[id]` for identical nodes, `null` for a missing id or an unreachable pair, and never routes through project, file or tool nodes.
++- AC-14-06: `shortestPath` gives the same path on every call when two shortest paths exist (lowest ids first).
++- AC-14-07: `nextMonth` steps from null to the first month, month to month, to null after the last, null for an unknown month or empty list.
++- AC-14-08: `clusterBounds` gives the mean centre and a radius of at least 80 (farthest distance plus 40), and the default for no points.
++- AC-14-09: `orbitPosition` keeps y, sits `radius` away from the centre on the x-z plane, and angle 0 is straight along +z.
++
++## External systems to mock
++- None (pure functions).
++
++## Dependencies on earlier phases
++- Phase 13 (same module `scene3d.ts`). Phase 07: `graph.ts`.
+diff --git a/specs/phase-15.md b/specs/phase-15.md
+new file mode 100644
+index 0000000..bb06393
+--- /dev/null
++++ b/specs/phase-15.md
+@@ -0,0 +1,49 @@
++# Phase 15: 3D look - shapes, fog, bloom, particles, legend, fit, auto-rotate, width
++
++## Intent
++Make the 3D view readable and match 2D: a shape per node type, depth fog and a soft glow, faint
++coloured links without file and tool clutter, particles on the selected node's links, a legend,
++a camera that fits after loading and drifts slowly when idle, and a view that starts right of the panels.
++
++## Complexity
++L - several rendering features on `three` and `3d-force-graph` that interact, checked only by build and in the browser.
++
++## Scope
++- In scope: `explorer/src/main.ts`, `explorer/index.html`, `explorer/package.json` (add `three` at `^0.179.0`, the lowest version `3d-force-graph` accepts; keep `package-lock.json` in step), using the helpers in `scene3d.ts`.
++- Out of scope: time/island forces, layers, time-lapse, path, orbit (phase 16); changing `scene3d.ts` behaviour.
++
++## Interface contract
++App shell, not unit-tested. Checked by `npm run build`, `npx tsc --noEmit` and the existing tests.
++
++| Item | Location | Shape | Errors |
++|---|---|---|---|
++| `three` dependency | `explorer/package.json` | `"three": "^0.179.0"` under dependencies | - |
++| Legend | `explorer/index.html` + `main.ts` | `<div id="legend">` bottom-left of the graph area: sphere = session, cube = project, octahedron = topic, plus link colours from `linkRgba` | - |
++
++## Behaviour
++- Node shapes in 3D (`nodeThreeObject`): `SphereGeometry` for sessions, `BoxGeometry` for
++  projects, `OctahedronGeometry` for topics (files/tools sphere). Colour from the theme colour
++  (`communityColor`) or the dim colour when not highlighted; scale from `nodeSize`; opacity/emissive
++  intensity from `brightnessMap`; bridge nodes (`bridgeIds`) get a ring (torus) halo.
++- Fog: `scene().fog = new THREE.Fog(BACKGROUND, near, far)` tuned so the far side is clearly dimmer.
++- Bloom: `UnrealBloomPass` (from `three/examples/jsm/postprocessing/UnrealBloomPass.js`) added
++  through `postProcessingComposer()`, modest strength; the app must still render if it is unavailable.
++- Links: `linkColor` uses `linkRgba(type)` (about 15% opacity), white when touching the selected node, dim otherwise; the graph data passed to the 3D view goes through `defaultLinkFilter` (file/tool links hidden unless the file/tool type boxes are ticked).
++- Particles: `linkDirectionalParticles` = 4 for links touching the selected node, 0 otherwise, with width 2.
++- Camera: after the first data load call `zoomToFit` once the layout has settled; `controls().autoRotate = true` at a slow speed, switched off while the user is dragging or a node is selected, back on after about 5 seconds idle.
++- Width: the 3D container is placed at `left: 324px` and sized `window.innerWidth - 324` (also in the resize handler), matching 2D.
++- Legend visible only in 3D mode; labels escaped as elsewhere.
++- Existing 2D, panels, search, details, filters unchanged.
++
++## Acceptance criteria
++- AC-15-01: `npm run build` succeeds with `three` listed in `explorer/package.json` dependencies.
++- AC-15-02: `npx tsc --noEmit` passes and the existing unit tests still pass.
++- AC-15-03: In the browser the 3D view shows spheres, cubes and octahedrons, fog, glow and a legend, with the view starting right of the left panel.
++- AC-15-04: Selecting a node shows particles flowing on its links and the camera stops auto-rotating; it resumes after idle.
++- AC-15-05: File and tool links are hidden by default and appear when those types are ticked.
++
++## External systems to mock
++- None; visual check in the browser preview.
++
++## Dependencies on earlier phases
++- Phase 13 and 14 (`nodeSize`, `brightnessMap`, `bridgeIds`, `defaultLinkFilter`, `linkRgba`). Phase 12 app shell.
+diff --git a/specs/phase-16.md b/specs/phase-16.md
+new file mode 100644
+index 0000000..f0a3f20
+--- /dev/null
++++ b/specs/phase-16.md
+@@ -0,0 +1,45 @@
++# Phase 16: 3D wiring - time and island forces, labels, layers, time-lapse, path, camera
++
++## Intent
++Give depth its job: sessions flow along Z by date, themes form islands with floating names, an
++optional layers mode, a time-lapse button, a topic-to-topic path picker, and insights tabs that
++fly the camera around a cluster and fade the rest.
++
++## Complexity
++L - force configuration, timers, camera animation and UI state that interact with filters and selection.
++
++## Scope
++- In scope: `explorer/src/main.ts`, `explorer/index.html`, using `scene3d.ts` helpers.
++- Out of scope: changing `scene3d.ts` behaviour, `analysis.ts`, `insights.ts`.
++
++## Interface contract
++App shell, not unit-tested. Checked by `npm run build`, `npx tsc --noEmit`, the existing tests and a browser run.
++
++| Item | Location | Shape | Errors |
++|---|---|---|---|
++| Layers switch | `index.html` | `<input type="checkbox" id="layers-mode">` with label "Layers" | - |
++| Time-lapse button | `index.html` | `<button id="timelapse">Time-lapse</button>`, label toggles to "Stop" while running | - |
++| Path picker | `index.html` | two `<select id="path-from">` / `<select id="path-to">` listing topics, `<button id="path-go">`, `<div id="path-result">` | - |
++
++## Behaviour
++- Time as depth: in 3D, `d3Force('z', forceZ(z => timeAxis(visible).get(id) ?? 0).strength(0.4))`; nodes with no entry are pulled toward 0.
++- Islands: custom x/y forces pull each node toward `islandCenters(analysis).get(community)` (strength about 0.15); unassigned nodes toward the origin. Theme names (`clusterLabels`) are drawn as canvas-texture sprites floating above each island's anchor node, escaped text, always facing the camera, hidden in 2D.
++- Layers mode: when the box is ticked the z force targets `layerZ(type)` instead of the time axis; unticking restores time; the simulation is reheated on change.
++- Time-lapse: pressing the button sets the "from" month to the first month and steps the "to" month with `nextMonth` every ~900 ms starting from the first month (`#to-month`, applying filters each step); at the end it stops and the full range stays; pressing again while running stops it and leaves the filter where it is. Switching to 2D also stops it.
++- Tabs drive the camera: `focusCommunity` and `focusNode` in 3D call a new `orbitCluster(ids)`: it computes `clusterBounds` of the members' current positions, flies to `orbitPosition(center, radius, angle)` and orbits slowly (angle advances per frame) until the selection changes or is cleared; all nodes outside the cluster are faded to the dim colour with lower opacity. Selecting a theme/bridge/roadmap item selects its node as before.
++- Path: choosing two topics and pressing "Find path" runs `shortestPath(visible, from, to)`; the nodes and links on the path are highlighted (others dimmed), the result shows the chain labels (escaped) such as `A → session → B`; `null` shows "No path between these topics" and clears highlights. Changing either select or the filters clears the path.
++- 2D keeps working; the new controls are shown only in 3D except the month filter.
++
++## Acceptance criteria
++- AC-16-01: `npm run build` and `npx tsc --noEmit` pass and the existing unit tests still pass.
++- AC-16-02: In the browser, 3D sessions are spread along Z in date order and themes appear as separate clusters with floating theme names.
++- AC-16-03: Ticking "Layers" puts projects, sessions and topics on three levels; unticking returns to the time axis.
++- AC-16-04: The time-lapse button grows the graph month by month, stops at the last month, and a second press stops it early.
++- AC-16-05: Clicking a theme, bridge or roadmap item in 3D orbits that cluster and fades the rest; clearing the selection stops the orbit.
++- AC-16-06: Picking two connected topics highlights the shortest chain; two unconnected topics show "No path between these topics".
++
++## External systems to mock
++- None; behaviour checked in the browser preview.
++
++## Dependencies on earlier phases
++- Phases 13-15. Phase 12 app shell (filters, tabs, `focusCommunity`, `focusNode`).
