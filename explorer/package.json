@@ -9,8 +9,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "3d-force-graph": "^1.80.1",
-    "force-graph": "^1.52.0"
+    "3d-force-graph": "^1.80.1"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
