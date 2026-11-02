@@ -25,8 +25,12 @@ import {
   viewGraph,
 } from './view';
 import {
+  CELL_SCALE,
+  axonCurve,
+  branchOffsets,
   bridgeIds,
   brightnessMap,
+  cellBodies,
   clusterBounds,
   defaultLinkFilter,
   glowLevels,
@@ -155,6 +159,7 @@ const exportStatus = el<HTMLSpanElement>('export-status');
 const legendBox = el<HTMLDivElement>('legend');
 const controls3dBox = el<HTMLDivElement>('controls3d');
 const layersBox = el<HTMLInputElement>('layers-mode');
+const neuronBox = el<HTMLInputElement>('neuron-look');
 const timelapseButton = el<HTMLButtonElement>('timelapse');
 const pathFromSelect = el<HTMLSelectElement>('path-from');
 const pathToSelect = el<HTMLSelectElement>('path-to');
@@ -186,6 +191,12 @@ let clusterIds: Set<string> | null = null;
 /** Nodes and links (keyed by linkKey) on the found path; everything else is dimmed. */
 let pathNodes: Set<string> | null = null;
 let pathLinks: Set<string> | null = null;
+/** The "Neuron look" tick box (3D only): bigger cells, branch rings, curved axons. */
+let neuronLook = neuronBox.checked;
+/** Theme cell-body node ids, per loaded graph. */
+let cellIds = new Set<string>();
+/** Branch spot per node, worked out from the full unfiltered node list so spots stay put. */
+let branchSpots = new Map<string, { x: number; y: number }>();
 
 function colorOf(n: GraphNode): string {
   return communityColor(analysis?.communityOf.get(n.id));
@@ -364,7 +375,8 @@ function styleNode(look: NodeLook): void {
   look.body.opacity = glow.opacity;
   look.ring.color.set(dim ? DIM_COLOR : '#ffffff');
   look.ring.opacity = glow.ring;
-  look.halo.visible = bridges.has(look.node.id) || look.node.id === selectedId;
+  look.halo.visible =
+    bridges.has(look.node.id) || look.node.id === selectedId || (neuronLook && cellIds.has(look.node.id));
   if (look.label) look.label.opacity = dim ? 0.25 : 1;
 }
 
@@ -387,7 +399,8 @@ function nodeObject3d(obj: object): THREE.Object3D {
     halo.quaternion.copy(camera.quaternion);
   };
   group.add(halo);
-  const scale = (sizes.get(node.id) ?? FALLBACK_NODE_SIZE) * NODE_SCALE;
+  const cell = neuronLook && cellIds.has(node.id);
+  const scale = (sizes.get(node.id) ?? FALLBACK_NODE_SIZE) * NODE_SCALE * (cell ? CELL_SCALE : 1);
   group.scale.setScalar(scale);
   let label: THREE.SpriteMaterial | null = null;
   const theme = anchorLabels.get(node.id);
@@ -414,6 +427,11 @@ function linkColor3d(l: GraphLink): string {
 function linkWidth3d(l: GraphLink): number {
   if (pathLinks !== null) return onPath(l) ? 2.5 : 0.5;
   return linkWidthOf(l);
+}
+
+/** Links between themes are curved axons while the neuron look is on; all others stay straight. */
+function curve3d(l: GraphLink): { curvature: number; rotation: number } {
+  return neuronLook && analysis ? axonCurve(l, analysis) : { curvature: 0, rotation: 0 };
 }
 
 function linkParticles(l: GraphLink): number {
@@ -515,8 +533,11 @@ function installForces(g: Graph3D): void {
     const c = analysis?.communityOf.get(n.id);
     return c === undefined ? undefined : centers.get(c);
   };
-  g.d3Force('x', axisForce('x', (n) => centerOf(n)?.x ?? 0, ISLAND_STRENGTH));
-  g.d3Force('y', axisForce('y', (n) => centerOf(n)?.y ?? 0, ISLAND_STRENGTH));
+  // With the neuron look on, branch nodes aim for their spot around the island centre.
+  const spotOf = (n: SimNode): { x: number; y: number } =>
+    neuronLook ? (branchSpots.get(n.id) ?? { x: 0, y: 0 }) : { x: 0, y: 0 };
+  g.d3Force('x', axisForce('x', (n) => (centerOf(n)?.x ?? 0) + (centerOf(n) ? spotOf(n).x : 0), ISLAND_STRENGTH));
+  g.d3Force('y', axisForce('y', (n) => (centerOf(n)?.y ?? 0) + (centerOf(n) ? spotOf(n).y : 0), ISLAND_STRENGTH));
   installDepthForce(g);
 }
 
@@ -658,6 +679,8 @@ function makeGraph3d(): Graph3D {
     .linkOpacity(1)
     .linkColor((l) => linkColor3d(l as GraphLink))
     .linkWidth((l) => linkWidth3d(l as GraphLink))
+    .linkCurvature((l) => curve3d(l as GraphLink).curvature)
+    .linkCurveRotation((l) => curve3d(l as GraphLink).rotation)
     .linkDirectionalParticles((l) => linkParticles(l as GraphLink))
     .linkDirectionalParticleWidth(PARTICLE_WIDTH)
     .cooldownTicks(250)
@@ -771,6 +794,8 @@ function setGraph(data: GraphData): void {
   bridges = bridgeIds(analysis);
   const a = analysis;
   sizes = new Map(full.nodes.map((n) => [n.id, nodeSize(n, a)]));
+  cellIds = new Set(cellBodies(a).values());
+  branchSpots = branchOffsets(a, full.nodes.map((n) => n.id));
   // A new graph gets new sizes, rings and a fresh camera fit.
   fit3dPending = true;
   rebuild3d = true;
@@ -1374,6 +1399,17 @@ toSelect.addEventListener('change', () => {
 layersBox.addEventListener('change', () => {
   if (mode !== '3d' || !graph3d) return;
   installDepthForce(graph3d);
+  graph3d.d3ReheatSimulation();
+});
+neuronBox.addEventListener('change', () => {
+  neuronLook = neuronBox.checked;
+  if (mode !== '3d' || !graph3d) return;
+  // Rebuild the node objects, curves and forces for the new look, then let the layout settle.
+  nodeLooks.clear();
+  graph3d.nodeThreeObject(nodeObject3d);
+  graph3d.linkCurvature((l) => curve3d(l as GraphLink).curvature);
+  graph3d.linkCurveRotation((l) => curve3d(l as GraphLink).rotation);
+  installForces(graph3d);
   graph3d.d3ReheatSimulation();
 });
 timelapseButton.addEventListener('click', () => {

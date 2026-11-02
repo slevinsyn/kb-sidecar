@@ -131,6 +131,14 @@
     "explorer/tests/neuron_maths.test.ts": {
       "sha256": "1941377cd9f013cf4528b8a39c9d03ab0ee55644710d6dc82ec776e92d08f10b",
       "phase": "19"
+    },
+    "explorer/tests/holdout/neuron_shell_hidden.test.ts": {
+      "sha256": "edcb669f918093a3306d48ed2a54bfabc3c5c45aa7b90e90af9bfb095adf4833",
+      "phase": "20"
+    },
+    "explorer/tests/neuron_shell.test.ts": {
+      "sha256": "4078c3f5a1737a85dafab871140c3baa3046eb6d34875a0eb5aa3a8d3cef1537",
+      "phase": "20"
     }
   }
 }

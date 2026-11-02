@@ -22,6 +22,7 @@ _Written by `.phased/bin/phase.py`. Do not edit by hand._
 | 16 | 3D wiring - time and island forces, labels, layers, time-lapse, path, camera | done | 2026-11-02T11:28 | 2026-11-02T11:28 | 2 | 2026-11-02T11:28 | f308bdd233 |
 | 17 | Glow levels - capped, pure, selection never brighter | done | 2026-11-02T13:08 | 2026-11-02T13:08 | 2 | 2026-11-02T13:08 | 6ceb24fab8 |
 | 18 | 3D glare fix - gentler glow, soft selection, readable hover name | done | 2026-11-02T13:10 | 2026-11-02T13:10 | 2 | 2026-11-02T13:23 | fe54a5bf27 |
-| 19 | Neuron maths - cell per theme, branch spots, axon curves | implementing | 2026-11-02T17:30 | 2026-11-02T17:30 | 2 | 2026-11-02T17:33 |  |
+| 19 | Neuron maths - cell per theme, branch spots, axon curves | done | 2026-11-02T17:30 | 2026-11-02T17:30 | 2 | 2026-11-02T17:33 | 3753ea547f |
+| 20 | 3D neuron look - cells, branches, axons | implementing | 2026-11-02T17:36 | 2026-11-02T17:36 | 2 | 2026-11-02T17:52 |  |
 
 Evidence of failing-first test runs is in `.phased/evidence/`.
