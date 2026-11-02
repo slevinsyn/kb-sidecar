@@ -3,7 +3,7 @@
   "self_test_passed": true,
   "phase": "12",
   "title": "Explorer UI - 2D labelled community map, insights panel, month filter",
-  "stage": "implementing",
+  "stage": "done",
   "history": [
     {
       "event": "self-test",
@@ -940,6 +940,22 @@
       "round": 1,
       "verdict": "PASS",
       "important": 0
+    },
+    {
+      "at": "2026-11-02T00:50:02+05:30",
+      "event": "finish",
+      "phase": "12",
+      "commit": "98cf4a41df74aebd5b906d111b1e672de4b811a5"
+    },
+    {
+      "at": "2026-11-02T00:50:09+05:30",
+      "event": "report",
+      "phase": "12"
+    },
+    {
+      "at": "2026-11-02T00:50:09+05:30",
+      "event": "kba-facts",
+      "phase": "12"
     }
   ],
   "change_dir": "changes/2026-11-01-graph-map",
@@ -1252,6 +1268,11 @@
       "phase": "11",
       "level": "M",
       "minutes": 2.0
+    },
+    {
+      "phase": "12",
+      "level": "M",
+      "minutes": 7.9
     }
   ]
 }
