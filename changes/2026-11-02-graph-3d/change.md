@@ -43,17 +43,18 @@ per type, fog, glow, faint coloured links, less clutter, and a view that starts 
 ## Risk: Medium
 Normal product change to the explorer, runs only in the browser on private data and sends nothing
 out. Adds one dependency (`three`, already installed through `3d-force-graph`), so `package.json` changes.
+Also adds `@types/three` as a dev-only, type-only dependency (approved by Sarthak during phase 15, needed for `tsc --noEmit`). `three` is pinned to 0.179.x, so the installed version moves down from 0.187.
 
 ## Undo
 Revert the phase commits. The 2D map comes back with the first commit on this branch; revert that too to drop it.
 
 ## Not in this change
 - Changing graph.json, `kb ingest`, `kb context`, `analysis.ts` or `insights.ts`.
-- Any other new package, any online service, saving camera views.
+- Any other new package (except the approved `@types/three` dev dependency), any online service, saving camera views.
 
 ## Assumptions
 - This branch undoes the revert on the base branch, so the pull request also restores the 2D map (answered: "Bring 2D back too").
-- `three` is added at the version `3d-force-graph` already uses (>=0.179, installed 0.187). Theme labels are drawn on canvas sprites, no font package.
+- `three` is added at the version `3d-force-graph` already uses (>=0.179; pinned to 0.179.x, so the installed 0.187 moves down to 0.179.1). Theme labels are drawn on canvas sprites, no font package.
 - The new logic is pure and unit-tested in `scene3d.ts`; rendering and wiring in `main.ts` and `index.html` are checked by `npm run build`, `tsc --noEmit` and a look in the browser.
 - "Recent" is measured from the latest session in the graph, not the clock.
 - Link types are the ones graph.json already has: `in_project`, `has_topic`, `touched_file`, `used_tool`.

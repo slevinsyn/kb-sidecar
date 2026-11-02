@@ -1,0 +1,72 @@
+diff --git a/changes/2026-11-02-graph-3d/change.md b/changes/2026-11-02-graph-3d/change.md
+index 01e4486..7c8998b 100644
+--- a/changes/2026-11-02-graph-3d/change.md
++++ b/changes/2026-11-02-graph-3d/change.md
+@@ -43,6 +43,7 @@ per type, fog, glow, faint coloured links, less clutter, and a view that starts
+ ## Risk: Medium
+ Normal product change to the explorer, runs only in the browser on private data and sends nothing
+ out. Adds one dependency (`three`, already installed through `3d-force-graph`), so `package.json` changes.
++Also adds `@types/three` as a dev-only, type-only dependency (approved by Sarthak during phase 15, needed for `tsc --noEmit`). `three` is pinned to 0.179.x, so the installed version moves down from 0.187.
+ 
+ ## Undo
+ Revert the phase commits. The 2D map comes back with the first commit on this branch; revert that too to drop it.
+diff --git a/explorer/src/main.ts b/explorer/src/main.ts
+index 0e70703..5d41a35 100644
+--- a/explorer/src/main.ts
++++ b/explorer/src/main.ts
+@@ -134,6 +134,8 @@ let toMonth = '';
+ const activeTypes = new Set<NodeType>(DEFAULT_VIEW_TYPES);
+ let brightness = new Map<string, number>();
+ let bridges = new Set<string>();
++/** 3D node sizes, computed once per loaded graph. */
++let sizes = new Map<string, number>();
+ 
+ function colorOf(n: GraphNode): string {
+   return communityColor(analysis?.communityOf.get(n.id));
+@@ -310,7 +312,7 @@ function nodeObject3d(obj: object): THREE.Object3D {
+     };
+     group.add(halo);
+   }
+-  group.scale.setScalar((analysis ? nodeSize(node, analysis) : FALLBACK_NODE_SIZE) * NODE_SCALE);
++  group.scale.setScalar((sizes.get(node.id) ?? FALLBACK_NODE_SIZE) * NODE_SCALE);
+   const look: NodeLook = { node, body, ring };
+   styleNode(look);
+   nodeLooks.set(node.id, look);
+@@ -408,6 +410,8 @@ async function addBloom(g: Graph3D): Promise<void> {
+     const output = new OutputPass();
+     composer.addPass(bloom);
+     composer.addPass(output);
++    // Size the new passes' render targets for the current pixel ratio (HiDPI).
++    composer.setSize(graphWidth(), window.innerHeight);
+     try {
+       composer.render();
+     } catch (e) {
+@@ -561,6 +565,8 @@ function setGraph(data: GraphData): void {
+   analysis = analyzeGraph(full);
+   brightness = brightnessMap(full, analysis);
+   bridges = bridgeIds(analysis);
++  const a = analysis;
++  sizes = new Map(full.nodes.map((n) => [n.id, nodeSize(n, a)]));
+   // A new graph gets new sizes, rings and a fresh camera fit.
+   fit3dPending = true;
+   rebuild3d = true;
+@@ -631,15 +637,13 @@ function applyFilters(): void {
+     // 3D hides file/tool links unless one of those node types is ticked.
+     const shown = defaultLinkFilter(visible, showNoiseLinks());
+     const g = activeGraph() as Graph3D;
++    // The nodes below are fresh copies, so the library builds a new object for every node
++    // (nodeObject3d records its look again). Old looks belong to discarded objects.
++    nodeLooks.clear();
+     if (rebuild3d) {
+-      // Kept node objects would keep old sizes and rings; setting the accessor rebuilds them all.
++      // A new graph: set the accessor again so nothing built for the old graph is kept.
+       rebuild3d = false;
+-      nodeLooks.clear();
+       g.nodeThreeObject(nodeObject3d);
+-    } else {
+-      // The library keeps the objects of nodes that stay; forget only the ones that leave.
+-      const ids = new Set(shown.nodes.map((n) => n.id));
+-      for (const id of [...nodeLooks.keys()]) if (!ids.has(id)) nodeLooks.delete(id);
+     }
+     g.graphData({
+       nodes: shown.nodes.map((n) => ({ ...n })),

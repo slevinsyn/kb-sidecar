@@ -91,6 +91,14 @@
     "explorer/tests/scene3d-logic.test.ts": {
       "sha256": "fa94a857489f2c1bce42a979fd302d0bfb5da701bff72565064754a63a49433d",
       "phase": "14"
+    },
+    "explorer/tests/app3d.test.ts": {
+      "sha256": "91efcc2d988f64b9668cfe72abd6b75e7bdfe49da6a3f1fc8f978656cb589dbe",
+      "phase": "15"
+    },
+    "explorer/tests/holdout/app3d_hidden.test.ts": {
+      "sha256": "350b57c94a16d2e5a31558280240474c18ea4dbb4c41ba2c497f955c2a3ad5b1",
+      "phase": "15"
     }
   }
 }

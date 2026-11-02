@@ -7,8 +7,13 @@
     <style>
       html, body { margin: 0; height: 100%; background: #0b0e14; color: #e6e6e6;
         font: 13px/1.4 system-ui, sans-serif; overflow: hidden; }
-      #graph2d, #graph3d { position: absolute; inset: 0; }
-      #graph2d { left: 324px; }
+      #graph2d, #graph3d { position: absolute; inset: 0; left: 324px; }
+      #legend { position: absolute; left: 336px; bottom: 12px; pointer-events: none; }
+      #legend .legend-title { margin: 4px 0 2px; font-size: 11px; text-transform: uppercase; color: #8a93a6; }
+      #legend .legend-title:first-child { margin-top: 0; }
+      #legend .legend-row { display: flex; align-items: center; gap: 6px; }
+      #legend .legend-glyph { display: inline-block; width: 14px; text-align: center; }
+      #legend .legend-line { display: inline-block; width: 18px; height: 3px; border-radius: 2px; }
       .panel { background: rgba(20, 24, 34, 0.92); border: 1px solid #2a3142;
         border-radius: 6px; padding: 10px; box-sizing: border-box; }
       #left { position: absolute; top: 12px; left: 12px; width: 300px;
@@ -78,6 +83,7 @@
         </div>
       </div>
     </div>
+    <div id="legend" class="panel" hidden></div>
     <div id="details" class="panel" hidden></div>
     <div id="error" class="panel" hidden>
       <p id="error-text"></p>

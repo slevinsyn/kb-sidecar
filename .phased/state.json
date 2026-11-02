@@ -1,8 +1,8 @@
 {
   "initialized": true,
   "self_test_passed": true,
-  "phase": "14",
-  "title": "3D graph logic - link filter and colours, shortest path, time-lapse, orbit maths",
+  "phase": "15",
+  "title": "3D look - shapes, fog, bloom, particles, legend, fit, auto-rotate, width",
   "stage": "implementing",
   "history": [
     {
@@ -1121,6 +1121,71 @@
       "round": 1,
       "verdict": "PASS",
       "important": 0
+    },
+    {
+      "at": "2026-11-02T11:09:39+05:30",
+      "event": "finish",
+      "phase": "14",
+      "commit": "c6b72af243adc57f5fd7e92a248a356036dd7497"
+    },
+    {
+      "at": "2026-11-02T11:09:39+05:30",
+      "event": "start",
+      "phase": "15",
+      "title": "3D look - shapes, fog, bloom, particles, legend, fit, auto-rotate, width"
+    },
+    {
+      "at": "2026-11-02T11:09:39+05:30",
+      "event": "approve-spec",
+      "phase": "15",
+      "criteria": [
+        "AC-15-01",
+        "AC-15-02",
+        "AC-15-03",
+        "AC-15-04",
+        "AC-15-05"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-02T11:09:39+05:30",
+      "event": "tests-moved-in",
+      "phase": "15",
+      "files": 2
+    },
+    {
+      "at": "2026-11-02T11:10:07+05:30",
+      "event": "red",
+      "phase": "15",
+      "tests": 2
+    },
+    {
+      "at": "2026-11-02T11:17:53+05:30",
+      "event": "review-prep",
+      "phase": "15",
+      "round": 1
+    },
+    {
+      "at": "2026-11-02T11:24:42+05:30",
+      "event": "review",
+      "phase": "15",
+      "round": 1,
+      "verdict": "FAIL",
+      "important": 1
+    },
+    {
+      "at": "2026-11-02T11:26:13+05:30",
+      "event": "review-prep",
+      "phase": "15",
+      "round": 2
+    },
+    {
+      "at": "2026-11-02T11:28:09+05:30",
+      "event": "review",
+      "phase": "15",
+      "round": 2,
+      "verdict": "PASS",
+      "important": 0
     }
   ],
   "change_dir": "changes/2026-11-02-graph-3d",
@@ -1151,10 +1216,6 @@
     "16"
   ],
   "pending_tests": {
-    "15": {
-      "explorer/tests/app3d.test.ts": "91efcc2d988f64b9668cfe72abd6b75e7bdfe49da6a3f1fc8f978656cb589dbe",
-      "explorer/tests/holdout/app3d_hidden.test.ts": "350b57c94a16d2e5a31558280240474c18ea4dbb4c41ba2c497f955c2a3ad5b1"
-    },
     "16": {
       "explorer/tests/holdout/shell3d_hidden.test.ts": "26c39ee7d6267da685e8e82cda885d1a2b6c5a05a3ecc4bb0bf35cae203b1ff0",
       "explorer/tests/shell3d.test.ts": "397159c6344ec79fadd2446596a0aac976fd5bcc0037b2c43d4b94ada5c67f8e"
@@ -1162,16 +1223,16 @@
   },
   "review": {
     "verdict": "PASS",
-    "lock_digest": "44691e25d99d7ae9055e7fddb18e8fec9811af34ee9c3be872b488117f716fb0",
-    "at": "2026-11-02T11:07:44+05:30",
+    "lock_digest": "c5bde61d1b3859c4d740d7d5fe808aca0c6caa55cb2bea6393738a11aee852ad",
+    "at": "2026-11-02T11:09:39+05:30",
     "prefetched": true
   },
   "red": {
     "ok": true,
-    "lock_digest": "44691e25d99d7ae9055e7fddb18e8fec9811af34ee9c3be872b488117f716fb0",
-    "evidence": ".phased/evidence/phase-14-red.log"
+    "lock_digest": "c5bde61d1b3859c4d740d7d5fe808aca0c6caa55cb2bea6393738a11aee852ad",
+    "evidence": ".phased/evidence/phase-15-red.log"
   },
-  "spec_sha256": "6c893a50b4bdfc951fc65f430f93a3e7e15f6c71baf7c7138dac4ee507d0b797",
+  "spec_sha256": "85097673d02fd58d2e700f6f5a84bc171fedf06b8a30c9ab72acd14cf3921d2f",
   "code_reviews": {
     "01": {
       "rounds": [
@@ -1420,6 +1481,30 @@
           ]
         }
       ]
+    },
+    "15": {
+      "rounds": [
+        {
+          "tree": "a5127eef8e0d0efdc038d0ea59eb65115db76665",
+          "at": "2026-11-02T11:17:53+05:30",
+          "verdict": "FAIL",
+          "important": 1,
+          "nits": 4,
+          "preexisting": 0,
+          "classes": [
+            "unplanned dependency"
+          ]
+        },
+        {
+          "tree": "048a0e75de8be7ff0a9a0db0fa6039cfb8201e86",
+          "at": "2026-11-02T11:26:13+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 2,
+          "preexisting": 0,
+          "classes": []
+        }
+      ]
     }
   },
   "durations": [
@@ -1487,6 +1572,11 @@
       "phase": "13",
       "level": "M",
       "minutes": 2.4
+    },
+    {
+      "phase": "14",
+      "level": "M",
+      "minutes": 1.9
     }
   ]
 }

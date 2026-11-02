@@ -1,0 +1,163 @@
+== core-rust (run 1): cargo test --quiet -> exit 0
+862 | fn test_AC_06_08_hook_on_empty_out_does_not_scan_claude_dir() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_06_08_hook_on_empty_out_does_not_scan_claude_dir`
+
+warning: function `test_AC_06_08_hook_replaces_an_existing_session` should have a snake case name
+   --> tests/phase06_cli.rs:894:4
+    |
+894 | fn test_AC_06_08_hook_replaces_an_existing_session() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_06_08_hook_replaces_an_existing_session`
+
+warning: function `test_AC_06_09_hook_bad_input_exits_0_writes_nothing` should have a snake case name
+   --> tests/phase06_cli.rs:922:4
+    |
+922 | fn test_AC_06_09_hook_bad_input_exits_0_writes_nothing() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_06_09_hook_bad_input_exits_0_writes_nothing`
+
+warning: function `test_AC_06_09_failed_hook_leaves_existing_knowledge_base_untouched` should have a snake case name
+   --> tests/phase06_cli.rs:952:4
+    |
+952 | fn test_AC_06_09_failed_hook_leaves_existing_knowledge_base_untouched() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_06_09_failed_hook_leaves_existing_knowledge_base_untouched`
+
+warning: function `test_AC_06_10_install_keeps_other_settings_and_is_idempotent` should have a snake case name
+   --> tests/phase06_cli.rs:985:4
+    |
+985 | fn test_AC_06_10_install_keeps_other_settings_and_is_idempotent() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_06_10_install_keeps_other_settings_and_is_idempotent`
+
+warning: function `test_AC_06_10_existing_identical_command_is_not_rewritten` should have a snake case name
+    --> tests/phase06_cli.rs:1041:4
+     |
+1041 | fn test_AC_06_10_existing_identical_command_is_not_rewritten() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_06_10_existing_identical_command_is_not_rewritten`
+
+warning: function `test_AC_06_10_different_command_is_appended_as_second_entry` should have a snake case name
+    --> tests/phase06_cli.rs:1055:4
+     |
+1055 | fn test_AC_06_10_different_command_is_appended_as_second_entry() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_06_10_different_command_is_appended_as_second_entry`
+
+warning: function `test_AC_06_10_same_command_under_other_event_does_not_count` should have a snake case name
+    --> tests/phase06_cli.rs:1078:4
+     |
+1078 | fn test_AC_06_10_same_command_under_other_event_does_not_count() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_06_10_same_command_under_other_event_does_not_count`
+
+warning: function `test_AC_06_10_settings_without_hooks_key_gets_one` should have a snake case name
+    --> tests/phase06_cli.rs:1103:4
+     |
+1103 | fn test_AC_06_10_settings_without_hooks_key_gets_one() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_06_10_settings_without_hooks_key_gets_one`
+
+warning: function `test_AC_06_10_default_command_is_running_executable_plus_hook` should have a snake case name
+    --> tests/phase06_cli.rs:1123:4
+     |
+1123 | fn test_AC_06_10_default_command_is_running_executable_plus_hook() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_06_10_default_command_is_running_executable_plus_hook`
+
+warning: function `test_AC_06_11_missing_settings_file_is_created_with_only_the_hook` should have a snake case name
+    --> tests/phase06_cli.rs:1154:4
+     |
+1154 | fn test_AC_06_11_missing_settings_file_is_created_with_only_the_hook() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_06_11_missing_settings_file_is_created_with_only_the_hook`
+
+warning: function `test_AC_06_11_invalid_json_exits_1_and_leaves_file_unchanged` should have a snake case name
+    --> tests/phase06_cli.rs:1173:4
+     |
+1173 | fn test_AC_06_11_invalid_json_exits_1_and_leaves_file_unchanged() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_06_11_invalid_json_exits_1_and_leaves_file_unchanged`
+
+warning: function `test_AC_06_11_wrong_json_types_exit_1_and_leave_file_unchanged` should have a snake case name
+    --> tests/phase06_cli.rs:1186:4
+     |
+1186 | fn test_AC_06_11_wrong_json_types_exit_1_and_leave_file_unchanged() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_06_11_wrong_json_types_exit_1_and_leave_file_unchanged`
+
+warning: function `test_AC_06_11_install_hook_without_settings_argument_exits_2` should have a snake case name
+    --> tests/phase06_cli.rs:1207:4
+     |
+1207 | fn test_AC_06_11_install_hook_without_settings_argument_exits_2() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_06_11_install_hook_without_settings_argument_exits_2`
+== explorer-javascript (run 1): npx vitest run --exclude 'tests/holdout/**' -> exit 1
+      #tab-body .clickable:hover { background: #222a3c; }
+      .muted { color: #8a93a6; margin: 0; }
+      .bar { height: 8px; background: #4e79a7; border-radius: 2px; margin-top: 2px; }
+      .month { font-variant-numeric: tabular-nums; }
+      #export { margin-top: 8px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+      #details { position: absolute; top: 12px; right: 12px; width: 300px;
+        max-height: calc(100% - 24px); overflow: auto; }
+      #details h2 { margin: 0 0 4px; font-size: 15px; }
+      #details h3 { margin: 10px 0 2px; font-size: 12px; text-transform: uppercase; color: #8a93a6; }
+      #details pre { white-space: pre-wrap; word-break: break-word; margin: 4px 0; }
+      #details ul { margin: 0; padding-left: 16px; }
+      #details a { color: #7fb2ff; cursor: pointer; }
+      #error { position: absolute; bottom: 12px; right: 12px; max-width: 420px; border-color: #7a2b2b; }
+      #error p { margin: 0 0 8px; color: #ff9b9b; }
+      [hidden] { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <div id=\"graph2d\"></div>
+    <div id=\"graph3d\" hidden></div>
+    <div id=\"left\">
+      <div id=\"controls\" class=\"panel\">
+        <input id=\"search\" type=\"search\" placeholder=\"Search nodes\" autocomplete=\"off\" />
+        <ul id=\"results\"></ul>
+        <div id=\"filters\"></div>
+        <div class=\"row-line\">
+          <label>From <select id=\"from-month\"></select></label>
+          <label>to <select id=\"to-month\"></select></label>
+          <button id=\"mode-toggle\" type=\"button\" title=\"Switch to the 3D view\">3D</button>
+        </div>
+        <div id=\"stats\"></div>
+      </div>
+      <div id=\"insights\" class=\"panel\">
+        <div id=\"tabs\"></div>
+        <div id=\"tab-body\"></div>
+        <div id=\"export\">
+          <button id=\"copy-md\" type=\"button\">Copy Markdown</button>
+          <button id=\"download-md\" type=\"button\">Download insights.md</button>
+          <span id=\"export-status\" class=\"muted\" role=\"status\"></span>
+        </div>
+      </div>
+    </div>
+    <div id=\"details\" class=\"panel\" hidden></div>
+    <div id=\"error\" class=\"panel\" hidden>
+      <p id=\"error-text\"></p>
+      <label>Load a graph.json: <input id=\"file\" type=\"file\" accept=\".json,application/json\" /></label>
+    </div>
+    <script type=\"module\" src=\"/src/main.ts\"></script>
+  </body>
+</html>
+"
+
+ ❯ tests/app3d.test.ts:58:18
+     56|
+     57|   it('AC-15-03 index.html contains a <div id="legend"> element', () =>…
+     58|     expect(html).toMatch(/<div\b[^>]*\bid\s*=\s*["']legend["'][^>]*>/i…
+       |                  ^
+     59|   });
+     60|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  tests/app3d.test.ts > legend element > AC-15-03 index.html has exactly one element with id legend
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ tests/app3d.test.ts:63:21
+     61|   it('AC-15-03 index.html has exactly one element with id legend', () …
+     62|     const matches = html.match(/\bid\s*=\s*["']legend["']/gi) ?? [];
+     63|     expect(matches).toHaveLength(1);
+       |                     ^
+     64|   });
+     65| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+== explorer-javascript hidden tests -> exit 1:       Tests  3 failed | 61 passed (64) (details hidden)

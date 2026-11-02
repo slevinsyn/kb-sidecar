@@ -17,6 +17,7 @@ _Written by `.phased/bin/phase.py`. Do not edit by hand._
 | 11 | Offline insights - executive summary, roadmap, Markdown export | done | 2026-11-02T00:40 | 2026-11-02T00:40 | 2 | 2026-11-02T00:40 | 8d31ca122e |
 | 12 | Explorer UI - 2D labelled community map, insights panel, month filter | done | 2026-11-02T00:42 | 2026-11-02T00:42 | 2 | 2026-11-02T00:42 | 98cf4a41df |
 | 13 | 3D layout maths - time axis, islands, layers, size, brightness | done | 2026-11-02T10:47 | 2026-11-02T10:47 | 2 | 2026-11-02T10:47 | 226d0a616d |
-| 14 | 3D graph logic - link filter and colours, shortest path, time-lapse, orbit maths | implementing | 2026-11-02T11:07 | 2026-11-02T11:07 | 2 | 2026-11-02T11:08 |  |
+| 14 | 3D graph logic - link filter and colours, shortest path, time-lapse, orbit maths | done | 2026-11-02T11:07 | 2026-11-02T11:07 | 2 | 2026-11-02T11:08 | c6b72af243 |
+| 15 | 3D look - shapes, fog, bloom, particles, legend, fit, auto-rotate, width | implementing | 2026-11-02T11:09 | 2026-11-02T11:09 | 2 | 2026-11-02T11:10 |  |
 
 Evidence of failing-first test runs is in `.phased/evidence/`.

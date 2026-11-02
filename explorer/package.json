@@ -10,10 +10,12 @@
   },
   "dependencies": {
     "3d-force-graph": "^1.80.1",
-    "force-graph": "^1.52.0"
+    "force-graph": "^1.52.0",
+    "three": "^0.179.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "@types/three": "^0.179.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.5",
     "vitest": "^5.0.5"

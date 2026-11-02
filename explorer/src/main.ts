@@ -1,5 +1,7 @@
 import ForceGraph from 'force-graph';
 import ForceGraph3D from '3d-force-graph';
+import type { ForceGraph3DInstance } from '3d-force-graph';
+import * as THREE from 'three';
 import {
   GraphError,
   NODE_TYPES,
@@ -22,15 +24,46 @@ import {
   monthRange,
   viewGraph,
 } from './view';
+import { bridgeIds, brightnessMap, defaultLinkFilter, linkRgba, nodeSize } from './scene3d';
 
 const DIM_COLOR = '#2b3040';
 const TOP_LABEL_COUNT = 30;
 const LABEL_ZOOM = 1.6;
-/** The 2D canvas starts to the right of the left-hand panels (matches #graph2d in index.html). */
+/** Both canvases start to the right of the left-hand panels (matches #graph2d/#graph3d in index.html). */
 const LEFT_PANEL_PX = 324;
-const width2d = (): number => Math.max(200, window.innerWidth - LEFT_PANEL_PX);
+const graphWidth = (): number => Math.max(200, window.innerWidth - LEFT_PANEL_PX);
 const MONTH_KEY = /^\d{4}-\d{2}$/;
 const BACKGROUND = '#0b0e14';
+
+// 3D look.
+/** World units per unit of nodeSize (nodeSize is 3..15). */
+const NODE_SCALE = 0.6;
+const FALLBACK_NODE_SIZE = 3;
+/** Alpha of a link that does not touch the selected node while something is selected. */
+const DIM_LINK_ALPHA = 0.04;
+const SELECTED_PARTICLES = 4;
+const PARTICLE_WIDTH = 2;
+const AUTO_ROTATE_SPEED = 0.5;
+const IDLE_RESUME_MS = 5000;
+const BLOOM_STRENGTH = 0.9;
+const BLOOM_RADIUS = 0.4;
+const BLOOM_THRESHOLD = 0.15;
+/** Fog starts a little in front of the graph centre and ends well behind it. */
+const FOG_NEAR_FACTOR = 0.25;
+const FOG_FAR_FACTOR = 1.5;
+const DEFAULT_SCENE_RADIUS = 300;
+const LEGEND_SHAPES: ReadonlyArray<readonly [string, string]> = [
+  ['●', 'sphere = session'],
+  ['■', 'cube = project'],
+  ['◆', 'octahedron = topic'],
+  ['○', 'ring = bridge'],
+];
+const LEGEND_LINKS: ReadonlyArray<readonly [string, string]> = [
+  ['in_project', 'in project'],
+  ['has_topic', 'has topic'],
+  ['touched_file', 'touched file'],
+  ['used_tool', 'used tool'],
+];
 
 type Mode = '2d' | '3d';
 type Tab = 'summary' | 'themes' | 'bridges' | 'loose' | 'roadmap' | 'timeline';
@@ -83,6 +116,7 @@ const tabBody = el<HTMLDivElement>('tab-body');
 const copyButton = el<HTMLButtonElement>('copy-md');
 const downloadButton = el<HTMLButtonElement>('download-md');
 const exportStatus = el<HTMLSpanElement>('export-status');
+const legendBox = el<HTMLDivElement>('legend');
 
 let full: GraphData = { nodes: [], links: [] };
 let visible: GraphData = full;
@@ -98,6 +132,10 @@ let anchors = new Map<number, string>();
 let fromMonth = '';
 let toMonth = '';
 const activeTypes = new Set<NodeType>(DEFAULT_VIEW_TYPES);
+let brightness = new Map<string, number>();
+let bridges = new Set<string>();
+/** 3D node sizes, computed once per loaded graph. */
+let sizes = new Map<string, number>();
 
 function colorOf(n: GraphNode): string {
   return communityColor(analysis?.communityOf.get(n.id));
@@ -151,7 +189,7 @@ function makeGraph2d(): ForceGraph {
   const g = new ForceGraph(container2d)
     .backgroundColor(BACKGROUND)
     .nodeId('id')
-    .width(width2d())
+    .width(graphWidth())
     .height(window.innerHeight)
     .nodeLabel((n) => escapeHtml((n as GraphNode).label))
     // The default link label reads link.name as HTML; links carry no label text, so show none.
@@ -224,22 +262,236 @@ function drawThemeLabels(ctx: CanvasRenderingContext2D, scale: number): void {
 
 // ---------- 3D view ----------
 
-function makeGraph3d() {
-  return new ForceGraph3D(container3d)
+// One unit-sized geometry per shape; each node scales its own group.
+const SPHERE = new THREE.SphereGeometry(1, 16, 12);
+const CUBE = new THREE.BoxGeometry(1.6, 1.6, 1.6);
+const OCTAHEDRON = new THREE.OctahedronGeometry(1.35);
+const RING = new THREE.TorusGeometry(1.75, 0.08, 8, 40);
+
+/** The materials of one rendered node, so selection changes can restyle it in place. */
+interface NodeLook {
+  node: GraphNode;
+  body: THREE.MeshLambertMaterial;
+  ring: THREE.MeshBasicMaterial | null;
+}
+
+const nodeLooks = new Map<string, NodeLook>();
+
+function geometryFor(type: NodeType): THREE.BufferGeometry {
+  if (type === 'project') return CUBE;
+  if (type === 'topic') return OCTAHEDRON;
+  return SPHERE;
+}
+
+function styleNode(look: NodeLook): void {
+  const dim = isDimmed(look.node);
+  const color = dim ? DIM_COLOR : colorOf(look.node);
+  const b = brightness.get(look.node.id) ?? 0.5;
+  look.body.color.set(color);
+  look.body.emissive.set(color);
+  look.body.emissiveIntensity = dim ? 0 : 0.15 + 0.6 * b;
+  look.body.opacity = dim ? 0.3 : 0.4 + 0.6 * b;
+  if (look.ring) {
+    look.ring.color.set(dim ? DIM_COLOR : '#ffffff');
+    look.ring.opacity = dim ? 0.2 : 0.45 + 0.4 * b;
+  }
+}
+
+function nodeObject3d(obj: object): THREE.Object3D {
+  const node = obj as GraphNode;
+  const group = new THREE.Group();
+  const body = new THREE.MeshLambertMaterial({ transparent: true });
+  group.add(new THREE.Mesh(geometryFor(node.type), body));
+  let ring: THREE.MeshBasicMaterial | null = null;
+  if (bridges.has(node.id)) {
+    ring = new THREE.MeshBasicMaterial({ transparent: true });
+    const halo = new THREE.Mesh(RING, ring);
+    // Keep the halo facing the camera (the parent group is never rotated).
+    halo.onBeforeRender = (_renderer, _scene, camera) => {
+      halo.quaternion.copy(camera.quaternion);
+    };
+    group.add(halo);
+  }
+  group.scale.setScalar((sizes.get(node.id) ?? FALLBACK_NODE_SIZE) * NODE_SCALE);
+  const look: NodeLook = { node, body, ring };
+  styleNode(look);
+  nodeLooks.set(node.id, look);
+  return group;
+}
+
+function linkColor3d(l: GraphLink): string {
+  if (selectedId === null) return linkRgba(l.type);
+  return touchesSelected(l) ? '#ffffff' : linkRgba(l.type, DIM_LINK_ALPHA);
+}
+
+function linkParticles(l: GraphLink): number {
+  return touchesSelected(l) ? SELECTED_PARTICLES : 0;
+}
+
+/** File and tool links are shown in 3D only when one of those node types is ticked. */
+function showNoiseLinks(): boolean {
+  return activeTypes.has('file') || activeTypes.has('tool');
+}
+
+// ---------- 3D camera: fit, auto-rotate, fog ----------
+
+type Graph3D = ForceGraph3DInstance;
+
+/** The parts of OrbitControls this app uses; other control types lack autoRotate. */
+interface RotatingControls {
+  autoRotate: boolean;
+  autoRotateSpeed: number;
+  target?: THREE.Vector3;
+  addEventListener(type: string, listener: () => void): void;
+}
+
+let fit3dPending = true;
+let rebuild3d = false;
+let dragging = false;
+let idleTimer: ReturnType<typeof setTimeout> | null = null;
+const sceneCenter = new THREE.Vector3();
+let sceneRadius = DEFAULT_SCENE_RADIUS;
+
+function rotatingControls(): RotatingControls | null {
+  const c = graph3d?.controls() as Partial<RotatingControls> | undefined;
+  if (!c || typeof c.autoRotate !== 'boolean' || typeof c.addEventListener !== 'function') return null;
+  return c as RotatingControls;
+}
+
+function pauseRotation(): void {
+  if (idleTimer !== null) clearTimeout(idleTimer);
+  idleTimer = null;
+  const c = rotatingControls();
+  if (c) c.autoRotate = false;
+}
+
+/** Stops rotating now and starts again after IDLE_RESUME_MS without dragging or selecting. */
+function resumeRotationWhenIdle(): void {
+  pauseRotation();
+  idleTimer = setTimeout(() => {
+    idleTimer = null;
+    if (dragging) return;
+    const c = rotatingControls();
+    if (c) c.autoRotate = true;
+  }, IDLE_RESUME_MS);
+}
+
+function measureScene(g: Graph3D): void {
+  const box = g.getGraphBbox();
+  if (!box) return;
+  sceneCenter.set((box.x[0] + box.x[1]) / 2, (box.y[0] + box.y[1]) / 2, (box.z[0] + box.z[1]) / 2);
+  const half = Math.hypot(box.x[1] - box.x[0], box.y[1] - box.y[0], box.z[1] - box.z[0]) / 2;
+  sceneRadius = Number.isFinite(half) && half > 1 ? half : DEFAULT_SCENE_RADIUS;
+}
+
+function updateFog(g: Graph3D): void {
+  const fog = g.scene().fog;
+  if (!(fog instanceof THREE.Fog)) return;
+  const d = g.camera().position.distanceTo(sceneCenter);
+  fog.near = Math.max(1, d - FOG_NEAR_FACTOR * sceneRadius);
+  fog.far = Math.max(fog.near + 1, d + FOG_FAR_FACTOR * sceneRadius);
+}
+
+/** Adds a soft glow. Any failure leaves the plain renderer in place. */
+async function addBloom(g: Graph3D): Promise<void> {
+  try {
+    const [{ UnrealBloomPass }, { OutputPass }] = await Promise.all([
+      import('three/examples/jsm/postprocessing/UnrealBloomPass.js'),
+      import('three/examples/jsm/postprocessing/OutputPass.js'),
+    ]);
+    const composer = g.postProcessingComposer();
+    const bloom = new UnrealBloomPass(
+      new THREE.Vector2(graphWidth(), window.innerHeight),
+      BLOOM_STRENGTH,
+      BLOOM_RADIUS,
+      BLOOM_THRESHOLD,
+    );
+    // Bloom becomes the last pass, so colour-space output has to be done by an OutputPass.
+    const output = new OutputPass();
+    composer.addPass(bloom);
+    composer.addPass(output);
+    // Size the new passes' render targets for the current pixel ratio (HiDPI).
+    composer.setSize(graphWidth(), window.innerHeight);
+    try {
+      composer.render();
+    } catch (e) {
+      composer.removePass(output);
+      composer.removePass(bloom);
+      throw e;
+    }
+  } catch (e) {
+    console.warn('Bloom is unavailable; the 3D view renders without glow.', e);
+  }
+}
+
+function setUpScene3d(g: Graph3D): void {
+  g.scene().fog = new THREE.Fog(BACKGROUND, 1, 2000);
+  updateFog(g);
+  const c = g.controls() as Partial<RotatingControls>;
+  if (typeof c.autoRotate === 'boolean' && typeof c.addEventListener === 'function') {
+    c.autoRotate = true;
+    c.autoRotateSpeed = AUTO_ROTATE_SPEED;
+    c.addEventListener('start', () => {
+      dragging = true;
+      pauseRotation();
+    });
+    c.addEventListener('end', () => {
+      dragging = false;
+      resumeRotationWhenIdle();
+    });
+    c.addEventListener('change', () => updateFog(g));
+  }
+  void addBloom(g);
+}
+
+function makeGraph3d(): Graph3D {
+  // Orbit controls are the ones that support autoRotate.
+  const g = new ForceGraph3D(container3d, { controlType: 'orbit' })
     .backgroundColor(BACKGROUND)
     .nodeId('id')
-    .width(window.innerWidth)
+    .width(graphWidth())
     .height(window.innerHeight)
     .nodeLabel((n) => escapeHtml((n as GraphNode).label))
     .linkLabel(() => '')
-    .nodeVal((n) => (n as GraphNode).size)
-    .nodeColor((n) => {
-      const node = n as GraphNode;
-      return isDimmed(node) ? DIM_COLOR : colorOf(node);
-    })
-    .linkColor((l) => linkColorOf(l as GraphLink))
+    .nodeThreeObject(nodeObject3d)
+    // linkRgba carries the opacity; keep the library from scaling it down further.
+    .linkOpacity(1)
+    .linkColor((l) => linkColor3d(l as GraphLink))
     .linkWidth((l) => linkWidthOf(l as GraphLink))
+    .linkDirectionalParticles((l) => linkParticles(l as GraphLink))
+    .linkDirectionalParticleWidth(PARTICLE_WIDTH)
+    .cooldownTicks(250)
+    .onEngineStop(() => {
+      measureScene(g);
+      if (fit3dPending) {
+        fit3dPending = false;
+        g.zoomToFit(800, 60);
+      }
+      updateFog(g);
+    })
+    .onNodeDrag(() => pauseRotation())
+    .onNodeDragEnd(() => resumeRotationWhenIdle())
     .onNodeClick((n) => select((n as GraphNode).id, false));
+  setUpScene3d(g);
+  return g;
+}
+
+function buildLegend(): void {
+  legendBox.replaceChildren();
+  legendBox.append(h('div', 'Shapes', 'legend-title'));
+  for (const [glyph, text] of LEGEND_SHAPES) {
+    const row = h('div', '', 'legend-row');
+    row.append(h('span', glyph, 'legend-glyph'), document.createTextNode(text));
+    legendBox.append(row);
+  }
+  legendBox.append(h('div', 'Links', 'legend-title'));
+  for (const [type, text] of LEGEND_LINKS) {
+    const row = h('div', '', 'legend-row');
+    const line = h('span', '', 'legend-line');
+    line.style.background = linkRgba(type, 1);
+    row.append(line, document.createTextNode(text));
+    legendBox.append(row);
+  }
 }
 
 // ---------- data and filters ----------
@@ -258,10 +510,12 @@ function refreshColors(): void {
     // nodeCanvasObject reads the selection on every frame; only the link styles need a nudge.
     graph2d?.linkColor(graph2d.linkColor()).linkWidth(graph2d.linkWidth());
   } else {
+    // Node materials are restyled in place; link accessors are set again to re-read the selection.
+    for (const look of nodeLooks.values()) styleNode(look);
     graph3d
-      ?.nodeColor(graph3d.nodeColor())
-      .linkColor(graph3d.linkColor())
-      .linkWidth(graph3d.linkWidth());
+      ?.linkColor(graph3d.linkColor())
+      .linkWidth(graph3d.linkWidth())
+      .linkDirectionalParticles(graph3d.linkDirectionalParticles());
   }
 }
 
@@ -309,6 +563,13 @@ function setGraph(data: GraphData): void {
   detailsBox.hidden = true;
   // Analysis and insights are computed once per loaded graph, in the browser only.
   analysis = analyzeGraph(full);
+  brightness = brightnessMap(full, analysis);
+  bridges = bridgeIds(analysis);
+  const a = analysis;
+  sizes = new Map(full.nodes.map((n) => [n.id, nodeSize(n, a)]));
+  // A new graph gets new sizes, rings and a fresh camera fit.
+  fit3dPending = true;
+  rebuild3d = true;
   insights = buildInsights(full, analysis);
   markdown = insightsMarkdown(insights);
   fromMonth = '';
@@ -367,10 +628,28 @@ function applyFilters(): void {
       : `${visible.nodes.length} nodes, ${visible.links.length} links, ${sessions} sessions`;
   fitPending = true;
   // Both libraries mutate the data they are given, so hand them copies.
-  activeGraph().graphData({
-    nodes: visible.nodes.map((n) => ({ ...n })),
-    links: visible.links.map((l) => ({ ...l })),
-  });
+  if (mode === '2d') {
+    activeGraph().graphData({
+      nodes: visible.nodes.map((n) => ({ ...n })),
+      links: visible.links.map((l) => ({ ...l })),
+    });
+  } else {
+    // 3D hides file/tool links unless one of those node types is ticked.
+    const shown = defaultLinkFilter(visible, showNoiseLinks());
+    const g = activeGraph() as Graph3D;
+    // The nodes below are fresh copies, so the library builds a new object for every node
+    // (nodeObject3d records its look again). Old looks belong to discarded objects.
+    nodeLooks.clear();
+    if (rebuild3d) {
+      // A new graph: set the accessor again so nothing built for the old graph is kept.
+      rebuild3d = false;
+      g.nodeThreeObject(nodeObject3d);
+    }
+    g.graphData({
+      nodes: shown.nodes.map((n) => ({ ...n })),
+      links: shown.links.map((l) => ({ ...l })),
+    });
+  }
   if (selectedId !== null) select(selectedId, false);
 }
 
@@ -400,6 +679,8 @@ function select(id: string, fly: boolean): void {
   highlighted = new Set([id, ...neighbors(visible, id).nodes.map((n) => n.id)]);
   renderDetails(details.node, details.neighborsByType);
   refreshColors();
+  // Selecting stops the 3D turn; it starts again after a quiet spell.
+  if (mode === '3d') resumeRotationWhenIdle();
   if (fly) flyTo(id);
 }
 
@@ -599,6 +880,7 @@ function setMode(next: Mode): void {
   mode = next;
   container2d.hidden = mode !== '2d';
   container3d.hidden = mode !== '3d';
+  legendBox.hidden = mode !== '3d';
   modeButton.textContent = mode === '2d' ? '3D' : '2D';
   modeButton.title = mode === '2d' ? 'Switch to the 3D view' : 'Switch back to the 2D map';
   if (mode === '2d') graph3d?.pauseAnimation();
@@ -655,10 +937,12 @@ filePicker.addEventListener('change', () => {
   read.then(load, (e) => showError(`Could not read file: ${String(e)}`));
 });
 window.addEventListener('resize', () => {
-  graph2d?.width(width2d()).height(window.innerHeight);
-  graph3d?.width(window.innerWidth).height(window.innerHeight);
+  graph2d?.width(graphWidth()).height(window.innerHeight);
+  graph3d?.width(graphWidth()).height(window.innerHeight);
 });
 
+buildLegend();
+legendBox.hidden = true;
 container3d.hidden = true;
 graph2d = makeGraph2d();
 void loadFromServer();
