@@ -1,8 +1,8 @@
 {
   "initialized": true,
   "self_test_passed": true,
-  "phase": "15",
-  "title": "3D look - shapes, fog, bloom, particles, legend, fit, auto-rotate, width",
+  "phase": "16",
+  "title": "3D wiring - time and island forces, labels, layers, time-lapse, path, camera",
   "stage": "implementing",
   "history": [
     {
@@ -1186,6 +1186,58 @@
       "round": 2,
       "verdict": "PASS",
       "important": 0
+    },
+    {
+      "at": "2026-11-02T11:28:18+05:30",
+      "event": "finish",
+      "phase": "15",
+      "commit": "9d2df8908d9d57ff456a39dbd097f47ec1a16ad1"
+    },
+    {
+      "at": "2026-11-02T11:28:18+05:30",
+      "event": "start",
+      "phase": "16",
+      "title": "3D wiring - time and island forces, labels, layers, time-lapse, path, camera"
+    },
+    {
+      "at": "2026-11-02T11:28:18+05:30",
+      "event": "approve-spec",
+      "phase": "16",
+      "criteria": [
+        "AC-16-01",
+        "AC-16-02",
+        "AC-16-03",
+        "AC-16-04",
+        "AC-16-05",
+        "AC-16-06"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-02T11:28:18+05:30",
+      "event": "tests-moved-in",
+      "phase": "16",
+      "files": 2
+    },
+    {
+      "at": "2026-11-02T11:28:53+05:30",
+      "event": "red",
+      "phase": "16",
+      "tests": 2
+    },
+    {
+      "at": "2026-11-02T11:44:19+05:30",
+      "event": "review-prep",
+      "phase": "16",
+      "round": 1
+    },
+    {
+      "at": "2026-11-02T11:47:49+05:30",
+      "event": "review",
+      "phase": "16",
+      "round": 1,
+      "verdict": "PASS",
+      "important": 0
     }
   ],
   "change_dir": "changes/2026-11-02-graph-3d",
@@ -1215,24 +1267,19 @@
     "15",
     "16"
   ],
-  "pending_tests": {
-    "16": {
-      "explorer/tests/holdout/shell3d_hidden.test.ts": "26c39ee7d6267da685e8e82cda885d1a2b6c5a05a3ecc4bb0bf35cae203b1ff0",
-      "explorer/tests/shell3d.test.ts": "397159c6344ec79fadd2446596a0aac976fd5bcc0037b2c43d4b94ada5c67f8e"
-    }
-  },
+  "pending_tests": {},
   "review": {
     "verdict": "PASS",
-    "lock_digest": "c5bde61d1b3859c4d740d7d5fe808aca0c6caa55cb2bea6393738a11aee852ad",
-    "at": "2026-11-02T11:09:39+05:30",
+    "lock_digest": "e44bcb8902d0b1cd78be5c0a090f80c38463a9aebbcfda116d347a1e47075504",
+    "at": "2026-11-02T11:28:18+05:30",
     "prefetched": true
   },
   "red": {
     "ok": true,
-    "lock_digest": "c5bde61d1b3859c4d740d7d5fe808aca0c6caa55cb2bea6393738a11aee852ad",
-    "evidence": ".phased/evidence/phase-15-red.log"
+    "lock_digest": "e44bcb8902d0b1cd78be5c0a090f80c38463a9aebbcfda116d347a1e47075504",
+    "evidence": ".phased/evidence/phase-16-red.log"
   },
-  "spec_sha256": "85097673d02fd58d2e700f6f5a84bc171fedf06b8a30c9ab72acd14cf3921d2f",
+  "spec_sha256": "ea26eda3e2454db327eb7ab8c32d36a93cfffd4b8dee3baeede10b7dac6abbf1",
   "code_reviews": {
     "01": {
       "rounds": [
@@ -1505,6 +1552,21 @@
           "classes": []
         }
       ]
+    },
+    "16": {
+      "rounds": [
+        {
+          "tree": "b1229a0b4a36e46e20add7ef298fc8536ca4faf1",
+          "at": "2026-11-02T11:44:19+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 3,
+          "preexisting": 1,
+          "classes": [
+            "none"
+          ]
+        }
+      ]
     }
   },
   "durations": [
@@ -1577,6 +1639,11 @@
       "phase": "14",
       "level": "M",
       "minutes": 1.9
+    },
+    {
+      "phase": "15",
+      "level": "L",
+      "minutes": 18.7
     }
   ]
 }

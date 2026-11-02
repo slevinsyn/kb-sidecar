@@ -31,6 +31,9 @@
       button { cursor: pointer; }
       button:hover { background: #222a3c; }
       #mode-toggle { font-weight: 600; }
+      .path-line select { max-width: 96px; }
+      #path-result { margin-top: 6px; word-break: break-word; }
+      #path-result:empty { display: none; }
       #stats { margin-top: 6px; color: #8a93a6; }
       .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; }
       #insights { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
@@ -70,6 +73,18 @@
           <label>From <select id="from-month"></select></label>
           <label>to <select id="to-month"></select></label>
           <button id="mode-toggle" type="button" title="Switch to the 3D view">3D</button>
+        </div>
+        <div id="controls3d" hidden>
+          <div class="row-line">
+            <label title="Put projects, sessions and topics on three levels"><input type="checkbox" id="layers-mode" /> Layers</label>
+            <button id="timelapse" type="button" title="Grow the graph month by month">Time-lapse</button>
+          </div>
+          <div class="row-line path-line">
+            <label>Path <select id="path-from"></select></label>
+            <label>to <select id="path-to"></select></label>
+            <button id="path-go" type="button">Find path</button>
+          </div>
+          <div id="path-result" class="muted" role="status"></div>
         </div>
         <div id="stats"></div>
       </div>

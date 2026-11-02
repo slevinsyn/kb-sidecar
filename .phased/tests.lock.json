@@ -99,6 +99,14 @@
     "explorer/tests/holdout/app3d_hidden.test.ts": {
       "sha256": "350b57c94a16d2e5a31558280240474c18ea4dbb4c41ba2c497f955c2a3ad5b1",
       "phase": "15"
+    },
+    "explorer/tests/holdout/shell3d_hidden.test.ts": {
+      "sha256": "26c39ee7d6267da685e8e82cda885d1a2b6c5a05a3ecc4bb0bf35cae203b1ff0",
+      "phase": "16"
+    },
+    "explorer/tests/shell3d.test.ts": {
+      "sha256": "397159c6344ec79fadd2446596a0aac976fd5bcc0037b2c43d4b94ada5c67f8e",
+      "phase": "16"
     }
   }
 }

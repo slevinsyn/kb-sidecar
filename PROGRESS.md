@@ -18,6 +18,7 @@ _Written by `.phased/bin/phase.py`. Do not edit by hand._
 | 12 | Explorer UI - 2D labelled community map, insights panel, month filter | done | 2026-11-02T00:42 | 2026-11-02T00:42 | 2 | 2026-11-02T00:42 | 98cf4a41df |
 | 13 | 3D layout maths - time axis, islands, layers, size, brightness | done | 2026-11-02T10:47 | 2026-11-02T10:47 | 2 | 2026-11-02T10:47 | 226d0a616d |
 | 14 | 3D graph logic - link filter and colours, shortest path, time-lapse, orbit maths | done | 2026-11-02T11:07 | 2026-11-02T11:07 | 2 | 2026-11-02T11:08 | c6b72af243 |
-| 15 | 3D look - shapes, fog, bloom, particles, legend, fit, auto-rotate, width | implementing | 2026-11-02T11:09 | 2026-11-02T11:09 | 2 | 2026-11-02T11:10 |  |
+| 15 | 3D look - shapes, fog, bloom, particles, legend, fit, auto-rotate, width | done | 2026-11-02T11:09 | 2026-11-02T11:09 | 2 | 2026-11-02T11:10 | 9d2df8908d |
+| 16 | 3D wiring - time and island forces, labels, layers, time-lapse, path, camera | implementing | 2026-11-02T11:28 | 2026-11-02T11:28 | 2 | 2026-11-02T11:28 |  |
 
 Evidence of failing-first test runs is in `.phased/evidence/`.
