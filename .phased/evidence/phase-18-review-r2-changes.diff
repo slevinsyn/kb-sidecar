@@ -1,0 +1,70 @@
+diff --git a/explorer/index.html b/explorer/index.html
+index 3488b52..88138b3 100644
+--- a/explorer/index.html
++++ b/explorer/index.html
+@@ -60,7 +60,8 @@
+       #error p { margin: 0 0 8px; color: #ff9b9b; }
+       .scene-tooltip { background: rgba(15, 18, 26, 0.88) !important; color: #e8ecf4 !important;
+         font-size: 12px !important; line-height: 1.4; padding: 4px 8px; border-radius: 4px;
+-        border: 1px solid #2a3142; white-space: nowrap !important; pointer-events: none !important; }
++        border: 1px solid #2a3142; white-space: nowrap !important;
++        max-width: 280px; overflow: hidden; text-overflow: ellipsis; pointer-events: none !important; }
+       [hidden] { display: none !important; }
+     </style>
+   </head>
+diff --git a/explorer/src/main.ts b/explorer/src/main.ts
+index cf080d0..3130efd 100644
+--- a/explorer/src/main.ts
++++ b/explorer/src/main.ts
+@@ -338,6 +338,8 @@ interface NodeLook {
+   node: GraphNode;
+   body: THREE.MeshLambertMaterial;
+   ring: THREE.MeshBasicMaterial | null;
++  /** The halo mesh: shown for bridge nodes and for the selected node only. */
++  halo: THREE.Mesh | null;
+   /** The floating theme name, on theme anchor nodes only. */
+   label: THREE.SpriteMaterial | null;
+ }
+@@ -364,6 +366,7 @@ function styleNode(look: NodeLook): void {
+     look.ring.color.set(dim ? DIM_COLOR : '#ffffff');
+     look.ring.opacity = glow.ring;
+   }
++  if (look.halo) look.halo.visible = bridges.has(look.node.id) || look.node.id === selectedId;
+   if (look.label) look.label.opacity = dim ? 0.25 : 1;
+ }
+ 
+@@ -372,16 +375,15 @@ function nodeObject3d(obj: object): THREE.Object3D {
+   const group = new THREE.Group();
+   const body = new THREE.MeshLambertMaterial({ transparent: true });
+   group.add(new THREE.Mesh(geometryFor(node.type), body));
+-  let ring: THREE.MeshBasicMaterial | null = null;
+-  if (bridges.has(node.id)) {
+-    ring = new THREE.MeshBasicMaterial({ transparent: true });
+-    const halo = new THREE.Mesh(RING, ring);
+-    // Keep the halo facing the camera (the parent group is never rotated).
+-    halo.onBeforeRender = (_renderer, _scene, camera) => {
+-      halo.quaternion.copy(camera.quaternion);
+-    };
+-    group.add(halo);
+-  }
++  // Every node owns a halo so the selected node can show its white ring; styleNode hides it
++  // unless the node is a bridge or the selected node.
++  const ring = new THREE.MeshBasicMaterial({ transparent: true });
++  const halo = new THREE.Mesh(RING, ring);
++  // Keep the halo facing the camera (the parent group is never rotated).
++  halo.onBeforeRender = (_renderer, _scene, camera) => {
++    halo.quaternion.copy(camera.quaternion);
++  };
++  group.add(halo);
+   const scale = (sizes.get(node.id) ?? FALLBACK_NODE_SIZE) * NODE_SCALE;
+   group.scale.setScalar(scale);
+   let label: THREE.SpriteMaterial | null = null;
+@@ -393,7 +395,7 @@ function nodeObject3d(obj: object): THREE.Object3D {
+       label = sprite.material;
+     }
+   }
+-  const look: NodeLook = { node, body, ring, label };
++  const look: NodeLook = { node, body, ring, halo, label };
+   styleNode(look);
+   nodeLooks.set(node.id, look);
+   return group;

@@ -288,6 +288,86 @@ export function orbitPosition(center: Point3, radius: number, angle: number): Po
   };
 }
 
+export const CELL_SCALE = 2.2;
+export const AXON_CURVATURE = 0.3;
+export const BRANCH_BASE_RADIUS = 60;
+export const BRANCH_RADIUS_STEP = 4;
+
+const BRANCH_SLOTS = 12;
+
+// For each community with topics, the topic with the highest rank (ties: smaller id).
+export function cellBodies(a: Analysis): Map<number, string> {
+  const out = new Map<number, string>();
+  for (const c of a.communities) {
+    let best: string | undefined;
+    let bestRank = 0;
+    for (const t of c.topics) {
+      const r = a.rank.get(t) ?? 0;
+      if (best === undefined || r > bestRank || (r === bestRank && t < best)) {
+        best = t;
+        bestRank = r;
+      }
+    }
+    if (best !== undefined) out.set(c.id, best);
+  }
+  return out;
+}
+
+export function branchOffset(index: number, count: number): { x: number; y: number } {
+  if (!Number.isInteger(index) || !Number.isInteger(count) || index < 0 || index >= count) {
+    return { x: BRANCH_BASE_RADIUS, y: 0 };
+  }
+  const ring = Math.floor(index / BRANCH_SLOTS);
+  const slot = index % BRANCH_SLOTS;
+  const radius = BRANCH_BASE_RADIUS + BRANCH_RADIUS_STEP * ring;
+  const angle = (2 * Math.PI * slot) / BRANCH_SLOTS + (ring * Math.PI) / BRANCH_SLOTS;
+  return { x: radius * Math.cos(angle), y: radius * Math.sin(angle) };
+}
+
+export function branchOffsets(
+  a: Analysis,
+  nodeIds: readonly string[],
+): Map<string, { x: number; y: number }> {
+  const cells = cellBodies(a);
+  const byCommunity = new Map<number, Set<string>>();
+  for (const id of nodeIds) {
+    const c = a.communityOf.get(id);
+    if (c === undefined || cells.get(c) === id) continue;
+    let set = byCommunity.get(c);
+    if (!set) {
+      set = new Set();
+      byCommunity.set(c, set);
+    }
+    set.add(id);
+  }
+  const out = new Map<string, { x: number; y: number }>();
+  for (const set of byCommunity.values()) {
+    const sorted = [...set].sort((x, y) => (x < y ? -1 : x > y ? 1 : 0));
+    sorted.forEach((id, k) => out.set(id, branchOffset(k, sorted.length)));
+  }
+  return out;
+}
+
+// FNV-1a, 32 bit: small, stable and good enough to spread link rotations.
+function hash32(text: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h >>> 0;
+}
+
+export function axonCurve(link: GraphLink, a: Analysis): { curvature: number; rotation: number } {
+  const source = linkEnd(link.source);
+  const target = linkEnd(link.target);
+  const cs = a.communityOf.get(source);
+  const ct = a.communityOf.get(target);
+  if (cs === undefined || ct === undefined || cs === ct) return { curvature: 0, rotation: 0 };
+  const rotation = (hash32(source + '>' + target) / 4_294_967_296) * 2 * Math.PI;
+  return { curvature: AXON_CURVATURE, rotation };
+}
+
 export const MAX_EMISSIVE = 0.25;
 
 export type NodeState = 'normal' | 'selected' | 'dim';

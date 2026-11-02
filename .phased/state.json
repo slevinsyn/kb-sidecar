@@ -1,8 +1,8 @@
 {
   "initialized": true,
   "self_test_passed": true,
-  "phase": "18",
-  "title": "3D glare fix - gentler glow, soft selection, readable hover name",
+  "phase": "19",
+  "title": "Neuron maths - cell per theme, branch spots, axon curves",
   "stage": "implementing",
   "history": [
     {
@@ -1420,11 +1420,77 @@
       "round": 3,
       "verdict": "PASS",
       "important": 0
+    },
+    {
+      "at": "2026-11-02T17:19:34+05:30",
+      "event": "finish",
+      "phase": "18",
+      "commit": "fe54a5bf277ec0e405da86bdac66873ca41c8fab"
+    },
+    {
+      "at": "2026-11-02T17:28:21+05:30",
+      "event": "plan",
+      "phase": "18",
+      "change": "changes/2026-11-02-graph-neurons"
+    },
+    {
+      "at": "2026-11-02T17:30:07+05:30",
+      "event": "approve-plan",
+      "phase": "18",
+      "phases": [
+        "19",
+        "20"
+      ]
+    },
+    {
+      "at": "2026-11-02T17:30:32+05:30",
+      "event": "start",
+      "phase": "19",
+      "title": "Neuron maths - cell per theme, branch spots, axon curves"
+    },
+    {
+      "at": "2026-11-02T17:30:32+05:30",
+      "event": "approve-spec",
+      "phase": "19",
+      "criteria": [
+        "AC-19-01",
+        "AC-19-02",
+        "AC-19-03",
+        "AC-19-04",
+        "AC-19-05"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-02T17:33:34+05:30",
+      "event": "review",
+      "phase": "19",
+      "verdict": "PASS"
+    },
+    {
+      "at": "2026-11-02T17:33:42+05:30",
+      "event": "red",
+      "phase": "19",
+      "tests": 2
+    },
+    {
+      "at": "2026-11-02T17:35:06+05:30",
+      "event": "review-prep",
+      "phase": "19",
+      "round": 1
+    },
+    {
+      "at": "2026-11-02T17:35:39+05:30",
+      "event": "review",
+      "phase": "19",
+      "round": 1,
+      "verdict": "PASS",
+      "important": 0
     }
   ],
-  "change_dir": "changes/2026-11-02-graph-glare",
-  "base_commit": "98282d8d1156944e072f95d3903055c36938eb81",
-  "change_sha256": "a2be889a0384f1e1268bd182248b3a97b1467702ed06fa84c2d12b144cf4f155",
+  "change_dir": "changes/2026-11-02-graph-neurons",
+  "base_commit": "fe54a5bf277ec0e405da86bdac66873ca41c8fab",
+  "change_sha256": "f4e25b1ce51cd6f409af53800bf14923347eddee9051d7aedf166428dffb31ba",
   "approved_specs": {
     "01": "01527e477aa90e33e8bb613e55b1396690ec40feae5f8c7c307d20e0abc62f70",
     "02": "d1083c8313f6c92a4b22916064d84005ca65389623c38fe5a37ac1b4ed1f8c47",
@@ -1443,24 +1509,26 @@
     "15": "85097673d02fd58d2e700f6f5a84bc171fedf06b8a30c9ab72acd14cf3921d2f",
     "16": "ea26eda3e2454db327eb7ab8c32d36a93cfffd4b8dee3baeede10b7dac6abbf1",
     "17": "95672c8c19ef5503671b5dd78ebffa8a9e2c11fc1525b3e147ef914556592a21",
-    "18": "e39425076c2b88a5f15d3919838aef205b0e291b2136100574412bdb5cc40b04"
+    "18": "e39425076c2b88a5f15d3919838aef205b0e291b2136100574412bdb5cc40b04",
+    "19": "7fa008a9626f5e0d8bfa8cee1013d04f452a9e9e6350c29021afabf62cd5db5d",
+    "20": "24ddcff06770044ce451ee61c9bd1da8764cc92cc706e723af570a9acc074b74"
   },
   "change_phases": [
-    "17",
-    "18"
+    "19",
+    "20"
   ],
   "pending_tests": {},
   "review": {
     "verdict": "PASS",
-    "lock_digest": "a91414ea2ef166ddcbdef60445b420de91481843554e33a8dd03de76c5312eb6",
-    "at": "2026-11-02T13:23:20+05:30"
+    "lock_digest": "7d8f6f09eb2b2305db6f3a843c2f8488a727a2b799f58192a51d275a6410eff7",
+    "at": "2026-11-02T17:33:34+05:30"
   },
   "red": {
     "ok": true,
-    "lock_digest": "a91414ea2ef166ddcbdef60445b420de91481843554e33a8dd03de76c5312eb6",
-    "evidence": ".phased/evidence/phase-18-red.log"
+    "lock_digest": "7d8f6f09eb2b2305db6f3a843c2f8488a727a2b799f58192a51d275a6410eff7",
+    "evidence": ".phased/evidence/phase-19-red.log"
   },
-  "spec_sha256": "e39425076c2b88a5f15d3919838aef205b0e291b2136100574412bdb5cc40b04",
+  "spec_sha256": "7fa008a9626f5e0d8bfa8cee1013d04f452a9e9e6350c29021afabf62cd5db5d",
   "code_reviews": {
     "01": {
       "rounds": [
@@ -1782,6 +1850,19 @@
           "classes": []
         }
       ]
+    },
+    "19": {
+      "rounds": [
+        {
+          "tree": "404a87f1f983ab7b81e234f50f7e7c8c6a3454d8",
+          "at": "2026-11-02T17:35:06+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 2,
+          "preexisting": 0,
+          "classes": []
+        }
+      ]
     }
   },
   "durations": [
@@ -1869,6 +1950,11 @@
       "phase": "17",
       "level": "S",
       "minutes": 2.1
+    },
+    {
+      "phase": "18",
+      "level": "M",
+      "minutes": 249.3
     }
   ]
 }

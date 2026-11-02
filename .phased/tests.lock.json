@@ -123,6 +123,14 @@
     "explorer/tests/holdout/glare_shell_hidden.test.ts": {
       "sha256": "89f1d8503e3aac24f2b38ddf33efbbf1666a6694bc14e3224006cd47863e2608",
       "phase": "18"
+    },
+    "explorer/tests/holdout/neuron_maths_hidden.test.ts": {
+      "sha256": "299db9f309f0c4774344fbaab164137729d5498f5b556f29865fd3cb6bd75e14",
+      "phase": "19"
+    },
+    "explorer/tests/neuron_maths.test.ts": {
+      "sha256": "1941377cd9f013cf4528b8a39c9d03ab0ee55644710d6dc82ec776e92d08f10b",
+      "phase": "19"
     }
   }
 }
