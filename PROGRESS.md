@@ -20,5 +20,6 @@ _Written by `.phased/bin/phase.py`. Do not edit by hand._
 | 14 | 3D graph logic - link filter and colours, shortest path, time-lapse, orbit maths | done | 2026-11-02T11:07 | 2026-11-02T11:07 | 2 | 2026-11-02T11:08 | c6b72af243 |
 | 15 | 3D look - shapes, fog, bloom, particles, legend, fit, auto-rotate, width | done | 2026-11-02T11:09 | 2026-11-02T11:09 | 2 | 2026-11-02T11:10 | 9d2df8908d |
 | 16 | 3D wiring - time and island forces, labels, layers, time-lapse, path, camera | done | 2026-11-02T11:28 | 2026-11-02T11:28 | 2 | 2026-11-02T11:28 | f308bdd233 |
+| 17 | Glow levels - capped, pure, selection never brighter | implementing | 2026-11-02T13:08 | 2026-11-02T13:08 | 2 | 2026-11-02T13:08 |  |
 
 Evidence of failing-first test runs is in `.phased/evidence/`.

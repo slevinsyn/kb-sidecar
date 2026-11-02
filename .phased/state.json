@@ -1,9 +1,9 @@
 {
   "initialized": true,
   "self_test_passed": true,
-  "phase": "16",
-  "title": "3D wiring - time and island forces, labels, layers, time-lapse, path, camera",
-  "stage": "done",
+  "phase": "17",
+  "title": "Glow levels - capped, pure, selection never brighter",
+  "stage": "implementing",
   "history": [
     {
       "event": "self-test",
@@ -1254,11 +1254,91 @@
       "at": "2026-11-02T11:48:04+05:30",
       "event": "kba-facts",
       "phase": "16"
+    },
+    {
+      "at": "2026-11-02T12:55:19+05:30",
+      "event": "plan",
+      "phase": "16",
+      "change": "changes/2026-11-02-graph-glare"
+    },
+    {
+      "at": "2026-11-02T12:56:07+05:30",
+      "event": "approve-plan",
+      "phase": "16",
+      "phases": [
+        "17",
+        "18"
+      ]
+    },
+    {
+      "at": "2026-11-02T12:57:55+05:30",
+      "event": "prefetch",
+      "phase": "16",
+      "phases": [
+        "17",
+        "18"
+      ]
+    },
+    {
+      "at": "2026-11-02T13:07:59+05:30",
+      "event": "prefetch-done",
+      "phase": "16",
+      "ready": [
+        "17"
+      ],
+      "dropped": [
+        "18"
+      ]
+    },
+    {
+      "at": "2026-11-02T13:08:00+05:30",
+      "event": "start",
+      "phase": "17",
+      "title": "Glow levels - capped, pure, selection never brighter"
+    },
+    {
+      "at": "2026-11-02T13:08:00+05:30",
+      "event": "approve-spec",
+      "phase": "17",
+      "criteria": [
+        "AC-17-01",
+        "AC-17-02",
+        "AC-17-03",
+        "AC-17-04",
+        "AC-17-05"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-02T13:08:00+05:30",
+      "event": "tests-moved-in",
+      "phase": "17",
+      "files": 2
+    },
+    {
+      "at": "2026-11-02T13:08:32+05:30",
+      "event": "red",
+      "phase": "17",
+      "tests": 2
+    },
+    {
+      "at": "2026-11-02T13:09:01+05:30",
+      "event": "review-prep",
+      "phase": "17",
+      "round": 1
+    },
+    {
+      "at": "2026-11-02T13:09:43+05:30",
+      "event": "review",
+      "phase": "17",
+      "round": 1,
+      "verdict": "PASS",
+      "important": 0
     }
   ],
-  "change_dir": "changes/2026-11-02-graph-3d",
-  "base_commit": "1f96150b92c610e6932288255a6a8097dcc10395",
-  "change_sha256": "f5c2b51921d0510b1fcf065e063375bf18f63a1a9c6ccb3e9dc59f7e69a36216",
+  "change_dir": "changes/2026-11-02-graph-glare",
+  "base_commit": "98282d8d1156944e072f95d3903055c36938eb81",
+  "change_sha256": "a2be889a0384f1e1268bd182248b3a97b1467702ed06fa84c2d12b144cf4f155",
   "approved_specs": {
     "01": "01527e477aa90e33e8bb613e55b1396690ec40feae5f8c7c307d20e0abc62f70",
     "02": "d1083c8313f6c92a4b22916064d84005ca65389623c38fe5a37ac1b4ed1f8c47",
@@ -1275,27 +1355,27 @@
     "13": "84fbb60d86a871006bd93b964c6b2cb9a2b13e0c62b11b9944ccd689bc892715",
     "14": "6c893a50b4bdfc951fc65f430f93a3e7e15f6c71baf7c7138dac4ee507d0b797",
     "15": "85097673d02fd58d2e700f6f5a84bc171fedf06b8a30c9ab72acd14cf3921d2f",
-    "16": "ea26eda3e2454db327eb7ab8c32d36a93cfffd4b8dee3baeede10b7dac6abbf1"
+    "16": "ea26eda3e2454db327eb7ab8c32d36a93cfffd4b8dee3baeede10b7dac6abbf1",
+    "17": "95672c8c19ef5503671b5dd78ebffa8a9e2c11fc1525b3e147ef914556592a21",
+    "18": "e39425076c2b88a5f15d3919838aef205b0e291b2136100574412bdb5cc40b04"
   },
   "change_phases": [
-    "13",
-    "14",
-    "15",
-    "16"
+    "17",
+    "18"
   ],
   "pending_tests": {},
   "review": {
     "verdict": "PASS",
-    "lock_digest": "e44bcb8902d0b1cd78be5c0a090f80c38463a9aebbcfda116d347a1e47075504",
-    "at": "2026-11-02T11:28:18+05:30",
+    "lock_digest": "23758c2d272308b87728e53d80344784f4dfae7a26687716d04a66555e2146d6",
+    "at": "2026-11-02T13:08:00+05:30",
     "prefetched": true
   },
   "red": {
     "ok": true,
-    "lock_digest": "e44bcb8902d0b1cd78be5c0a090f80c38463a9aebbcfda116d347a1e47075504",
-    "evidence": ".phased/evidence/phase-16-red.log"
+    "lock_digest": "23758c2d272308b87728e53d80344784f4dfae7a26687716d04a66555e2146d6",
+    "evidence": ".phased/evidence/phase-17-red.log"
   },
-  "spec_sha256": "ea26eda3e2454db327eb7ab8c32d36a93cfffd4b8dee3baeede10b7dac6abbf1",
+  "spec_sha256": "95672c8c19ef5503671b5dd78ebffa8a9e2c11fc1525b3e147ef914556592a21",
   "code_reviews": {
     "01": {
       "rounds": [
@@ -1581,6 +1661,19 @@
           "classes": [
             "none"
           ]
+        }
+      ]
+    },
+    "17": {
+      "rounds": [
+        {
+          "tree": "cdb5d4007ae940d0d8b3bab1d56539a4f196c9c0",
+          "at": "2026-11-02T13:09:01+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 2,
+          "preexisting": 0,
+          "classes": []
         }
       ]
     }

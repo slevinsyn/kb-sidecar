@@ -287,3 +287,25 @@ export function orbitPosition(center: Point3, radius: number, angle: number): Po
     z: center.z + radius * Math.cos(angle),
   };
 }
+
+export const MAX_EMISSIVE = 0.25;
+
+export type NodeState = 'normal' | 'selected' | 'dim';
+
+export interface GlowLevels {
+  emissive: number;
+  opacity: number;
+  ring: number;
+}
+
+export function glowLevels(brightness: number, state: NodeState): GlowLevels {
+  const b = Number.isNaN(brightness) ? 0.5 : Math.min(1, Math.max(0, brightness));
+  if (state === 'dim') return { emissive: 0, opacity: 0.3, ring: 0.2 };
+  const emissive = Math.min(MAX_EMISSIVE, 0.05 + 0.2 * b);
+  if (state === 'selected') return { emissive, opacity: 1, ring: 1 };
+  return {
+    emissive,
+    opacity: Math.min(1, 0.4 + 0.6 * b),
+    ring: Math.min(1, 0.45 + 0.4 * b),
+  };
+}

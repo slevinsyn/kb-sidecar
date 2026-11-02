@@ -107,6 +107,14 @@
     "explorer/tests/shell3d.test.ts": {
       "sha256": "397159c6344ec79fadd2446596a0aac976fd5bcc0037b2c43d4b94ada5c67f8e",
       "phase": "16"
+    },
+    "explorer/tests/glow.test.ts": {
+      "sha256": "61a80c648dd85c1dafd4a75b3b3d7e73f1ccd3e485416eac9f85884309e67d0a",
+      "phase": "17"
+    },
+    "explorer/tests/holdout/glow_hidden.test.ts": {
+      "sha256": "b738de744e1fadf53f75f5b3b7334400ef49f5de620fe9a470caac090b443498",
+      "phase": "17"
     }
   }
 }
