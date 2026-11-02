@@ -13,8 +13,5 @@ _Written by `.phased/bin/phase.py`. Do not edit by hand._
 | 07 | 3D explorer web app | done | 2026-11-01T20:59 | 2026-11-01T20:59 | 2 | 2026-11-01T21:02 | b56b27d900 |
 | 08 | Clean topics | done | 2026-11-01T23:59 | 2026-11-01T23:59 | 3 | 2026-11-02T00:00 | e0c156e613 |
 | 09 | `kb context` - token-light context for assistants (GraphRAG) | done | 2026-11-02T00:04 | 2026-11-02T00:04 | 2 | 2026-11-02T00:04 | 9ea9520b0b |
-| 10 | Explorer analysis - communities, rank, bridges, gaps, timeline | done | 2026-11-02T00:34 | 2026-11-02T00:34 | 2 | 2026-11-02T00:34 | 913cb8229e |
-| 11 | Offline insights - executive summary, roadmap, Markdown export | done | 2026-11-02T00:40 | 2026-11-02T00:40 | 2 | 2026-11-02T00:40 | 8d31ca122e |
-| 12 | Explorer UI - 2D labelled community map, insights panel, month filter | implementing | 2026-11-02T00:42 | 2026-11-02T00:42 | 2 | 2026-11-02T00:42 |  |
 
 Evidence of failing-first test runs is in `.phased/evidence/`.

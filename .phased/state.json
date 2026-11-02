@@ -1,9 +1,9 @@
 {
   "initialized": true,
   "self_test_passed": true,
-  "phase": "12",
-  "title": "Explorer UI - 2D labelled community map, insights panel, month filter",
-  "stage": "implementing",
+  "phase": "09",
+  "title": "`kb context` - token-light context for assistants (GraphRAG)",
+  "stage": "done",
   "history": [
     {
       "event": "self-test",
@@ -746,205 +746,11 @@
       "at": "2026-11-02T00:08:34+05:30",
       "event": "kba-facts",
       "phase": "09"
-    },
-    {
-      "at": "2026-11-02T00:18:12+05:30",
-      "event": "plan",
-      "phase": "09",
-      "change": "changes/2026-11-01-graph-map"
-    },
-    {
-      "at": "2026-11-02T00:21:28+05:30",
-      "event": "approve-plan",
-      "phase": "09",
-      "phases": [
-        "10",
-        "11",
-        "12"
-      ]
-    },
-    {
-      "at": "2026-11-02T00:22:55+05:30",
-      "event": "prefetch",
-      "phase": "09",
-      "phases": [
-        "10",
-        "11",
-        "12"
-      ]
-    },
-    {
-      "at": "2026-11-02T00:34:24+05:30",
-      "event": "prefetch-done",
-      "phase": "09",
-      "ready": [
-        "10",
-        "11",
-        "12"
-      ],
-      "dropped": []
-    },
-    {
-      "at": "2026-11-02T00:34:26+05:30",
-      "event": "start",
-      "phase": "10",
-      "title": "Explorer analysis - communities, rank, bridges, gaps, timeline"
-    },
-    {
-      "at": "2026-11-02T00:34:26+05:30",
-      "event": "approve-spec",
-      "phase": "10",
-      "criteria": [
-        "AC-10-01",
-        "AC-10-02",
-        "AC-10-03",
-        "AC-10-04",
-        "AC-10-05",
-        "AC-10-06",
-        "AC-10-07",
-        "AC-10-08",
-        "AC-10-09",
-        "AC-10-10"
-      ],
-      "preapproved": true
-    },
-    {
-      "at": "2026-11-02T00:34:26+05:30",
-      "event": "tests-moved-in",
-      "phase": "10",
-      "files": 2
-    },
-    {
-      "at": "2026-11-02T00:34:58+05:30",
-      "event": "red",
-      "phase": "10",
-      "tests": 2
-    },
-    {
-      "at": "2026-11-02T00:38:26+05:30",
-      "event": "review-prep",
-      "phase": "10",
-      "round": 1
-    },
-    {
-      "at": "2026-11-02T00:39:50+05:30",
-      "event": "review",
-      "phase": "10",
-      "round": 1,
-      "verdict": "PASS",
-      "important": 0
-    },
-    {
-      "at": "2026-11-02T00:40:02+05:30",
-      "event": "finish",
-      "phase": "10",
-      "commit": "913cb8229ee6276408d8191ea65ac9ba5e006fa6"
-    },
-    {
-      "at": "2026-11-02T00:40:05+05:30",
-      "event": "start",
-      "phase": "11",
-      "title": "Offline insights - executive summary, roadmap, Markdown export"
-    },
-    {
-      "at": "2026-11-02T00:40:05+05:30",
-      "event": "approve-spec",
-      "phase": "11",
-      "criteria": [
-        "AC-11-01",
-        "AC-11-02",
-        "AC-11-03",
-        "AC-11-04",
-        "AC-11-05",
-        "AC-11-06",
-        "AC-11-07",
-        "AC-11-08"
-      ],
-      "preapproved": true
-    },
-    {
-      "at": "2026-11-02T00:40:05+05:30",
-      "event": "tests-moved-in",
-      "phase": "11",
-      "files": 2
-    },
-    {
-      "at": "2026-11-02T00:40:36+05:30",
-      "event": "red",
-      "phase": "11",
-      "tests": 2
-    },
-    {
-      "at": "2026-11-02T00:41:23+05:30",
-      "event": "review-prep",
-      "phase": "11",
-      "round": 1
-    },
-    {
-      "at": "2026-11-02T00:42:01+05:30",
-      "event": "review",
-      "phase": "11",
-      "round": 1,
-      "verdict": "PASS",
-      "important": 0
-    },
-    {
-      "at": "2026-11-02T00:42:05+05:30",
-      "event": "finish",
-      "phase": "11",
-      "commit": "8d31ca122e6873e7efe7dee92c6ea0194d8f9061"
-    },
-    {
-      "at": "2026-11-02T00:42:06+05:30",
-      "event": "start",
-      "phase": "12",
-      "title": "Explorer UI - 2D labelled community map, insights panel, month filter"
-    },
-    {
-      "at": "2026-11-02T00:42:06+05:30",
-      "event": "approve-spec",
-      "phase": "12",
-      "criteria": [
-        "AC-12-01",
-        "AC-12-02",
-        "AC-12-03",
-        "AC-12-04",
-        "AC-12-05",
-        "AC-12-06",
-        "AC-12-07"
-      ],
-      "preapproved": true
-    },
-    {
-      "at": "2026-11-02T00:42:06+05:30",
-      "event": "tests-moved-in",
-      "phase": "12",
-      "files": 2
-    },
-    {
-      "at": "2026-11-02T00:42:40+05:30",
-      "event": "red",
-      "phase": "12",
-      "tests": 2
-    },
-    {
-      "at": "2026-11-02T00:48:18+05:30",
-      "event": "review-prep",
-      "phase": "12",
-      "round": 1
-    },
-    {
-      "at": "2026-11-02T00:49:53+05:30",
-      "event": "review",
-      "phase": "12",
-      "round": 1,
-      "verdict": "PASS",
-      "important": 0
     }
   ],
-  "change_dir": "changes/2026-11-01-graph-map",
-  "base_commit": "5335c0da85b68a9462e2495c0731c5b4db31c1ac",
-  "change_sha256": "a53dd91aece87d4d86505ceb792d8f06a7edfa292d303f1349873b51696a38db",
+  "change_dir": "changes/2026-11-01-graph-insights",
+  "base_commit": "d687f1c2c143563c04de522b4c1b469e4ea73925",
+  "change_sha256": "edf8a1539bf36e0d50148f33a22ce666a314323b2641c72d53bad4be47d42755",
   "approved_specs": {
     "01": "01527e477aa90e33e8bb613e55b1396690ec40feae5f8c7c307d20e0abc62f70",
     "02": "d1083c8313f6c92a4b22916064d84005ca65389623c38fe5a37ac1b4ed1f8c47",
@@ -954,29 +760,25 @@
     "06": "d1982818f0df1140e6660f14262fa5720a0b7ed6ec7e2ce2793a2d404cf8b256",
     "07": "74125299bb42ccb25b6197d0edba5144b952e46ef005f9f11f381f6c47063009",
     "08": "34062d84b3b93f6e62a9b4a0c17754dc949d3fc4cc6bbd7704fcf9e369881f10",
-    "09": "ee26e597b1a04a07840b9384d34393490f9cc8e94be8c8b84bd9aeca0bc9a117",
-    "10": "115921bb49d2ce5e7c20882049cea7adc1be1654e7a402e044b6cebc765a55f3",
-    "11": "817ec346cc5605055e98a145d0b033917ddbe8a469c95188bf044e41f4395fa0",
-    "12": "a860d89a6e367dcd3530d110190f5aaa0ae963cbb40e9b5cb4fc4784dfa3072a"
+    "09": "ee26e597b1a04a07840b9384d34393490f9cc8e94be8c8b84bd9aeca0bc9a117"
   },
   "change_phases": [
-    "10",
-    "11",
-    "12"
+    "08",
+    "09"
   ],
   "pending_tests": {},
   "review": {
     "verdict": "PASS",
-    "lock_digest": "e51260afb964e4043677362385a3c8bd76fec7196bd891622d38216ef4f1a984",
-    "at": "2026-11-02T00:42:06+05:30",
+    "lock_digest": "474c9d89d7089761cd69dbfb78ce26dba64eceafb50e667748f6ceea938ac296",
+    "at": "2026-11-02T00:04:07+05:30",
     "prefetched": true
   },
   "red": {
     "ok": true,
-    "lock_digest": "e51260afb964e4043677362385a3c8bd76fec7196bd891622d38216ef4f1a984",
-    "evidence": ".phased/evidence/phase-12-red.log"
+    "lock_digest": "474c9d89d7089761cd69dbfb78ce26dba64eceafb50e667748f6ceea938ac296",
+    "evidence": ".phased/evidence/phase-09-red.log"
   },
-  "spec_sha256": "a860d89a6e367dcd3530d110190f5aaa0ae963cbb40e9b5cb4fc4784dfa3072a",
+  "spec_sha256": "ee26e597b1a04a07840b9384d34393490f9cc8e94be8c8b84bd9aeca0bc9a117",
   "code_reviews": {
     "01": {
       "rounds": [
@@ -1150,51 +952,6 @@
           "classes": []
         }
       ]
-    },
-    "10": {
-      "rounds": [
-        {
-          "tree": "68b4f27ef673e0b94c1ed4de31513beb549588bb",
-          "at": "2026-11-02T00:38:26+05:30",
-          "verdict": "PASS",
-          "important": 0,
-          "nits": 2,
-          "preexisting": 0,
-          "classes": [
-            "none"
-          ]
-        }
-      ]
-    },
-    "11": {
-      "rounds": [
-        {
-          "tree": "8c66dd101b7a2e4f8bf2ad0a5a32d865fb9f522f",
-          "at": "2026-11-02T00:41:23+05:30",
-          "verdict": "PASS",
-          "important": 0,
-          "nits": 2,
-          "preexisting": 0,
-          "classes": [
-            "none"
-          ]
-        }
-      ]
-    },
-    "12": {
-      "rounds": [
-        {
-          "tree": "efbfe15699bd1405383d33fe10b6e97d6c94bf43",
-          "at": "2026-11-02T00:48:18+05:30",
-          "verdict": "PASS",
-          "important": 0,
-          "nits": 4,
-          "preexisting": 0,
-          "classes": [
-            "none"
-          ]
-        }
-      ]
     }
   },
   "durations": [
@@ -1242,16 +999,6 @@
       "phase": "09",
       "level": "M",
       "minutes": 4.3
-    },
-    {
-      "phase": "10",
-      "level": "L",
-      "minutes": 5.6
-    },
-    {
-      "phase": "11",
-      "level": "M",
-      "minutes": 2.0
     }
   ]
 }
