@@ -1,6 +1,6 @@
 import type { Analysis } from './analysis';
 import { linkEnd } from './graph';
-import type { GraphData, GraphNode, NodeType } from './graph';
+import type { GraphData, GraphLink, GraphNode, NodeType } from './graph';
 
 export const Z_SPAN = 600;
 export const ISLAND_RADIUS = 200;
@@ -164,4 +164,126 @@ export function brightnessMap(g: GraphData, a: Analysis): Map<string, number> {
 
 export function bridgeIds(a: Analysis): Set<string> {
   return new Set(a.bridges.map((b) => b.id));
+}
+
+export const NOISE_LINK_TYPES: readonly string[] = ['used_tool', 'touched_file'];
+
+export function defaultLinkFilter(g: GraphData, showNoise = false): GraphData {
+  const links: GraphLink[] = [];
+  for (const l of g.links) {
+    if (!showNoise && NOISE_LINK_TYPES.includes(l.type)) continue;
+    links.push({ source: linkEnd(l.source), target: linkEnd(l.target), type: l.type });
+  }
+  return { nodes: [...g.nodes], links };
+}
+
+export const LINK_OPACITY = 0.15;
+
+const LINK_RGB: Readonly<Record<string, readonly [number, number, number]>> = {
+  in_project: [247, 201, 107],
+  has_topic: [122, 162, 247],
+  touched_file: [158, 206, 106],
+  used_tool: [187, 154, 247],
+};
+const FALLBACK_RGB: readonly [number, number, number] = [138, 143, 152];
+
+export function linkRgba(type: string, alpha: number = LINK_OPACITY): string {
+  const known = Object.prototype.hasOwnProperty.call(LINK_RGB, type);
+  const [r, g, b] = known ? LINK_RGB[type] : FALLBACK_RGB;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+export function shortestPath(g: GraphData, from: string, to: string): string[] | null {
+  const eligible = new Set<string>();
+  const ids = new Set<string>();
+  for (const n of g.nodes) {
+    ids.add(n.id);
+    if (n.type === 'session' || n.type === 'topic') eligible.add(n.id);
+  }
+  if (!ids.has(from) || !ids.has(to)) return null;
+  if (from === to) return [from];
+  if (!eligible.has(from) || !eligible.has(to)) return null;
+  const adj = new Map<string, Set<string>>();
+  const connect = (a: string, b: string): void => {
+    let set = adj.get(a);
+    if (!set) {
+      set = new Set();
+      adj.set(a, set);
+    }
+    set.add(b);
+  };
+  for (const l of g.links) {
+    const a = linkEnd(l.source);
+    const b = linkEnd(l.target);
+    if (a === b || !eligible.has(a) || !eligible.has(b)) continue;
+    connect(a, b);
+    connect(b, a);
+  }
+  const prev = new Map<string, string>();
+  const seen = new Set<string>([from]);
+  let queue = [from];
+  while (queue.length > 0) {
+    const next: string[] = [];
+    for (const cur of queue) {
+      const nbrs = [...(adj.get(cur) ?? [])].sort((x, y) => (x < y ? -1 : x > y ? 1 : 0));
+      for (const nb of nbrs) {
+        if (seen.has(nb)) continue;
+        seen.add(nb);
+        prev.set(nb, cur);
+        if (nb === to) {
+          const path = [to];
+          let at = to;
+          while (at !== from) {
+            at = prev.get(at) as string;
+            path.push(at);
+          }
+          return path.reverse();
+        }
+        next.push(nb);
+      }
+    }
+    queue = next;
+  }
+  return null;
+}
+
+export function nextMonth(months: readonly string[], current: string | null): string | null {
+  if (current === null) return months.length > 0 ? months[0] : null;
+  const i = months.indexOf(current);
+  if (i < 0 || i + 1 >= months.length) return null;
+  return months[i + 1];
+}
+
+export interface Point3 {
+  x: number;
+  y: number;
+  z: number;
+}
+
+export function clusterBounds(points: readonly Point3[]): { center: Point3; radius: number } {
+  if (points.length === 0) return { center: { x: 0, y: 0, z: 0 }, radius: 120 };
+  let sx = 0;
+  let sy = 0;
+  let sz = 0;
+  for (const p of points) {
+    sx += p.x;
+    sy += p.y;
+    sz += p.z;
+  }
+  const n = points.length;
+  const center = { x: sx / n, y: sy / n, z: sz / n };
+  let far = 0;
+  for (const p of points) {
+    const d = Math.hypot(p.x - center.x, p.y - center.y, p.z - center.z);
+    if (d > far) far = d;
+  }
+  return { center, radius: Math.max(80, far + 40) };
+}
+
+export function orbitPosition(center: Point3, radius: number, angle: number): Point3 {
+  return {
+    x: center.x + radius * Math.sin(angle),
+    y: center.y,
+    z: center.z + radius * Math.cos(angle),
+  };
 }

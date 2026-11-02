@@ -83,6 +83,14 @@
     "explorer/tests/scene3d.test.ts": {
       "sha256": "7b9365c5c87bfc2892c68baf9f2ef9e98512528e1e37ffffbf1a6439ff014c5d",
       "phase": "13"
+    },
+    "explorer/tests/holdout/scene3d_logic_hidden.test.ts": {
+      "sha256": "01305f327c4b28eafd27a4ebcaef7270b5017dcb090d629dd349fbd9529b959e",
+      "phase": "14"
+    },
+    "explorer/tests/scene3d-logic.test.ts": {
+      "sha256": "fa94a857489f2c1bce42a979fd302d0bfb5da701bff72565064754a63a49433d",
+      "phase": "14"
     }
   }
 }

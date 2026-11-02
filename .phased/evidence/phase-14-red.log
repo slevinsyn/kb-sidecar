@@ -1,0 +1,163 @@
+== core-rust (run 1): cargo test --quiet -> exit 0
+
+warning: function `test_AC_06_11_missing_settings_file_is_created_with_only_the_hook` should have a snake case name
+    --> tests/phase06_cli.rs:1154:4
+     |
+1154 | fn test_AC_06_11_missing_settings_file_is_created_with_only_the_hook() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_06_11_missing_settings_file_is_created_with_only_the_hook`
+
+warning: function `test_AC_06_11_invalid_json_exits_1_and_leaves_file_unchanged` should have a snake case name
+    --> tests/phase06_cli.rs:1173:4
+     |
+1173 | fn test_AC_06_11_invalid_json_exits_1_and_leaves_file_unchanged() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_06_11_invalid_json_exits_1_and_leaves_file_unchanged`
+
+warning: function `test_AC_06_11_wrong_json_types_exit_1_and_leave_file_unchanged` should have a snake case name
+    --> tests/phase06_cli.rs:1186:4
+     |
+1186 | fn test_AC_06_11_wrong_json_types_exit_1_and_leave_file_unchanged() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_06_11_wrong_json_types_exit_1_and_leave_file_unchanged`
+
+warning: function `test_AC_06_11_install_hook_without_settings_argument_exits_2` should have a snake case name
+    --> tests/phase06_cli.rs:1207:4
+     |
+1207 | fn test_AC_06_11_install_hook_without_settings_argument_exits_2() {
+     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `test_ac_06_11_install_hook_without_settings_argument_exits_2`
+
+warning: function `hidden_AC_09_01_scoring_weights_and_ordering` should have a snake case name
+   --> tests/phase09_context_hidden.rs:121:4
+    |
+121 | fn hidden_AC_09_01_scoring_weights_and_ordering() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `hidden_ac_09_01_scoring_weights_and_ordering`
+    |
+    = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+warning: function `hidden_AC_09_02_tie_order` should have a snake case name
+   --> tests/phase09_context_hidden.rs:143:4
+    |
+143 | fn hidden_AC_09_02_tie_order() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `hidden_ac_09_02_tie_order`
+
+warning: function `hidden_AC_09_03_exact_layout` should have a snake case name
+   --> tests/phase09_context_hidden.rs:159:4
+    |
+159 | fn hidden_AC_09_03_exact_layout() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `hidden_ac_09_03_exact_layout`
+
+warning: function `hidden_AC_09_04_caps_and_exclusions` should have a snake case name
+   --> tests/phase09_context_hidden.rs:188:4
+    |
+188 | fn hidden_AC_09_04_caps_and_exclusions() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `hidden_ac_09_04_caps_and_exclusions`
+
+warning: function `hidden_AC_09_05_limit_and_hand_computed_truncation` should have a snake case name
+   --> tests/phase09_context_hidden.rs:243:4
+    |
+243 | fn hidden_AC_09_05_limit_and_hand_computed_truncation() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `hidden_ac_09_05_limit_and_hand_computed_truncation`
+
+warning: function `hidden_AC_09_06_no_match_forms` should have a snake case name
+   --> tests/phase09_context_hidden.rs:275:4
+    |
+275 | fn hidden_AC_09_06_no_match_forms() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `hidden_ac_09_06_no_match_forms`
+
+warning: function `hidden_AC_09_07_parse_errors` should have a snake case name
+   --> tests/phase09_context_hidden.rs:284:4
+    |
+284 | fn hidden_AC_09_07_parse_errors() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `hidden_ac_09_07_parse_errors`
+
+warning: function `hidden_AC_09_08_cli_end_to_end` should have a snake case name
+   --> tests/phase09_context_hidden.rs:314:4
+    |
+314 | fn hidden_AC_09_08_cli_end_to_end() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `hidden_ac_09_08_cli_end_to_end`
+
+warning: function `hidden_AC_09_09_cli_errors` should have a snake case name
+   --> tests/phase09_context_hidden.rs:334:4
+    |
+334 | fn hidden_AC_09_09_cli_errors() {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `hidden_ac_09_09_cli_errors`
+== explorer-javascript (run 1): npx vitest run --exclude 'tests/holdout/**' -> exit 1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[57/63]⎯
+
+ FAIL  tests/scene3d-logic.test.ts > orbitPosition > AC-14-09 quarter, half and three-quarter turns
+Error: not implemented
+ ❯ orbitPosition src/scene3d.ts:213:9
+    211|   void radius;
+    212|   void angle;
+    213|   throw new Error('not implemented');
+       |         ^
+    214| }
+    215|
+ ❯ tests/scene3d-logic.test.ts:601:15
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[58/63]⎯
+
+ FAIL  tests/scene3d-logic.test.ts > orbitPosition > AC-14-09 keeps y equal to the centre y for any angle
+Error: not implemented
+ ❯ orbitPosition src/scene3d.ts:213:9
+    211|   void radius;
+    212|   void angle;
+    213|   throw new Error('not implemented');
+       |         ^
+    214| }
+    215|
+ ❯ tests/scene3d-logic.test.ts:614:14
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[59/63]⎯
+
+ FAIL  tests/scene3d-logic.test.ts > orbitPosition > AC-14-09 sits exactly radius away from the centre on the x-z plane
+Error: not implemented
+ ❯ orbitPosition src/scene3d.ts:213:9
+    211|   void radius;
+    212|   void angle;
+    213|   throw new Error('not implemented');
+       |         ^
+    214| }
+    215|
+ ❯ tests/scene3d-logic.test.ts:620:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[60/63]⎯
+
+ FAIL  tests/scene3d-logic.test.ts > orbitPosition > AC-14-09 follows x = cx + r sin(angle), z = cz + r cos(angle)
+Error: not implemented
+ ❯ orbitPosition src/scene3d.ts:213:9
+    211|   void radius;
+    212|   void angle;
+    213|   throw new Error('not implemented');
+       |         ^
+    214| }
+    215|
+ ❯ tests/scene3d-logic.test.ts:627:15
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[61/63]⎯
+
+ FAIL  tests/scene3d-logic.test.ts > orbitPosition > AC-14-09 a radius of 0 stays at the centre
+Error: not implemented
+ ❯ orbitPosition src/scene3d.ts:213:9
+    211|   void radius;
+    212|   void angle;
+    213|   throw new Error('not implemented');
+       |         ^
+    214| }
+    215|
+ ❯ tests/scene3d-logic.test.ts:634:15
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[62/63]⎯
+
+ FAIL  tests/scene3d-logic.test.ts > orbitPosition > AC-14-09 does not mutate the centre
+Error: not implemented
+ ❯ orbitPosition src/scene3d.ts:213:9
+    211|   void radius;
+    212|   void angle;
+    213|   throw new Error('not implemented');
+       |         ^
+    214| }
+    215|
+ ❯ tests/scene3d-logic.test.ts:642:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[63/63]⎯
+== explorer-javascript hidden tests -> exit 1:       Tests  8 failed | 53 passed (61) (details hidden)

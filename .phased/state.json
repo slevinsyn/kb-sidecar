@@ -1,8 +1,8 @@
 {
   "initialized": true,
   "self_test_passed": true,
-  "phase": "13",
-  "title": "3D layout maths - time axis, islands, layers, size, brightness",
+  "phase": "14",
+  "title": "3D graph logic - link filter and colours, shortest path, time-lapse, orbit maths",
   "stage": "implementing",
   "history": [
     {
@@ -1045,6 +1045,82 @@
       "round": 1,
       "verdict": "PASS",
       "important": 0
+    },
+    {
+      "at": "2026-11-02T10:50:06+05:30",
+      "event": "finish",
+      "phase": "13",
+      "commit": "226d0a616d3865385482111c13fc40a5f53e070f"
+    },
+    {
+      "at": "2026-11-02T11:03:55+05:30",
+      "event": "prefetch",
+      "phase": "13",
+      "phases": [
+        "14",
+        "15",
+        "16"
+      ]
+    },
+    {
+      "at": "2026-11-02T11:07:42+05:30",
+      "event": "prefetch-done",
+      "phase": "13",
+      "ready": [
+        "14",
+        "15",
+        "16"
+      ],
+      "dropped": []
+    },
+    {
+      "at": "2026-11-02T11:07:44+05:30",
+      "event": "start",
+      "phase": "14",
+      "title": "3D graph logic - link filter and colours, shortest path, time-lapse, orbit maths"
+    },
+    {
+      "at": "2026-11-02T11:07:44+05:30",
+      "event": "approve-spec",
+      "phase": "14",
+      "criteria": [
+        "AC-14-01",
+        "AC-14-02",
+        "AC-14-03",
+        "AC-14-04",
+        "AC-14-05",
+        "AC-14-06",
+        "AC-14-07",
+        "AC-14-08",
+        "AC-14-09"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-02T11:07:44+05:30",
+      "event": "tests-moved-in",
+      "phase": "14",
+      "files": 2
+    },
+    {
+      "at": "2026-11-02T11:08:09+05:30",
+      "event": "red",
+      "phase": "14",
+      "tests": 2
+    },
+    {
+      "at": "2026-11-02T11:09:01+05:30",
+      "event": "review-prep",
+      "phase": "14",
+      "round": 1
+    },
+    {
+      "at": "2026-11-02T11:09:33+05:30",
+      "event": "review",
+      "phase": "14",
+      "round": 1,
+      "verdict": "PASS",
+      "important": 0
     }
   ],
   "change_dir": "changes/2026-11-02-graph-3d",
@@ -1075,31 +1151,27 @@
     "16"
   ],
   "pending_tests": {
-    "14": {
-      "explorer/tests/holdout/scene3d_hidden.test.ts": "5deca9d768dbe9137c6ce1068826724cf7a2d8bc0c636753fdb7b86381471836",
-      "explorer/tests/scene3d-logic.test.ts": "89e736b87cc8cae90f06115adf3be9934f78c6ee04dc83d8c792e02faad39c67"
-    },
     "15": {
       "explorer/tests/app3d.test.ts": "91efcc2d988f64b9668cfe72abd6b75e7bdfe49da6a3f1fc8f978656cb589dbe",
       "explorer/tests/holdout/app3d_hidden.test.ts": "350b57c94a16d2e5a31558280240474c18ea4dbb4c41ba2c497f955c2a3ad5b1"
     },
     "16": {
-      "explorer/tests/holdout/shell3d_hidden.test.ts": "94ab0a944f5c6f34f59bca3f1a1db93f676bbb1946ebb20d42f65a0eddf9d645",
-      "explorer/tests/shell3d.test.ts": "76a42f98f56f3f07eb19600602a727c3ce34f28ae8fa69c2dddb480359ec43ca"
+      "explorer/tests/holdout/shell3d_hidden.test.ts": "26c39ee7d6267da685e8e82cda885d1a2b6c5a05a3ecc4bb0bf35cae203b1ff0",
+      "explorer/tests/shell3d.test.ts": "397159c6344ec79fadd2446596a0aac976fd5bcc0037b2c43d4b94ada5c67f8e"
     }
   },
   "review": {
     "verdict": "PASS",
-    "lock_digest": "1af0256fc59840f4e675f08a508e5e4d045313e5fe2ad3f06ec7715be57b614f",
-    "at": "2026-11-02T10:47:40+05:30",
+    "lock_digest": "44691e25d99d7ae9055e7fddb18e8fec9811af34ee9c3be872b488117f716fb0",
+    "at": "2026-11-02T11:07:44+05:30",
     "prefetched": true
   },
   "red": {
     "ok": true,
-    "lock_digest": "1af0256fc59840f4e675f08a508e5e4d045313e5fe2ad3f06ec7715be57b614f",
-    "evidence": ".phased/evidence/phase-13-red.log"
+    "lock_digest": "44691e25d99d7ae9055e7fddb18e8fec9811af34ee9c3be872b488117f716fb0",
+    "evidence": ".phased/evidence/phase-14-red.log"
   },
-  "spec_sha256": "84fbb60d86a871006bd93b964c6b2cb9a2b13e0c62b11b9944ccd689bc892715",
+  "spec_sha256": "6c893a50b4bdfc951fc65f430f93a3e7e15f6c71baf7c7138dac4ee507d0b797",
   "code_reviews": {
     "01": {
       "rounds": [
@@ -1333,6 +1405,21 @@
           ]
         }
       ]
+    },
+    "14": {
+      "rounds": [
+        {
+          "tree": "22879823985192509d8f9006d67e96520f287826",
+          "at": "2026-11-02T11:09:01+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 3,
+          "preexisting": 0,
+          "classes": [
+            "none"
+          ]
+        }
+      ]
     }
   },
   "durations": [
@@ -1395,6 +1482,11 @@
       "phase": "12",
       "level": "M",
       "minutes": 7.9
+    },
+    {
+      "phase": "13",
+      "level": "M",
+      "minutes": 2.4
     }
   ]
 }
