@@ -51,6 +51,30 @@
     "core/tests/phase09_context_hidden.rs": {
       "sha256": "81dffc41360fdbaa6da481f580104c1e3575eafe52a946e875eae5bdd0d25ed9",
       "phase": "09"
+    },
+    "explorer/tests/analysis.test.ts": {
+      "sha256": "92ea0887ece28031e8299d7716d5223d40a642225ab0382680a0cb12a75dc9b4",
+      "phase": "10"
+    },
+    "explorer/tests/holdout/analysis_hidden.test.ts": {
+      "sha256": "b1311b75b86a11615713aab03227545f88ff6ad26fe63e281ffa65d07a64cb39",
+      "phase": "10"
+    },
+    "explorer/tests/holdout/insights_hidden.test.ts": {
+      "sha256": "dc65171a5482d60ee0c2bd57adc7fd0cc3922e85c9b51a2b94dc2003fd33312e",
+      "phase": "11"
+    },
+    "explorer/tests/insights.test.ts": {
+      "sha256": "a9f2c2d77adc9d2c67dc716d435d233b93ce762d7ba711df3d6d7023cfd2d95c",
+      "phase": "11"
+    },
+    "explorer/tests/holdout/view_hidden.test.ts": {
+      "sha256": "daf7c7423af40fe4613f9510285fa573620090b41d5068800ac9a3c87fd559ee",
+      "phase": "12"
+    },
+    "explorer/tests/view.test.ts": {
+      "sha256": "026b4f8062460e62176d04f4b4bc6c7e1482a8f2e8cd7fb8bf3ab169b5626c01",
+      "phase": "12"
     }
   }
 }

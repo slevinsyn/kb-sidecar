@@ -1,0 +1,816 @@
+import { describe, it, expect } from 'vitest';
+import { buildInsights, insightsMarkdown } from '../src/insights';
+import type { Insights } from '../src/insights';
+import { analyzeGraph } from '../src/analysis';
+import type { Analysis, Community } from '../src/analysis';
+import { parseGraph } from '../src/graph';
+import type { GraphData, GraphNode } from '../src/graph';
+
+const LATEST = '2025-03-31T00:00:00Z';
+
+interface CommSpec {
+  label: string;
+  dates: (string | null)[];
+  lastAt?: string | null;
+}
+
+function sessionNode(id: string, startedAt: string | null): GraphNode {
+  return {
+    id,
+    type: 'session',
+    label: `Session ${id}`,
+    size: 1,
+    meta: startedAt === null ? {} : { started_at: startedAt },
+  };
+}
+
+function emptyAnalysis(extra: Partial<Analysis> = {}): Analysis {
+  return {
+    communityOf: new Map(),
+    communities: [],
+    rank: new Map(),
+    bridges: [],
+    oneOffTopics: [],
+    looseEnds: [],
+    timeline: [],
+    latestAt: null,
+    ...extra,
+  };
+}
+
+function emptyGraph(): GraphData {
+  return { nodes: [], links: [] };
+}
+
+function build(
+  specs: CommSpec[],
+  extra: Partial<Analysis> = {},
+  plainSessions = 0,
+): { g: GraphData; a: Analysis } {
+  const nodes: GraphNode[] = [
+    { id: 'topic-x', type: 'topic', label: 'Topic X', size: 1, meta: {} },
+    { id: 'file-x', type: 'file', label: 'file.ts', size: 1, meta: {} },
+  ];
+  const communities: Community[] = specs.map((s, i) => {
+    const ids = s.dates.map((d, j) => {
+      const id = `c${i}s${j}`;
+      nodes.push(sessionNode(id, d));
+      return id;
+    });
+    const valid = s.dates
+      .filter((d): d is string => d !== null && !Number.isNaN(Date.parse(d)))
+      .sort();
+    const computedLast = valid.length > 0 ? valid[valid.length - 1] : null;
+    return {
+      id: i,
+      label: s.label,
+      topics: [],
+      sessions: [...ids].sort(),
+      size: ids.length,
+      projects: [],
+      firstAt: valid.length > 0 ? valid[0] : null,
+      lastAt: s.lastAt === undefined ? computedLast : s.lastAt,
+    };
+  });
+  for (let k = 0; k < plainSessions; k++) {
+    nodes.push(sessionNode(`plain${k}`, null));
+  }
+  return { g: { nodes, links: [] }, a: emptyAnalysis({ communities, latestAt: LATEST, ...extra }) };
+}
+
+function loose(id: number, label: string, size: number, lastAt: string): Community {
+  return {
+    id,
+    label,
+    topics: [],
+    sessions: Array.from({ length: size }, (_, i) => `l${id}s${i}`),
+    size,
+    projects: [],
+    firstAt: lastAt,
+    lastAt,
+  };
+}
+
+function bridge(label: string, i: number) {
+  return { id: `b${i}`, label, type: 'topic' as const, communities: [0, 1] };
+}
+
+function oneOff(label: string, i: number): GraphNode {
+  return { id: `o${i}`, type: 'topic', label, size: 1, meta: {} };
+}
+
+function month(m: string, sessions: number) {
+  return { month: m, sessions, topTopics: [] as string[] };
+}
+
+function full(): { g: GraphData; a: Analysis } {
+  const r = build(
+    [
+      {
+        label: 'Auth · Login',
+        dates: ['2025-03-10T00:00:00Z', '2025-03-12T00:00:00Z', '2025-03-20T00:00:00Z'],
+      },
+      { label: 'Billing', dates: ['2025-02-01T00:00:00Z', '2025-02-05T00:00:00Z'] },
+      { label: 'Docs', dates: ['2025-01-15T00:00:00Z'] },
+      { label: 'Extra', dates: ['2025-01-20T00:00:00Z'] },
+    ],
+    {
+      bridges: [bridge('Alpha', 0), bridge('Beta', 1), bridge('Gamma', 2), bridge('Delta', 3)],
+      oneOffTopics: [oneOff('o-a', 0), oneOff('o-b', 1), oneOff('o-c', 2)],
+      timeline: [month('2025-01', 2), month('2025-02', 2), month('2025-03', 3)],
+    },
+  );
+  r.a.looseEnds = [r.a.communities[3], r.a.communities[2]];
+  return r;
+}
+
+function ins(extra: Partial<Insights> = {}): Insights {
+  return {
+    headline: 'H',
+    summary: [],
+    themes: [],
+    bridges: [],
+    looseEnds: [],
+    oneOffCount: 0,
+    roadmap: [],
+    ...extra,
+  };
+}
+
+describe('headline', () => {
+  it('AC-11-01 says "No sessions yet" for a graph without sessions', () => {
+    expect(buildInsights(emptyGraph(), emptyAnalysis()).headline).toBe('No sessions yet');
+  });
+
+  it('AC-11-01 says "No sessions yet" when the graph holds only non-session nodes', () => {
+    const g: GraphData = {
+      nodes: [
+        { id: 't', type: 'topic', label: 'T', size: 1, meta: {} },
+        { id: 'f', type: 'file', label: 'F', size: 1, meta: {} },
+      ],
+      links: [],
+    };
+    expect(buildInsights(g, emptyAnalysis()).headline).toBe('No sessions yet');
+  });
+
+  it('AC-11-01 uses plural session and theme with the timeline month range', () => {
+    const { g, a } = build(
+      [
+        { label: 'One', dates: ['2025-01-10T00:00:00Z', '2025-02-10T00:00:00Z'] },
+        { label: 'Two', dates: ['2025-04-10T00:00:00Z'] },
+      ],
+      { timeline: [month('2025-01', 1), month('2025-02', 1), month('2025-04', 1)] },
+    );
+    expect(buildInsights(g, a).headline).toBe('3 sessions across 2 themes, 2025-01 to 2025-04');
+  });
+
+  it('AC-11-01 uses singular session and theme when each is 1', () => {
+    const { g, a } = build([{ label: 'Solo', dates: ['2025-05-01T00:00:00Z'] }], {
+      timeline: [month('2025-04', 1), month('2025-05', 0)],
+    });
+    expect(buildInsights(g, a).headline).toBe('1 session across 1 theme, 2025-04 to 2025-05');
+  });
+
+  it('AC-11-01 omits the month range when there is no timeline', () => {
+    const { g, a } = build([
+      { label: 'A', dates: [null, null] },
+      { label: 'B', dates: [null, null] },
+    ]);
+    expect(buildInsights(g, a).headline).toBe('4 sessions across 2 themes');
+  });
+
+  it('AC-11-01 omits the month range without a timeline for singular counts', () => {
+    const { g, a } = build([{ label: 'A', dates: [null] }]);
+    expect(buildInsights(g, a).headline).toBe('1 session across 1 theme');
+  });
+
+  it('AC-11-01 pluralises the session count and the theme count independently', () => {
+    const one = build([{ label: 'A', dates: [null, null, null, null, null] }]);
+    expect(buildInsights(one.g, one.a).headline).toBe('5 sessions across 1 theme');
+    const many = build(
+      [
+        { label: 'A', dates: [null] },
+        { label: 'B', dates: [] },
+        { label: 'C', dates: [] },
+      ],
+      {},
+    );
+    expect(buildInsights(many.g, many.a).headline).toBe('1 session across 3 themes');
+  });
+
+  it('AC-11-01 counts only session nodes and all communities, not just the first five', () => {
+    const specs: CommSpec[] = Array.from({ length: 7 }, (_, i) => ({
+      label: `T${i}`,
+      dates: [null],
+    }));
+    const { g, a } = build(specs);
+    expect(g.nodes.length).toBeGreaterThan(7);
+    expect(buildInsights(g, a).headline).toBe('7 sessions across 7 themes');
+  });
+
+  it('AC-11-01 works on the output of parseGraph and analyzeGraph', () => {
+    const g = parseGraph({
+      nodes: [
+        { id: 's1', type: 'session', label: 'S1', meta: { started_at: '2025-02-10T10:00:00Z' } },
+        { id: 's2', type: 'session', label: 'S2', meta: { started_at: '2025-03-12T10:00:00Z' } },
+        { id: 't1', type: 'topic', label: 'Caching' },
+      ],
+      links: [
+        { source: 's1', target: 't1', type: 'about' },
+        { source: 's2', target: 't1', type: 'about' },
+      ],
+    });
+    const out = buildInsights(g, analyzeGraph(g));
+    expect(out.headline).toBe('2 sessions across 1 theme, 2025-02 to 2025-03');
+    expect(out.themes).toEqual([
+      { label: 'Caching', sessions: 2, share: 100, lastAt: '2025-03-12T10:00:00Z' },
+    ]);
+  });
+});
+
+describe('themes', () => {
+  it('AC-11-02 lists label, sessions, integer share and lastAt per community', () => {
+    const { g, a } = build([
+      { label: 'Big', dates: ['2025-03-01T00:00:00Z', '2025-03-02T00:00:00Z', '2025-03-03T00:00:00Z'] },
+      { label: 'Mid', dates: ['2025-02-01T00:00:00Z', '2025-02-02T00:00:00Z'] },
+      { label: 'Tiny', dates: ['2025-01-01T00:00:00Z'] },
+      { label: 'Undated', dates: [null] },
+    ]);
+    expect(buildInsights(g, a).themes).toEqual([
+      { label: 'Big', sessions: 3, share: 43, lastAt: '2025-03-03T00:00:00Z' },
+      { label: 'Mid', sessions: 2, share: 29, lastAt: '2025-02-02T00:00:00Z' },
+      { label: 'Tiny', sessions: 1, share: 14, lastAt: '2025-01-01T00:00:00Z' },
+      { label: 'Undated', sessions: 1, share: 14, lastAt: null },
+    ]);
+  });
+
+  it('AC-11-02 rounds halves up using Math.round', () => {
+    const eight = build([{ label: 'A', dates: [null] }], {}, 7);
+    expect(buildInsights(eight.g, eight.a).themes[0].share).toBe(13);
+    const forty = build([{ label: 'A', dates: [null] }], {}, 39);
+    expect(buildInsights(forty.g, forty.a).themes[0].share).toBe(3);
+  });
+
+  it('AC-11-02 divides by all sessions in the graph, not only those in communities', () => {
+    const { g, a } = build([{ label: 'A', dates: [null, null] }], {}, 2);
+    const t = buildInsights(g, a).themes;
+    expect(t).toHaveLength(1);
+    expect(t[0].share).toBe(50);
+  });
+
+  it('AC-11-02 keeps only the first five communities in their given order', () => {
+    const specs: CommSpec[] = Array.from({ length: 7 }, (_, i) => ({
+      label: `T${i}`,
+      dates: Array.from({ length: i === 6 ? 5 : 1 }, () => null),
+    }));
+    const { g, a } = build(specs);
+    const t = buildInsights(g, a).themes;
+    expect(t.map((x) => x.label)).toEqual(['T0', 'T1', 'T2', 'T3', 'T4']);
+    expect(t.every((x) => Number.isInteger(x.share))).toBe(true);
+  });
+
+  it('AC-11-02 gives an empty list when there are no communities', () => {
+    const { g, a } = build([], {}, 2);
+    expect(buildInsights(g, a).themes).toEqual([]);
+  });
+});
+
+describe('summary lines', () => {
+  it('AC-11-03 emits all lines in the stated order with the exact wording', () => {
+    const { g, a } = full();
+    expect(buildInsights(g, a).summary).toEqual([
+      'Main themes: Auth · Login (3), Billing (2), Docs (1).',
+      'Most active month: 2025-03 (3 sessions).',
+      'Recent focus: Auth · Login.',
+      'Bridges: Alpha, Beta, Gamma link separate themes.',
+      'Loose ends: 2 small themes not touched for over 30 days.',
+      'One-off topics: 3.',
+    ]);
+  });
+
+  it('AC-11-03 omits every line when the analysis has no data', () => {
+    const { g } = build([{ label: 'A', dates: [null, null] }]);
+    expect(buildInsights(g, emptyAnalysis()).summary).toEqual([]);
+  });
+
+  it('AC-11-03 omits the main themes line (and recent focus) without communities', () => {
+    const { g, a } = full();
+    a.communities = [];
+    const s = buildInsights(g, a).summary;
+    expect(s.some((l) => l.startsWith('Main themes:'))).toBe(false);
+    expect(s.some((l) => l.startsWith('Recent focus:'))).toBe(false);
+    expect(s).toEqual([
+      'Most active month: 2025-03 (3 sessions).',
+      'Bridges: Alpha, Beta, Gamma link separate themes.',
+      'Loose ends: 2 small themes not touched for over 30 days.',
+      'One-off topics: 3.',
+    ]);
+  });
+
+  it('AC-11-03 omits the most active month line without a timeline', () => {
+    const { g, a } = full();
+    a.timeline = [];
+    expect(buildInsights(g, a).summary).toEqual([
+      'Main themes: Auth · Login (3), Billing (2), Docs (1).',
+      'Recent focus: Auth · Login.',
+      'Bridges: Alpha, Beta, Gamma link separate themes.',
+      'Loose ends: 2 small themes not touched for over 30 days.',
+      'One-off topics: 3.',
+    ]);
+  });
+
+  it('AC-11-03 omits the bridges line without bridges', () => {
+    const { g, a } = full();
+    a.bridges = [];
+    const s = buildInsights(g, a).summary;
+    expect(s.some((l) => l.startsWith('Bridges:'))).toBe(false);
+    expect(s).toHaveLength(5);
+  });
+
+  it('AC-11-03 omits the loose ends line without loose ends', () => {
+    const { g, a } = full();
+    a.looseEnds = [];
+    const s = buildInsights(g, a).summary;
+    expect(s.some((l) => l.startsWith('Loose ends:'))).toBe(false);
+    expect(s).toHaveLength(5);
+  });
+
+  it('AC-11-03 omits the one-off line without one-off topics', () => {
+    const { g, a } = full();
+    a.oneOffTopics = [];
+    const s = buildInsights(g, a).summary;
+    expect(s.some((l) => l.startsWith('One-off topics:'))).toBe(false);
+    expect(s).toHaveLength(5);
+  });
+
+  it('AC-11-03 omits the recent focus line when latestAt is null', () => {
+    const { g, a } = full();
+    a.latestAt = null;
+    const s = buildInsights(g, a).summary;
+    expect(s.some((l) => l.startsWith('Recent focus:'))).toBe(false);
+    expect(s).toHaveLength(5);
+  });
+
+  it('AC-11-03 names at most three themes in the main themes line', () => {
+    const { g, a } = full();
+    const line = buildInsights(g, a).summary[0];
+    expect(line).not.toContain('Extra');
+  });
+
+  it('AC-11-03 uses singular wording for one loose end', () => {
+    const { g, a } = full();
+    a.looseEnds = [a.communities[3]];
+    expect(buildInsights(g, a).summary).toContain(
+      'Loose ends: 1 small theme not touched for over 30 days.',
+    );
+  });
+
+  it('AC-11-03 uses the number of one-off topics', () => {
+    const { g, a } = full();
+    a.oneOffTopics = [oneOff('only', 0)];
+    expect(buildInsights(g, a).summary).toContain('One-off topics: 1.');
+  });
+
+  it('AC-11-03 names fewer than three bridges when fewer exist', () => {
+    const { g, a } = full();
+    a.bridges = [bridge('Solo', 0), bridge('Duo', 1)];
+    expect(buildInsights(g, a).summary).toContain('Bridges: Solo, Duo link separate themes.');
+  });
+
+  it('AC-11-03 lists bridge labels in order, at most ten, and counts one-off topics', () => {
+    const { g, a } = full();
+    a.bridges = Array.from({ length: 12 }, (_, i) => bridge(`B${i}`, i));
+    a.oneOffTopics = [oneOff('x', 0), oneOff('y', 1)];
+    const out = buildInsights(g, a);
+    expect(out.bridges).toEqual(['B0', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9']);
+    expect(out.oneOffCount).toBe(2);
+    expect(out.summary).toContain('Bridges: B0, B1, B2 link separate themes.');
+  });
+
+  it('AC-11-03 keeps all bridge labels when there are fewer than ten', () => {
+    const { g, a } = full();
+    expect(buildInsights(g, a).bridges).toEqual(['Alpha', 'Beta', 'Gamma', 'Delta']);
+  });
+
+  it('AC-11-03 sets oneOffCount to zero without one-off topics', () => {
+    const { g, a } = full();
+    a.oneOffTopics = [];
+    expect(buildInsights(g, a).oneOffCount).toBe(0);
+  });
+});
+
+describe('most active month and recent focus', () => {
+  it('AC-11-04 picks the month with the most sessions', () => {
+    const { g, a } = full();
+    a.timeline = [month('2025-01', 1), month('2025-02', 5), month('2025-03', 2)];
+    expect(buildInsights(g, a).summary).toContain('Most active month: 2025-02 (5 sessions).');
+  });
+
+  it('AC-11-04 picks the earliest month on a tie', () => {
+    const { g, a } = full();
+    a.timeline = [month('2025-01', 3), month('2025-02', 3), month('2025-03', 1)];
+    expect(buildInsights(g, a).summary).toContain('Most active month: 2025-01 (3 sessions).');
+  });
+
+  it('AC-11-04 uses singular session when the best month has one session', () => {
+    const { g, a } = full();
+    a.timeline = [month('2025-01', 1), month('2025-02', 1)];
+    expect(buildInsights(g, a).summary).toContain('Most active month: 2025-01 (1 session).');
+  });
+
+  it('AC-11-04 recent focus counts only sessions within 30 days of latestAt', () => {
+    const { g, a } = build([
+      {
+        label: 'Large but old',
+        dates: ['2024-05-01T00:00:00Z', '2024-05-02T00:00:00Z', '2025-03-30T00:00:00Z'],
+      },
+      { label: 'Small but fresh', dates: ['2025-03-25T00:00:00Z', '2025-03-26T00:00:00Z'] },
+    ]);
+    expect(buildInsights(g, a).summary).toContain('Recent focus: Small but fresh.');
+  });
+
+  it('AC-11-04 treats exactly 30 days before latestAt as recent and 31 days as not', () => {
+    const { g, a } = build([
+      { label: 'Edge in', dates: ['2025-03-01T00:00:00Z', '2025-03-01T00:00:00Z'] },
+      {
+        label: 'Edge out',
+        dates: ['2025-02-28T00:00:00Z', '2025-02-28T00:00:00Z', '2025-03-30T00:00:00Z'],
+      },
+    ]);
+    expect(buildInsights(g, a).summary).toContain('Recent focus: Edge in.');
+  });
+
+  it('AC-11-04 ignores sessions with a missing or unparseable started_at', () => {
+    const { g, a } = build([
+      { label: 'Undated', dates: [null, 'not a date', null, '2025-03-30T00:00:00Z'] },
+      { label: 'Dated', dates: ['2025-03-29T00:00:00Z', '2025-03-28T00:00:00Z'] },
+    ]);
+    expect(buildInsights(g, a).summary).toContain('Recent focus: Dated.');
+  });
+
+  it('AC-11-04 breaks recent focus ties with the lower community id', () => {
+    const { g, a } = build([
+      { label: 'First', dates: ['2025-03-25T00:00:00Z', '2024-01-01T00:00:00Z'] },
+      {
+        label: 'Second',
+        dates: ['2025-03-26T00:00:00Z', '2024-02-01T00:00:00Z', '2024-03-01T00:00:00Z'],
+      },
+    ]);
+    expect(buildInsights(g, a).summary).toContain('Recent focus: First.');
+  });
+
+  it('AC-11-04 omits recent focus when no session is recent', () => {
+    const { g, a } = build([
+      { label: 'Old', dates: ['2024-01-01T00:00:00Z', '2024-01-02T00:00:00Z'] },
+      { label: 'Older', dates: ['2023-01-01T00:00:00Z'] },
+    ]);
+    expect(buildInsights(g, a).summary.some((l) => l.startsWith('Recent focus:'))).toBe(false);
+  });
+});
+
+describe('looseEnds', () => {
+  it('AC-11-05 formats each loose end with the first ten characters of lastAt', () => {
+    const { g, a } = full();
+    a.looseEnds = [
+      loose(8, 'Old · Thing', 1, '2025-01-05T10:20:30Z'),
+      loose(9, 'Other', 3, '2024-12-30T00:00:00Z'),
+      loose(10, 'Pair', 2, '2024-11-01'),
+    ];
+    expect(buildInsights(g, a).looseEnds).toEqual([
+      'Old · Thing - last touched 2025-01-05, 1 session',
+      'Other - last touched 2024-12-30, 3 sessions',
+      'Pair - last touched 2024-11-01, 2 sessions',
+    ]);
+  });
+
+  it('AC-11-05 is empty without loose ends', () => {
+    const { g, a } = full();
+    a.looseEnds = [];
+    expect(buildInsights(g, a).looseEnds).toEqual([]);
+  });
+
+  it('AC-11-05 takes loose ends from the analysis communities', () => {
+    const { g, a } = full();
+    expect(buildInsights(g, a).looseEnds).toEqual([
+      'Extra - last touched 2025-01-20, 1 session',
+      'Docs - last touched 2025-01-15, 1 session',
+    ]);
+  });
+
+  it('AC-11-05 lists every loose end, not only the first five', () => {
+    const { g, a } = full();
+    a.looseEnds = Array.from({ length: 6 }, (_, i) => loose(20 + i, `L${i}`, 2, '2025-01-01T00:00:00Z'));
+    expect(buildInsights(g, a).looseEnds).toHaveLength(6);
+  });
+});
+
+describe('roadmap', () => {
+  it('AC-11-06 lists Continue milestones for recent themes, then Decide milestones', () => {
+    const { g, a } = full();
+    expect(buildInsights(g, a).roadmap).toEqual([
+      {
+        title: 'Continue: Auth · Login',
+        detail: '3 sessions, last 2025-03-20',
+        community: 0,
+      },
+      {
+        title: 'Decide: Extra',
+        detail: 'Finish or drop - idle since 2025-01-20',
+        community: 3,
+      },
+      {
+        title: 'Decide: Docs',
+        detail: 'Finish or drop - idle since 2025-01-15',
+        community: 2,
+      },
+    ]);
+  });
+
+  it('AC-11-06 uses singular session in Continue details and skips non-recent themes', () => {
+    const r = build([
+      { label: 'C0', dates: ['2025-03-20T00:00:00Z', '2025-03-21T00:00:00Z', '2025-03-22T00:00:00Z'] },
+      { label: 'C1', dates: ['2025-03-05T10:00:00Z'] },
+      { label: 'C2', dates: ['2025-02-10T00:00:00Z'] },
+      { label: 'C3', dates: ['2025-03-31T00:00:00Z', '2025-03-30T00:00:00Z'] },
+      { label: 'C4', dates: [null] },
+    ]);
+    expect(buildInsights(r.g, r.a).roadmap).toEqual([
+      { title: 'Continue: C0', detail: '3 sessions, last 2025-03-22', community: 0 },
+      { title: 'Continue: C1', detail: '1 session, last 2025-03-05', community: 1 },
+      { title: 'Continue: C3', detail: '2 sessions, last 2025-03-31', community: 3 },
+    ]);
+  });
+
+  it('AC-11-06 considers only the first five communities for Continue', () => {
+    const specs: CommSpec[] = Array.from({ length: 7 }, (_, i) => ({
+      label: `R${i}`,
+      dates: ['2025-03-20T00:00:00Z'],
+    }));
+    const { g, a } = build(specs);
+    const road = buildInsights(g, a).roadmap;
+    expect(road).toHaveLength(5);
+    expect(road.map((m) => m.community)).toEqual([0, 1, 2, 3, 4]);
+    expect(road.every((m) => m.title.startsWith('Continue: '))).toBe(true);
+  });
+
+  it('AC-11-06 does not count a recent community beyond the first five', () => {
+    const specs: CommSpec[] = [
+      { label: 'R0', dates: ['2025-03-20T00:00:00Z'] },
+      { label: 'R1', dates: ['2024-01-20T00:00:00Z'] },
+      { label: 'R2', dates: ['2024-01-20T00:00:00Z'] },
+      { label: 'R3', dates: ['2024-01-20T00:00:00Z'] },
+      { label: 'R4', dates: ['2024-01-20T00:00:00Z'] },
+      { label: 'R5', dates: ['2025-03-25T00:00:00Z'] },
+    ];
+    const { g, a } = build(specs);
+    expect(buildInsights(g, a).roadmap.map((m) => m.title)).toEqual(['Continue: R0']);
+  });
+
+  it('AC-11-06 limits Decide milestones to the first five loose ends in order', () => {
+    const { g, a } = full();
+    a.communities = [];
+    a.looseEnds = [
+      loose(10, 'L0', 1, '2025-01-05T08:00:00Z'),
+      loose(11, 'L1', 3, '2025-01-04T08:00:00Z'),
+      loose(12, 'L2', 2, '2025-01-03T08:00:00Z'),
+      loose(13, 'L3', 2, '2025-01-02T08:00:00Z'),
+      loose(14, 'L4', 2, '2025-01-01T08:00:00Z'),
+      loose(15, 'L5', 1, '2024-12-31T08:00:00Z'),
+    ];
+    expect(buildInsights(g, a).roadmap).toEqual([
+      { title: 'Decide: L0', detail: 'Finish or drop - idle since 2025-01-05', community: 10 },
+      { title: 'Decide: L1', detail: 'Finish or drop - idle since 2025-01-04', community: 11 },
+      { title: 'Decide: L2', detail: 'Finish or drop - idle since 2025-01-03', community: 12 },
+      { title: 'Decide: L3', detail: 'Finish or drop - idle since 2025-01-02', community: 13 },
+      { title: 'Decide: L4', detail: 'Finish or drop - idle since 2025-01-01', community: 14 },
+    ]);
+  });
+
+  it('AC-11-06 puts all Continue items before all Decide items', () => {
+    const { g, a } = build(
+      [
+        { label: 'Fresh1', dates: ['2025-03-20T00:00:00Z'] },
+        { label: 'Fresh2', dates: ['2025-03-21T00:00:00Z'] },
+      ],
+      { looseEnds: [loose(30, 'Stale', 1, '2024-12-01T00:00:00Z')] },
+    );
+    expect(buildInsights(g, a).roadmap.map((m) => m.title)).toEqual([
+      'Continue: Fresh1',
+      'Continue: Fresh2',
+      'Decide: Stale',
+    ]);
+  });
+
+  it('AC-11-06 treats exactly 30 days before latestAt as recent and 31 days as not', () => {
+    const { g, a } = build([
+      { label: 'Edge in', dates: ['2025-03-01T00:00:00Z'] },
+      { label: 'Edge out', dates: ['2025-02-28T23:59:59Z'] },
+    ]);
+    expect(buildInsights(g, a).roadmap.map((m) => m.title)).toEqual(['Continue: Edge in']);
+  });
+
+  it('AC-11-06 has no Continue milestones when latestAt is null', () => {
+    const { g, a } = build(
+      [{ label: 'Fresh', dates: ['2025-03-20T00:00:00Z'] }],
+      { latestAt: null },
+    );
+    expect(buildInsights(g, a).roadmap).toEqual([]);
+  });
+
+  it('AC-11-06 is empty without recent themes and loose ends', () => {
+    const { g, a } = build([{ label: 'Old', dates: ['2020-01-01T00:00:00Z'] }]);
+    expect(buildInsights(g, a).roadmap).toEqual([]);
+  });
+});
+
+describe('insightsMarkdown', () => {
+  const rich = ins({
+    headline: '7 sessions across 2 themes, 2025-01 to 2025-03',
+    summary: ['Main themes: A (3), B (2).', 'Recent focus: A.'],
+    themes: [
+      { label: 'A', sessions: 3, share: 43, lastAt: '2025-03-20T00:00:00Z' },
+      { label: 'B', sessions: 2, share: 29, lastAt: null },
+    ],
+    bridges: ['Shared topic', 'Other bridge'],
+    looseEnds: ['Old - last touched 2025-01-05, 1 session'],
+    oneOffCount: 4,
+    roadmap: [
+      { title: 'Continue: A', detail: '3 sessions, last 2025-03-20', community: 0 },
+      { title: 'Decide: Old', detail: 'Finish or drop - idle since 2025-01-05', community: 3 },
+    ],
+  });
+
+  it('AC-11-07 matches the layout exactly', () => {
+    const expected = [
+      '# Knowledge graph insights',
+      '',
+      '7 sessions across 2 themes, 2025-01 to 2025-03',
+      '',
+      '## Summary',
+      '- Main themes: A (3), B (2).',
+      '- Recent focus: A.',
+      '',
+      '## Main themes',
+      '| Theme | Sessions | Share | Last active |',
+      '|---|---|---|---|',
+      '| A | 3 | 43% | 2025-03-20 |',
+      '| B | 2 | 29% | - |',
+      '',
+      '## Bridges',
+      '- Shared topic',
+      '- Other bridge',
+      '',
+      '## Loose ends',
+      '- Old - last touched 2025-01-05, 1 session',
+      '',
+      '## Roadmap',
+      '1. **Continue: A** - 3 sessions, last 2025-03-20',
+      '2. **Decide: Old** - Finish or drop - idle since 2025-01-05',
+      '',
+    ].join('\n');
+    expect(insightsMarkdown(rich)).toBe(expected);
+  });
+
+  it('AC-11-07 ends with exactly one newline', () => {
+    const md = insightsMarkdown(rich);
+    expect(md.endsWith('\n')).toBe(true);
+    expect(md.endsWith('\n\n')).toBe(false);
+  });
+
+  it('AC-11-07 omits the Summary section when the summary is empty', () => {
+    const md = insightsMarkdown({ ...rich, summary: [] });
+    expect(md).not.toContain('## Summary');
+    expect(md).toContain('## Main themes');
+    expect(md.startsWith('# Knowledge graph insights\n\n7 sessions across 2 themes, 2025-01 to 2025-03\n\n## Main themes\n')).toBe(true);
+  });
+
+  it('AC-11-07 omits the Main themes section when there are no themes', () => {
+    const md = insightsMarkdown({ ...rich, themes: [] });
+    expect(md).not.toContain('## Main themes');
+    expect(md).not.toContain('| Theme |');
+    expect(md).toContain('- Recent focus: A.\n\n## Bridges\n');
+  });
+
+  it('AC-11-07 omits the Bridges section when there are no bridges', () => {
+    const md = insightsMarkdown({ ...rich, bridges: [] });
+    expect(md).not.toContain('## Bridges');
+    expect(md).toContain('| B | 2 | 29% | - |\n\n## Loose ends\n');
+  });
+
+  it('AC-11-07 omits the Loose ends section when there are none', () => {
+    const md = insightsMarkdown({ ...rich, looseEnds: [] });
+    expect(md).not.toContain('## Loose ends');
+    expect(md).toContain('- Other bridge\n\n## Roadmap\n');
+  });
+
+  it('AC-11-07 omits the Roadmap section when it is empty and keeps one trailing newline', () => {
+    const md = insightsMarkdown({ ...rich, roadmap: [] });
+    expect(md).not.toContain('## Roadmap');
+    expect(md.endsWith('- Old - last touched 2025-01-05, 1 session\n')).toBe(true);
+    expect(md.endsWith('\n\n')).toBe(false);
+  });
+
+  it('AC-11-07 numbers roadmap items from 1', () => {
+    const md = insightsMarkdown(
+      ins({
+        roadmap: [
+          { title: 'Continue: X', detail: 'd1', community: 0 },
+          { title: 'Continue: Y', detail: 'd2', community: 1 },
+          { title: 'Decide: Z', detail: 'd3', community: 2 },
+        ],
+      }),
+    );
+    expect(md).toBe(
+      '# Knowledge graph insights\n\nH\n\n## Roadmap\n1. **Continue: X** - d1\n2. **Continue: Y** - d2\n3. **Decide: Z** - d3\n',
+    );
+  });
+
+  it('AC-11-07 escapes pipes inside table cells', () => {
+    const md = insightsMarkdown(
+      ins({ themes: [{ label: 'a|b', sessions: 1, share: 100, lastAt: '2025-01-02T00:00:00Z' }] }),
+    );
+    expect(md).toContain('| a\\|b | 1 | 100% | 2025-01-02 |\n');
+    expect(md).not.toContain('| a|b |');
+  });
+
+  it('AC-11-07 writes a dash when lastAt is null and cuts lastAt to ten characters', () => {
+    const md = insightsMarkdown(
+      ins({
+        themes: [
+          { label: 'N', sessions: 1, share: 50, lastAt: null },
+          { label: 'D', sessions: 1, share: 50, lastAt: '2024-12-31T23:59:59Z' },
+        ],
+      }),
+    );
+    expect(md).toContain('| N | 1 | 50% | - |\n| D | 1 | 50% | 2024-12-31 |\n');
+  });
+
+  it('AC-11-07 does not mutate its input and is deterministic', () => {
+    const before = structuredClone(rich);
+    const first = insightsMarkdown(rich);
+    const second = insightsMarkdown(rich);
+    expect(rich).toEqual(before);
+    expect(second).toBe(first);
+  });
+
+  it('AC-11-07 ignores oneOffCount in the layout', () => {
+    expect(insightsMarkdown(ins({ oneOffCount: 9 }))).toBe(
+      '# Knowledge graph insights\n\nH\n',
+    );
+  });
+
+  it('AC-11-07 renders markdown for a real insights object from buildInsights', () => {
+    const { g, a } = full();
+    const md = insightsMarkdown(buildInsights(g, a));
+    expect(md.startsWith('# Knowledge graph insights\n\n7 sessions across 4 themes, 2025-01 to 2025-03\n\n## Summary\n- Main themes: Auth · Login (3), Billing (2), Docs (1).\n')).toBe(true);
+    expect(md).toContain('| Auth · Login | 3 | 43% | 2025-03-20 |\n');
+    expect(md).toContain('## Roadmap\n1. **Continue: Auth · Login** - 3 sessions, last 2025-03-20\n2. **Decide: Extra** - Finish or drop - idle since 2025-01-20\n3. **Decide: Docs** - Finish or drop - idle since 2025-01-15\n');
+    expect(md.endsWith('\n')).toBe(true);
+    expect(md.endsWith('\n\n')).toBe(false);
+  });
+});
+
+describe('empty graph and purity', () => {
+  it('AC-11-08 gives a "No sessions yet" headline and empty lists', () => {
+    const out = buildInsights(emptyGraph(), emptyAnalysis());
+    expect(out).toEqual({
+      headline: 'No sessions yet',
+      summary: [],
+      themes: [],
+      bridges: [],
+      looseEnds: [],
+      oneOffCount: 0,
+      roadmap: [],
+    });
+  });
+
+  it('AC-11-08 produces Markdown with only the title and headline', () => {
+    const out = buildInsights(emptyGraph(), emptyAnalysis());
+    expect(insightsMarkdown(out)).toBe('# Knowledge graph insights\n\nNo sessions yet\n');
+  });
+
+  it('AC-11-08 works on a parsed and analysed empty graph', () => {
+    const g = parseGraph({ nodes: [], links: [] });
+    const out = buildInsights(g, analyzeGraph(g));
+    expect(out.headline).toBe('No sessions yet');
+    expect(out.summary).toEqual([]);
+    expect(out.themes).toEqual([]);
+    expect(out.roadmap).toEqual([]);
+    expect(out.oneOffCount).toBe(0);
+    expect(insightsMarkdown(out)).toBe('# Knowledge graph insights\n\nNo sessions yet\n');
+  });
+
+  it('AC-11-03 same input gives the same output', () => {
+    const { g, a } = full();
+    expect(buildInsights(g, a)).toEqual(buildInsights(g, a));
+  });
+
+  it('AC-11-03 does not mutate the graph or the analysis', () => {
+    const { g, a } = full();
+    const gBefore = structuredClone(g);
+    const aBefore = structuredClone(a);
+    buildInsights(g, a);
+    expect(g).toEqual(gBefore);
+    expect(a).toEqual(aBefore);
+  });
+});
