@@ -115,6 +115,14 @@
     "explorer/tests/holdout/glow_hidden.test.ts": {
       "sha256": "b738de744e1fadf53f75f5b3b7334400ef49f5de620fe9a470caac090b443498",
       "phase": "17"
+    },
+    "explorer/tests/glare_shell.test.ts": {
+      "sha256": "03b1f3014904591a097b8ec33a63a338ff95ffdc648f9796fb9a5a18ce743e5d",
+      "phase": "18"
+    },
+    "explorer/tests/holdout/glare_shell_hidden.test.ts": {
+      "sha256": "89f1d8503e3aac24f2b38ddf33efbbf1666a6694bc14e3224006cd47863e2608",
+      "phase": "18"
     }
   }
 }

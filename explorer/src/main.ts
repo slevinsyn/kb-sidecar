@@ -29,6 +29,7 @@ import {
   brightnessMap,
   clusterBounds,
   defaultLinkFilter,
+  glowLevels,
   islandCenters,
   layerZ,
   linkRgba,
@@ -38,7 +39,7 @@ import {
   shortestPath,
   timeAxis,
 } from './scene3d';
-import type { Point3 } from './scene3d';
+import type { NodeState, Point3 } from './scene3d';
 
 const DIM_COLOR = '#2b3040';
 const TOP_LABEL_COUNT = 30;
@@ -55,13 +56,15 @@ const NODE_SCALE = 0.6;
 const FALLBACK_NODE_SIZE = 3;
 /** Alpha of a link that does not touch the selected node while something is selected. */
 const DIM_LINK_ALPHA = 0.04;
-const SELECTED_PARTICLES = 4;
-const PARTICLE_WIDTH = 2;
+const SELECTED_PARTICLES = 2;
+const PARTICLE_WIDTH = 1.2;
+/** Links touching the selected node: a soft white that does not pile into the bloom. */
+const SELECTED_LINK_COLOR = 'rgba(255, 255, 255, 0.55)';
 const AUTO_ROTATE_SPEED = 0.5;
 const IDLE_RESUME_MS = 5000;
-const BLOOM_STRENGTH = 0.9;
+const BLOOM_STRENGTH = 0.35;
 const BLOOM_RADIUS = 0.4;
-const BLOOM_THRESHOLD = 0.15;
+const BLOOM_THRESHOLD = 0.6;
 /** Fog starts a little in front of the graph centre and ends well behind it. */
 const FOG_NEAR_FACTOR = 0.25;
 const FOG_FAR_FACTOR = 1.5;
@@ -334,7 +337,9 @@ const RING = new THREE.TorusGeometry(1.75, 0.08, 8, 40);
 interface NodeLook {
   node: GraphNode;
   body: THREE.MeshLambertMaterial;
-  ring: THREE.MeshBasicMaterial | null;
+  ring: THREE.MeshBasicMaterial;
+  /** The halo mesh: shown for bridge nodes and for the selected node only. */
+  halo: THREE.Mesh;
   /** The floating theme name, on theme anchor nodes only. */
   label: THREE.SpriteMaterial | null;
 }
@@ -351,14 +356,15 @@ function styleNode(look: NodeLook): void {
   const dim = isDimmed(look.node);
   const color = dim ? DIM_COLOR : colorOf(look.node);
   const b = brightness.get(look.node.id) ?? 0.5;
+  const state: NodeState = look.node.id === selectedId ? 'selected' : dim ? 'dim' : 'normal';
+  const glow = glowLevels(b, state);
   look.body.color.set(color);
   look.body.emissive.set(color);
-  look.body.emissiveIntensity = dim ? 0 : 0.15 + 0.6 * b;
-  look.body.opacity = dim ? 0.3 : 0.4 + 0.6 * b;
-  if (look.ring) {
-    look.ring.color.set(dim ? DIM_COLOR : '#ffffff');
-    look.ring.opacity = dim ? 0.2 : 0.45 + 0.4 * b;
-  }
+  look.body.emissiveIntensity = glow.emissive;
+  look.body.opacity = glow.opacity;
+  look.ring.color.set(dim ? DIM_COLOR : '#ffffff');
+  look.ring.opacity = glow.ring;
+  look.halo.visible = bridges.has(look.node.id) || look.node.id === selectedId;
   if (look.label) look.label.opacity = dim ? 0.25 : 1;
 }
 
@@ -367,16 +373,20 @@ function nodeObject3d(obj: object): THREE.Object3D {
   const group = new THREE.Group();
   const body = new THREE.MeshLambertMaterial({ transparent: true });
   group.add(new THREE.Mesh(geometryFor(node.type), body));
-  let ring: THREE.MeshBasicMaterial | null = null;
-  if (bridges.has(node.id)) {
-    ring = new THREE.MeshBasicMaterial({ transparent: true });
-    const halo = new THREE.Mesh(RING, ring);
-    // Keep the halo facing the camera (the parent group is never rotated).
-    halo.onBeforeRender = (_renderer, _scene, camera) => {
-      halo.quaternion.copy(camera.quaternion);
-    };
-    group.add(halo);
-  }
+  // Every node owns a halo so the selected node can show its white ring; styleNode hides it
+  // unless the node is a bridge or the selected node.
+  const ring = new THREE.MeshBasicMaterial({ transparent: true });
+  const halo = new THREE.Mesh(RING, ring);
+  // three.js raycasting ignores .visible: only let a shown halo be hovered or clicked.
+  const pickHalo = THREE.Mesh.prototype.raycast;
+  halo.raycast = (raycaster, hits) => {
+    if (halo.visible) pickHalo.call(halo, raycaster, hits);
+  };
+  // Keep the halo facing the camera (the parent group is never rotated).
+  halo.onBeforeRender = (_renderer, _scene, camera) => {
+    halo.quaternion.copy(camera.quaternion);
+  };
+  group.add(halo);
   const scale = (sizes.get(node.id) ?? FALLBACK_NODE_SIZE) * NODE_SCALE;
   group.scale.setScalar(scale);
   let label: THREE.SpriteMaterial | null = null;
@@ -388,7 +398,7 @@ function nodeObject3d(obj: object): THREE.Object3D {
       label = sprite.material;
     }
   }
-  const look: NodeLook = { node, body, ring, label };
+  const look: NodeLook = { node, body, ring, halo, label };
   styleNode(look);
   nodeLooks.set(node.id, look);
   return group;
@@ -397,7 +407,7 @@ function nodeObject3d(obj: object): THREE.Object3D {
 function linkColor3d(l: GraphLink): string {
   if (pathLinks !== null) return onPath(l) ? PATH_COLOR : linkRgba(l.type, DIM_LINK_ALPHA);
   if (selectedId === null && clusterIds === null) return linkRgba(l.type);
-  if (touchesSelected(l)) return '#ffffff';
+  if (touchesSelected(l)) return SELECTED_LINK_COLOR;
   return inCluster(l) ? linkRgba(l.type) : linkRgba(l.type, DIM_LINK_ALPHA);
 }
 
@@ -641,7 +651,7 @@ function makeGraph3d(): Graph3D {
     .nodeId('id')
     .width(graphWidth())
     .height(window.innerHeight)
-    .nodeLabel((n) => escapeHtml((n as GraphNode).label))
+    .nodeLabel((n) => `${escapeHtml((n as GraphNode).label)}<br>${escapeHtml((n as GraphNode).type)}`)
     .linkLabel(() => '')
     .nodeThreeObject(nodeObject3d)
     // linkRgba carries the opacity; keep the library from scaling it down further.

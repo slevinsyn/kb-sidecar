@@ -1,8 +1,8 @@
 {
   "initialized": true,
   "self_test_passed": true,
-  "phase": "17",
-  "title": "Glow levels - capped, pure, selection never brighter",
+  "phase": "18",
+  "title": "3D glare fix - gentler glow, soft selection, readable hover name",
   "stage": "implementing",
   "history": [
     {
@@ -1334,6 +1334,92 @@
       "round": 1,
       "verdict": "PASS",
       "important": 0
+    },
+    {
+      "at": "2026-11-02T13:10:08+05:30",
+      "event": "finish",
+      "phase": "17",
+      "commit": "6ceb24fab838c6cdae5b6476f000e4ac8c2016f6"
+    },
+    {
+      "at": "2026-11-02T13:10:14+05:30",
+      "event": "start",
+      "phase": "18",
+      "title": "3D glare fix - gentler glow, soft selection, readable hover name"
+    },
+    {
+      "at": "2026-11-02T13:10:14+05:30",
+      "event": "approve-spec",
+      "phase": "18",
+      "criteria": [
+        "AC-18-01",
+        "AC-18-02",
+        "AC-18-03",
+        "AC-18-04"
+      ],
+      "preapproved": true
+    },
+    {
+      "at": "2026-11-02T13:10:32+05:30",
+      "event": "review",
+      "phase": "18",
+      "verdict": "PASS"
+    },
+    {
+      "at": "2026-11-02T13:19:46+05:30",
+      "event": "review",
+      "phase": "18",
+      "verdict": "FAIL"
+    },
+    {
+      "at": "2026-11-02T13:22:14+05:30",
+      "event": "review",
+      "phase": "18",
+      "verdict": "FAIL"
+    },
+    {
+      "at": "2026-11-02T13:23:12+05:30",
+      "event": "review",
+      "phase": "18",
+      "verdict": "PASS"
+    },
+    {
+      "at": "2026-11-02T13:23:20+05:30",
+      "event": "review",
+      "phase": "18",
+      "verdict": "PASS"
+    },
+    {
+      "at": "2026-11-02T13:23:23+05:30",
+      "event": "red",
+      "phase": "18",
+      "tests": 2
+    },
+    {
+      "at": "2026-11-02T17:12:39+05:30",
+      "event": "review-prep",
+      "phase": "18",
+      "round": 1
+    },
+    {
+      "at": "2026-11-02T17:14:40+05:30",
+      "event": "review-prep",
+      "phase": "18",
+      "round": 2
+    },
+    {
+      "at": "2026-11-02T17:16:31+05:30",
+      "event": "review-prep",
+      "phase": "18",
+      "round": 3
+    },
+    {
+      "at": "2026-11-02T17:17:06+05:30",
+      "event": "review",
+      "phase": "18",
+      "round": 3,
+      "verdict": "PASS",
+      "important": 0
     }
   ],
   "change_dir": "changes/2026-11-02-graph-glare",
@@ -1366,16 +1452,15 @@
   "pending_tests": {},
   "review": {
     "verdict": "PASS",
-    "lock_digest": "23758c2d272308b87728e53d80344784f4dfae7a26687716d04a66555e2146d6",
-    "at": "2026-11-02T13:08:00+05:30",
-    "prefetched": true
+    "lock_digest": "a91414ea2ef166ddcbdef60445b420de91481843554e33a8dd03de76c5312eb6",
+    "at": "2026-11-02T13:23:20+05:30"
   },
   "red": {
     "ok": true,
-    "lock_digest": "23758c2d272308b87728e53d80344784f4dfae7a26687716d04a66555e2146d6",
-    "evidence": ".phased/evidence/phase-17-red.log"
+    "lock_digest": "a91414ea2ef166ddcbdef60445b420de91481843554e33a8dd03de76c5312eb6",
+    "evidence": ".phased/evidence/phase-18-red.log"
   },
-  "spec_sha256": "95672c8c19ef5503671b5dd78ebffa8a9e2c11fc1525b3e147ef914556592a21",
+  "spec_sha256": "e39425076c2b88a5f15d3919838aef205b0e291b2136100574412bdb5cc40b04",
   "code_reviews": {
     "01": {
       "rounds": [
@@ -1676,6 +1761,27 @@
           "classes": []
         }
       ]
+    },
+    "18": {
+      "rounds": [
+        {
+          "tree": "0020c66ab14be0bd1684c0234aed087af4b674af",
+          "at": "2026-11-02T17:12:39+05:30"
+        },
+        {
+          "tree": "ff83c3050a3ba9766edfda544f34b4cb9f27f5c6",
+          "at": "2026-11-02T17:14:40+05:30"
+        },
+        {
+          "tree": "e5b00aa337f0c32d6d6e588b9eb02087373195c8",
+          "at": "2026-11-02T17:16:31+05:30",
+          "verdict": "PASS",
+          "important": 0,
+          "nits": 1,
+          "preexisting": 0,
+          "classes": []
+        }
+      ]
     }
   },
   "durations": [
@@ -1758,6 +1864,11 @@
       "phase": "16",
       "level": "L",
       "minutes": 19.7
+    },
+    {
+      "phase": "17",
+      "level": "S",
+      "minutes": 2.1
     }
   ]
 }
